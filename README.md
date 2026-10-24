@@ -5,6 +5,14 @@ vision / companion calls you explicitly configure with your own API key.
 
 ---
 
+## v0.7 — Profiles, a real Mac app, Custom theme
+
+- **Profiles (like Chrome's)** — Personal, School, Work… each with its own tabs, bookmarks, history, saved passwords, cookies and site logins, Home screen, AI chats and look. Switch from the avatar at the top of the sidebar, the **Profiles** menu (⌃⌘1…9), or Settings → Profiles (rename, color, emoji, remove). A new profile starts with your current look, tinted its color. Your original data is the first profile, so nothing moved. Removing a profile sends its data to the Trash. API keys stay shared. Code: `main/profiles.js`, `renderer/components/profiles.js`, `styles/profiles.css`.
+- **Installs as Flux.app** — `npm run install-app` builds it (with its own icon) and puts it in /Applications, so ⌘Space → “Flux” opens it. Re-run after code changes. It shares your data with `npm start`, and only one copy runs at a time (opening it again just brings the window forward). Code: `scripts/install-app.sh`, `scripts/make-icon.js`, `build/icon.svg`.
+- **Address bar fix** — clicking the “site / page title” breadcrumb now always opens the address for editing, with the URL selected so typing replaces it; Enter goes there in the same tab.
+- **Custom theme** — Settings → Appearance → Custom: pick your own tint, glow and accent; works in light and dark.
+- **Polish** — switches that are on now show as on in light mode; the dark Home search is dark glass with an accent focus ring; Flux follows macOS Reduce Transparency and Increase Contrast.
+
 ## v0.6 — Light & dark, Home Widgets, Easy Files
 
 - **Light + dark mode** — Auto (follows macOS live), Light or Dark, from Settings → Appearance or the sun/moon button at the bottom of the sidebar. Websites follow along (`prefers-color-scheme`), and so does the native window glass. Eight new themes work in both modes — Glass (default), Sky, Mint, Sunset, Rose, Lavender, Sand, Mono — each just a tint + an accent. The classic themes keep their one fixed look (Blackline is light paper, the rest are dark). Under the hood every neutral is drawn with one polarity channel, `rgb(var(--ink) / a)`, so light mode is a token flip, not a second stylesheet. Code: `styles/tokens.css`, `styles/themes/modern.css`, `styles/light.css`, `data/themes.js`.

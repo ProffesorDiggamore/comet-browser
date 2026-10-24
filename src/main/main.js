@@ -34,6 +34,16 @@ if (store.get("perf.hardwareAccel") === false) app.disableHardwareAcceleration()
 
 let win = null
 
+// one Flux per data folder: opening it again (Spotlight, the Dock, npm start
+// beside the installed app) brings the window forward instead of a second
+// copy fighting over the same profile files
+if (!app.requestSingleInstanceLock()) app.exit(0)
+app.on("second-instance", () => {
+  if (!win || win.isDestroyed()) return
+  if (win.isMinimized()) win.restore()
+  win.show(); win.focus()
+})
+
 // classic themes have one fixed mode; everything else follows theme.mode
 const FIXED_MODE = { nebula: "dark", ember: "dark", midnight: "dark", aurora: "dark", carbon: "dark", blackline: "light", "blackline-noir": "dark" }
 function themeSource () {
