@@ -55,5 +55,6 @@ body[data-theme="rose"]     { --t-hue: #ff5c93; --t-hue2: #c86bff; --t-accent: #
 body[data-theme="lavender"] { --t-hue: #8e6cff; --t-hue2: #5d8bff; --t-accent: #7a5cff; }
 body[data-theme="sand"]     { --t-hue: #c9a46c; --t-hue2: #e3c29b; --t-accent: #b8803a; }
 body[data-theme="mono"]     { --t-hue: #8e8e93; --t-hue2: #8e8e93; --t-accent: #636366; }
+body[data-theme="custom"]   { --t-hue: #8e6cff; --t-hue2: #5ad1ff; --t-accent: #7a5cff; }   /* state.js writes the picked ones inline */
 body[data-family="modern"][data-theme="mono"] { --m-mix: 0%; }
 body[data-theme="mono"][data-mode="dark"] { --t-accent: #8e8e93; }

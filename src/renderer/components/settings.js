@@ -47,17 +47,24 @@ function catSearch () {
 }
 
 function themeGrid (active) {
-  const card = (t) => h(`button.theme-card${t.id === active ? ".is-on" : ""}`, {
-    title: t.family === "classic" ? `${t.name} — ${t.mode ?? "dark"} only` : `${t.name} — light & dark`,
-    onclick: () => { state.set("theme.active", t.id); state.set("theme.accentCustom", false); bus.emit("settings:rerender") }
-  }, [
-    h("span.theme-sw", {}, [
-      h("i", { style: { background: t.sw[0] } }),
-      h("i", { style: { background: t.sw[1] } }),
-      h("b", { style: { background: t.sw[2] } })
-    ]),
-    h("span.theme-name", { text: t.name })
-  ])
+  const c = state.get("theme.custom") ?? {}
+  const card = (t) => {
+    // the Custom card previews your own colors
+    const sw = t.id === "custom" && c.hue
+      ? [`color-mix(in srgb, ${c.hue} 16%, #eceef2)`, `color-mix(in srgb, ${c.hue} 22%, #1d1e22)`, c.accent]
+      : t.sw
+    return h(`button.theme-card${t.id === active ? ".is-on" : ""}`, {
+      title: t.family === "classic" ? `${t.name} — ${t.mode ?? "dark"} only` : t.id === "custom" ? "Custom — your own colors, light & dark" : `${t.name} — light & dark`,
+      onclick: () => { state.set("theme.active", t.id); state.set("theme.accentCustom", false); bus.emit("settings:rerender") }
+    }, [
+      h("span.theme-sw", {}, [
+        h("i", { style: { background: sw[0] } }),
+        h("i", { style: { background: sw[1] } }),
+        h("b", { style: { background: sw[2] } })
+      ]),
+      h("span.theme-name", { text: t.name })
+    ])
+  }
   return [
     h("div.set-row", { dataset: { search: "theme color light dark glass sky mint sunset rose lavender sand mono" } }, [h("div.theme-grid", {}, THEMES.filter((t) => t.family === "modern").map(card))]),
     h("div.set-row", { dataset: { search: "classic dark theme nebula ember midnight aurora carbon blackline noir" } }, [
@@ -69,9 +76,21 @@ function themeGrid (active) {
   ]
 }
 
+// Custom theme: three color wells, live as you drag
+function customColors (c) {
+  const well = (key, label) => {
+    const i = h("input", { type: "color", value: c[key] ?? "#8e6cff", "aria-label": label })
+    i.addEventListener("input", () => state.set("theme.custom", { ...(state.get("theme.custom") ?? {}), [key]: i.value }))
+    i.addEventListener("change", () => bus.emit("settings:rerender"))
+    return h("label.cust-well", {}, [i, h("span", { text: label })])
+  }
+  return row("Custom colors", h("div.cust-wells", {}, [well("hue", "Tint"), well("hue2", "Glow"), well("accent", "Accent")]), "Tint colors the window, sidebar and Home; Glow is the second wash; Accent is buttons and highlights. Works in light and dark.")
+}
+
 function catAppearance () {
   const t = state.get("theme")
   const classic = themeById(t.active).family === "classic"
+  const themes = themeGrid(t.active)   // [modern + Custom, classic]
   const accent = h("input", { type: "color", value: t.accent })
   accent.addEventListener("input", () => { state.set("theme.accent", accent.value); state.set("theme.accentCustom", true) })
   const css = h("textarea", { value: t.customCss ?? "", style: { minHeight: "84px", fontFamily: "monospace", minWidth: "340px" } })
@@ -82,9 +101,11 @@ function catAppearance () {
         if (classic) state.set("theme.active", "glass")
         state.set("theme.mode", v); bus.emit("settings:rerender")
       }), classic ? "Classic themes have one fixed look — picking a mode switches to Glass." : "Auto follows macOS. Websites follow along too."),
-      ...themeGrid(t.active),
+      themes[0],
+      t.active === "custom" && customColors(t.custom ?? {}),
+      themes[1],
       row("Density", seg([{ v: "comfortable", label: "Comfortable" }, { v: "compact", label: "Compact" }], t.density ?? "comfortable", (v) => state.set("theme.density", v)), "Compact tightens spacing across the whole UI."),
-      row("Accent color", [accent, t.accentCustom && btn("Use theme color", () => { state.set("theme.accentCustom", false); bus.emit("settings:rerender") }, "btn btn--plain")])
+      t.active !== "custom" && row("Accent color", [accent, t.accentCustom && btn("Use theme color", () => { state.set("theme.accentCustom", false); bus.emit("settings:rerender") }, "btn btn--plain")])
     ]),
     group("Liquid glass", [
       row("macOS window glass", sw(t.vibrancy !== false, (v) => { state.set("theme.vibrancy", v); window.flux.win.vibrancy(v) }), "Your real desktop shows through the sidebar, blurred — like Apple's own apps."),

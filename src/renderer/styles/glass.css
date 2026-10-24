@@ -98,3 +98,21 @@ body[data-mode="light"] .glass { border-color: rgba(0, 0, 0, 0.08); }
     backdrop-filter: url(#flux-lens) blur(calc(var(--f-blur) * 0.5)) saturate(190%) brightness(1.1);
   }
 }
+
+/* ── accessibility: follow the macOS Display settings ─────────────── */
+/* Reduce transparency: nothing blurs; floating surfaces go solid so text
+   never sits on a busy page or wallpaper */
+@media (prefers-reduced-transparency: reduce) {
+  *, *::before, *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .glass, .pop, .ob-suggest, .pal, .pf-sheet, .toast, #hoverurl, body.vt-collapsed #vtabs.is-peek {
+    background-color: var(--f-bg-1, var(--f-bg)) !important; background-image: none !important;
+  }
+  .hw, .home-search, .home-tool { background: var(--f-bg-1, var(--f-bg)) !important; }
+  .home-input, .home-input::placeholder { color: var(--f-text) !important; text-shadow: none !important; }
+  .pf-scrim { background: rgb(0 0 0 / 0.5); }
+}
+/* Increase contrast: defined edges and stronger secondary text */
+@media (prefers-contrast: more) {
+  body { --f-text-dim: color-mix(in srgb, var(--f-text) 84%, transparent); --f-text-3: color-mix(in srgb, var(--f-text) 66%, transparent); }
+  .glass, .pop, .ob-suggest, .pal, .pf-sheet, .hw, .home-search, .btn, input.field, .set-box { border: 1px solid rgb(var(--ink) / 0.5) !important; }
+}

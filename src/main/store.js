@@ -31,6 +31,7 @@ const DEFAULTS = {
     blur: 28,                  // px backdrop blur
     accent: "#0a84ff",
     accentCustom: false,       // true = accent overrides the theme's own color
+    custom: { hue: "#8e6cff", hue2: "#5ad1ff", accent: "#7a5cff" },   // the Custom theme: tint, second tint, accent
     density: "comfortable",    // comfortable | compact
     vibrancy: true,            // real macOS window glass behind the chrome
     customCss: ""

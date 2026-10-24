@@ -144,3 +144,9 @@
 .theme-card.is-on { color: var(--f-text); font-weight: 600; }
 .theme-card.is-on .theme-sw { box-shadow: 0 0 0 2.5px var(--f-accent), 0 2px 8px rgba(0, 0, 0, 0.15); }
 .is-classic .theme-sw i + i { display: none; }
+
+/* Custom theme: three labelled color wells */
+.cust-wells { display: flex; gap: 14px; }
+.cust-well { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--f-text-dim); }
+.cust-well input[type="color"] { width: 40px; height: 40px; padding: 3px; border-radius: 50%; }
+.cust-well input[type="color"]::-webkit-color-swatch { border-radius: 50%; }

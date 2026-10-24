@@ -13,6 +13,8 @@ export const THEMES = [
   { id: "lavender", name: "Lavender", family: "modern", sw: ["#ebe7f8", "#211c30", "#7a5cff"] },
   { id: "sand", name: "Sand", family: "modern", sw: ["#f1ece4", "#26221c", "#b8803a"] },
   { id: "mono", name: "Mono", family: "modern", sw: ["#ececef", "#1c1c1f", "#636366"] },
+  // your own three colors (theme.custom), light + dark like the rest
+  { id: "custom", name: "Custom", family: "modern", sw: ["#ebe7f8", "#211c30", "#7a5cff"] },
   { id: "nebula", name: "Nebula", family: "classic", sw: ["#0b0a18", "#0b0a18", "#8b7bff"] },
   { id: "ember", name: "Ember", family: "classic", sw: ["#1a0f0a", "#1a0f0a", "#e8873c"] },
   { id: "midnight", name: "Midnight", family: "classic", sw: ["#0a0d16", "#0a0d16", "#6ea8ff"] },

@@ -142,3 +142,8 @@ body:not(.vt-collapsed)[data-layout="dia"] #loadbar { left: 6px; }
 body.focus-mode #vtabs, body.is-page-fullscreen #vtabs { display: none !important; }
 body.focus-mode[data-layout="dia"] #stage .pane, body.is-page-fullscreen[data-layout="dia"] #stage .pane { top: 0; right: 0; bottom: 0; left: 0; border-radius: 0; }
 body.focus-mode[data-layout="dia"] #stage::after, body.is-page-fullscreen[data-layout="dia"] #stage::after { display: none; }
+
+/* press feedback lands on pointer-down, not on release */
+.vt-row:not(.is-active):active { background: rgb(var(--ink) / 0.1); }
+.vt-foot:active { background: rgb(var(--ink) / 0.12); transform: scale(var(--f-press)); }
+[data-layout="dia"] .crumb:active { background: rgb(var(--ink) / 0.1); }

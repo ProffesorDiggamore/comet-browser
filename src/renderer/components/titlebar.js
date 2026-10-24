@@ -232,6 +232,8 @@ export function initTitlebar () {
     onkeydown: (e) => { if (e.key === "Escape") { setAddress(T.getActive()); address.blur() } }
   })
   chipSite = h("button.ob-chip.no-drag", { title: "Site info & permissions", onclick: () => openSiteInfo(chipSite) })
+  // while you type something new, the lock would vouch for a page you haven't gone to yet
+  address.addEventListener("input", () => { if (address.value !== address.dataset.full) chipSite.replaceChildren(ico("search", 13)) })
   chipZoom = h("button.ob-chip.ob-zoom.no-drag", { title: "Reset zoom", hidden: true, onclick: () => T.zoomReset() })
   chipShield = h("button.ob-chip.ob-shield.no-drag", { title: "Trackers blocked on this page", hidden: true, onclick: () => openSiteInfo(chipSite) }, [ico("shield", 13), h("span")])
   const chipAI = h("button.ob-chip.ob-ask.no-drag", { title: "Ask Flux AI about this page (⇧⌘J)", onclick: () => bus.emit("ai:ask", { text: "", focusOnly: true, withPage: true }) }, [ico("spark", 13), h("span", { text: "Ask" })])

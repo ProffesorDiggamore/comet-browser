@@ -72,6 +72,12 @@ export function applyTheme () {
   // otherwise each theme keeps its signature color
   if (t.accentCustom && t.accent) body.style.setProperty("--f-accent", t.accent)
   else body.style.removeProperty("--f-accent")
+  // the Custom theme's colors come from settings, not a stylesheet
+  const c = t.custom ?? {}
+  for (const [k, v] of [["--t-hue", c.hue], ["--t-hue2", c.hue2], ["--t-accent", c.accent]]) {
+    if (theme.id === "custom" && v) body.style.setProperty(k, v)
+    else body.style.removeProperty(k)
+  }
 
   // custom modpack / user CSS injection
   let tag = document.getElementById("flux-custom-css")
