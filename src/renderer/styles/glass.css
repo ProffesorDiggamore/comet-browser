@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LIQUID GLASS — Apple-style material.  It brightens and saturates
+   what's behind it, carries a hairline rim with a specular highlight
+   along the top-left edge (light catching the glass), a faint inner
+   glow, and floats on a soft two-layer shadow.  Tuned live by
+   --f-glass (clarity) and --f-blur.
+   ═══════════════════════════════════════════════════════════════════ */
+.glass {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--f-tint);
+  background-image: linear-gradient(180deg,
+    rgba(255, 255, 255, calc(var(--f-glass-w) * 1.1)) 0%,
+    rgba(255, 255, 255, calc(var(--f-glass-w) * 0.45)) 100%);
+  -webkit-backdrop-filter: blur(var(--f-blur)) saturate(190%) brightness(1.06);
+  backdrop-filter: blur(var(--f-blur)) saturate(190%) brightness(1.06);
+  border: 0.5px solid rgb(var(--ink) / 0.13);
+  border-radius: var(--f-radius);
+  box-shadow:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -0.5px 0 rgba(255, 255, 255, 0.05),
+    var(--f-glass-drop, 0 18px 50px -20px rgba(0, 0, 0, 0.6), 0 3px 10px -4px rgba(0, 0, 0, 0.35));
+}
+/* light glass: white frost, a dark hairline instead of a bright rim, softer drop */
+body[data-mode="light"] {
+  --f-glass-drop: 0 16px 40px -20px rgba(0, 0, 0, 0.22), 0 2px 8px -3px rgba(0, 0, 0, 0.1);
+}
+body[data-mode="light"] .glass { border-color: rgba(0, 0, 0, 0.08); }
+
+/* specular rim — light catching the edge (rim only, masked to 1px) */
+.glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(150deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.1) 22%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(255, 255, 255, 0) 70%,
+    rgba(255, 255, 255, 0.16) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* inner glow from above */
+.glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(255, 255, 255, 0.07), transparent 70%);
+}
+
+.glass--bar   { border-radius: 0; border-width: 0 0 0.5px 0; box-shadow: none; }
+.glass--panel { border-radius: var(--f-frame-r); }
+.glass--card  { border-radius: var(--f-radius); }
+.glass--side  { border-radius: 0; border-width: 0 0 0 0.5px; }
+
+.glass--hover { transition: transform var(--f-med) var(--f-ease), box-shadow var(--f-med) var(--f-ease-out); }
+.glass--hover:hover { transform: translateY(calc(var(--f-lift) * -1)); }
+
+/* ── interactive light ──────────────────────────────────────────
+   spotlight: a soft highlight tracks the cursor (motion.js sets
+   --mx/--my on the hovered .glass / .lit element).
+   shimmer: one specular glint runs along the rim on hover.          */
+.lit { position: relative; isolation: isolate; }
+[data-spotlight="true"] .glass.is-lit::after,
+[data-spotlight="true"] .lit.is-lit::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;   /* above the pane's fill, below its content */
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.11), transparent 65%);
+}
+[data-shimmer="true"] .lit:hover::before,
+[data-shimmer="true"] .glass--hover:hover::before {
+  background:
+    linear-gradient(115deg, transparent 32%, rgba(255,255,255,0.75) 45%, transparent 58%) no-repeat,
+    linear-gradient(150deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 22%, rgba(255,255,255,0) 45%, rgba(255,255,255,0) 70%, rgba(255,255,255,0.16) 100%);
+  background-size: 250% 100%, 100% 100%;
+  animation: glass-sheen calc(1000ms * var(--f-speed)) var(--f-ease-out) 1;
+}
+@keyframes glass-sheen { from { background-position: 130% 0, 0 0; } to { background-position: -60% 0, 0 0; } }
+
+/* liquid lens: real refraction of what's behind (Chromium only) */
+@supports (backdrop-filter: url(#flux-lens)) {
+  [data-lens="true"] .glass[data-lens] {
+    -webkit-backdrop-filter: url(#flux-lens) blur(calc(var(--f-blur) * 0.5)) saturate(190%) brightness(1.1);
+    backdrop-filter: url(#flux-lens) blur(calc(var(--f-blur) * 0.5)) saturate(190%) brightness(1.1);
+  }
+}

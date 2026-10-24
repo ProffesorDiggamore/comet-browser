@@ -1,0 +1,146 @@
+/* ═══════════════════════════════════════════════════════════════════
+   CONTROLS — macOS-style buttons, fields, pop-up menus, switches,
+   segmented controls, sliders, tags.  Generic element rules use
+   :where() so any component class can override them.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── buttons ───────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 28px; padding: 0 13px; border-radius: 8px; white-space: nowrap;
+  border: 0.5px solid rgb(var(--ink) / 0.07);
+  background: var(--f-control); color: var(--f-text); font-size: 13px; font-weight: 500;
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.25), inset 0 0.5px 0 rgb(var(--spec) / 0.14);
+  transition: background var(--f-fast) var(--f-ease-out), transform var(--f-fast) var(--f-ease), box-shadow var(--f-fast);
+}
+.btn:hover { background: var(--f-control-hi); }
+.btn:active { transform: scale(var(--f-press)); background: rgb(var(--ink) / 0.22); }
+.btn[disabled] { opacity: 0.4; pointer-events: none; }
+.btn--accent {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--f-accent) 88%, #fff), var(--f-accent));
+  color: #fff; border-color: transparent;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px -6px var(--f-glow), inset 0 0.5px 0 rgb(var(--spec) / 0.35);
+}
+.btn--accent:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--f-accent) 80%, #fff), color-mix(in srgb, var(--f-accent) 92%, #fff)); }
+.btn--ghost, .btn--plain { background: transparent; border-color: transparent; box-shadow: none; color: var(--f-accent-text); }
+.btn--ghost:hover, .btn--plain:hover { background: var(--f-accent-soft); }
+.btn--danger { background: rgba(255, 69, 58, 0.14); color: #ff6961; border-color: rgba(255, 69, 58, 0.18); box-shadow: none; }
+.btn--danger:hover { background: rgba(255, 69, 58, 0.22); }
+/* App Store "GET" capsule */
+.btn--pill { height: 26px; padding: 0 15px; border-radius: 999px; border: 0; background: var(--f-control-hi); color: var(--f-accent-text); font-weight: 650; letter-spacing: 0.01em; box-shadow: none; }
+.btn--pill:hover { background: var(--f-accent-soft); }
+
+/* ── text fields ───────────────────────────────────────────────── */
+:where(input[type="text"], input[type="password"], input[type="url"], input[type="email"], input[type="search"], input[type="number"], textarea),
+input.field, textarea.field {
+  height: 28px; padding: 0 9px; border-radius: 7px; min-width: 0;
+  border: 0.5px solid rgb(var(--ink) / 0.12); background: rgb(var(--ink) / 0.06);
+  color: var(--f-text); outline: none; font-size: 13px;
+  box-shadow: inset 0 0.5px 1.5px rgba(0, 0, 0, 0.25);
+  transition: box-shadow var(--f-fast) var(--f-ease-out), border-color var(--f-fast);
+}
+:where(textarea), textarea.field { height: auto; min-height: 84px; padding: 8px 10px; resize: vertical; line-height: 1.45; }
+input.field.is-wide { width: 320px; }
+textarea.field.is-area { width: 100%; display: block; }
+:where(input[type="text"], input[type="password"], input[type="url"], input[type="email"], input[type="search"], input[type="number"], textarea):focus, input.field:focus, textarea.field:focus {
+  border-color: color-mix(in srgb, var(--f-accent) 80%, transparent);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--f-accent) 38%, transparent);
+}
+::placeholder { color: var(--f-text-3); }
+
+/* ── pop-up button (select) ────────────────────────────────────── */
+:where(select), select.popup {
+  appearance: none; -webkit-appearance: none;
+  height: 26px; padding: 0 28px 0 10px; border-radius: 7px; min-width: 120px;
+  border: 0.5px solid rgb(var(--ink) / 0.07); color: var(--f-text); font-size: 13px; outline: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%23ffffff' stroke-opacity='.75' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 9px center,
+    var(--f-control);
+  box-shadow: 0 1px 1.5px rgba(0, 0, 0, 0.25), inset 0 0.5px 0 rgb(var(--spec) / 0.14);
+}
+:where(select):hover, select.popup:hover { background-color: var(--f-control-hi); }
+:where(select) option { background: var(--f-bg-1); color: var(--f-text); }
+
+/* ── switch ────────────────────────────────────────────────────── */
+.switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; display: inline-block; }
+.switch input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; z-index: 2; cursor: default; }
+.switch .track {
+  position: absolute; inset: 0; border-radius: 999px; background: rgba(120, 120, 128, 0.36);
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+  transition: background var(--f-med) var(--f-ease-out);
+}
+.switch .track::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  transition: transform var(--f-med) var(--f-ease), width var(--f-fast) var(--f-ease-out);
+}
+.switch input:active + .track::after { width: 22px; }
+.switch input:checked + .track { background: var(--f-accent); }
+.switch input:checked + .track::after { transform: translateX(16px); }
+.switch input:checked:active + .track::after { transform: translateX(12px); }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--f-accent) 50%, transparent); }
+
+/* ── segmented control (sliding thumb) ─────────────────────────── */
+.seg {
+  position: relative; display: inline-flex; padding: 2px; border-radius: 9px;
+  background: rgba(120, 120, 128, 0.24); box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.25);
+}
+.seg-thumb {
+  position: absolute; top: 2px; bottom: 2px; left: 2px; border-radius: 7px; opacity: 0; pointer-events: none;
+  background: rgb(var(--ink) / 0.2);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 0.5px 0 rgb(var(--spec) / 0.22);
+  transition: transform var(--f-med) var(--f-ease), width var(--f-med) var(--f-ease);
+}
+.seg button {
+  position: relative; z-index: 1; height: 24px; padding: 0 12px; border: 0; border-radius: 7px;
+  background: transparent; color: var(--f-text-dim); font-size: 12.5px; font-weight: 500; white-space: nowrap;
+  transition: color var(--f-fast);
+}
+.seg button:hover { color: var(--f-text); }
+.seg button.is-on { color: var(--f-text); }
+
+/* ── slider ────────────────────────────────────────────────────── */
+.rng { display: flex; align-items: center; gap: 10px; }
+.rng .val { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--f-text-dim); min-width: 46px; text-align: right; }
+input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 170px; height: 4px; border-radius: 4px; margin: 0;
+  background: linear-gradient(to right, var(--f-accent) var(--p, 50%), rgba(120, 120, 128, 0.4) var(--p, 50%));
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+  transition: transform var(--f-fast) var(--f-ease);
+}
+input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+input[type="checkbox"]:not([role="switch"]) { accent-color: var(--f-accent); width: 14px; height: 14px; }
+input[type="color"] { -webkit-appearance: none; width: 44px; height: 26px; padding: 2px; border-radius: 7px; border: 0.5px solid var(--f-line); background: var(--f-control); }
+input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 5px; }
+
+/* ── tags + capability badges ──────────────────────────────────── */
+.tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 500; background: rgba(120, 120, 128, 0.24); color: var(--f-text-dim); white-space: nowrap; }
+.tag.ok { background: rgba(48, 209, 88, 0.16); color: #4be07a; }
+.tag.warn { background: rgba(255, 159, 10, 0.16); color: #ffb340; }
+.caps { display: inline-flex; gap: 4px; vertical-align: 1px; margin-left: 4px; }
+.cap { font-size: 9.5px; font-weight: 650; letter-spacing: 0.03em; padding: 1px 6px; border-radius: 999px; }
+.cap--tools { background: rgba(10, 132, 255, 0.18); color: #64b5ff; }
+.cap--vision { background: rgba(48, 209, 88, 0.16); color: #4be07a; }
+.cap--think { background: rgba(191, 90, 242, 0.18); color: #d68cff; }
+
+/* ── download capsule (GET → progress) ─────────────────────────── */
+.get-wrap { display: inline-flex; }
+.get-progress { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--f-control); min-width: 140px; }
+.get-bar { flex: 1; height: 4px; border-radius: 4px; background: rgba(120, 120, 128, 0.4); overflow: hidden; }
+.get-bar i { display: block; height: 100%; background: var(--f-accent); border-radius: 4px; transition: width 0.3s var(--f-ease-out); }
+.get-pct { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--f-text-dim); min-width: 30px; text-align: right; }
+.get-x { width: 20px; height: 20px; border: 0; border-radius: 50%; background: rgb(var(--ink) / 0.12); color: var(--f-text); display: grid; place-items: center; }
+
+/* ── colored squircle tiles (System Settings icons) ────────────── */
+.tile {
+  --ts: 22px; width: var(--ts); height: var(--ts); flex: 0 0 auto; position: relative;
+  display: inline-grid; place-items: center; border-radius: calc(var(--ts) * 0.26);
+  background: var(--tint, #8e8e93); color: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 0.5px 0 rgb(var(--spec) / 0.35);
+}
+.tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, rgb(var(--ink) / 0.22), rgb(var(--ink) / 0) 55%); pointer-events: none; }
+.tile svg { position: relative; z-index: 1; filter: drop-shadow(0 0.5px 0.5px rgba(0,0,0,0.2)); }

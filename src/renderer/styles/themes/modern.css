@@ -1,0 +1,59 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEMES · MODERN — the light + dark family (v0.6).  Each theme is two
+   colors: --t-hue tints the window, sidebar and Home; --t-accent is the
+   one accent moment.  The mode (body[data-mode]) supplies the neutral
+   base, so every theme gets a light and a dark version for free.
+   state.js sets body[data-family="modern"] for these themes.
+   ═══════════════════════════════════════════════════════════════════ */
+body[data-family="modern"][data-mode="dark"] {
+  --m-bg: #1c1c1f;
+  --m-bg-1: #2a2a2e;
+  --m-page: #1e1e20;
+  --m-pane: #18181b;
+  --m-vib: rgba(26, 26, 30, 0.42);
+  --m-mix: 9%;
+  --f-text: rgba(255, 255, 255, 0.92);
+  --f-text-dim: rgba(235, 235, 245, 0.62);
+  --f-text-3: rgba(235, 235, 245, 0.34);
+}
+body[data-family="modern"][data-mode="light"] {
+  --m-bg: #eaeaee;
+  --m-bg-1: #ffffff;
+  --m-page: #ffffff;
+  --m-pane: #f6f6f8;
+  --m-vib: rgba(238, 238, 242, 0.46);
+  --m-mix: 7%;
+}
+
+body[data-family="modern"] {
+  --f-accent: var(--t-accent);
+  --f-bg: color-mix(in srgb, var(--t-hue) var(--m-mix), var(--m-bg));
+  --f-bg-1: color-mix(in srgb, var(--t-hue) 4%, var(--m-bg-1));
+  --f-page-bg: var(--m-page);
+  --f-frame-bg: color-mix(in srgb, var(--m-page) 94%, transparent);
+  --f-vibrancy-tint: color-mix(in srgb, var(--t-hue) 12%, var(--m-vib));
+  --f-glow: color-mix(in srgb, var(--t-accent) 40%, transparent);
+  --f-pane-bg:
+    radial-gradient(1100px 700px at 82% -12%, color-mix(in srgb, var(--t-hue) 10%, transparent), transparent 58%),
+    var(--m-pane);
+  --f-ambient:
+    radial-gradient(1000px 640px at 78% -12%, color-mix(in srgb, var(--t-hue) 34%, transparent), transparent 62%),
+    radial-gradient(900px 600px at 6% 112%, color-mix(in srgb, var(--t-hue2, var(--t-hue)) 26%, transparent), transparent 58%),
+    var(--f-bg);
+  --f-ribbon-a: color-mix(in srgb, var(--t-hue) 50%, transparent);
+  --f-ribbon-b: color-mix(in srgb, var(--t-hue2, var(--t-hue)) 30%, transparent);
+  --f-ribbon-c: color-mix(in srgb, var(--t-accent) 30%, transparent);
+  background: var(--f-bg);
+}
+
+/* the palette — hue, optional second hue, accent */
+body[data-theme="glass"]    { --t-hue: #8e9bb0; --t-hue2: #a7b4c8; --t-accent: #0a84ff; }
+body[data-theme="sky"]      { --t-hue: #3d8bff; --t-hue2: #5ad1ff; --t-accent: #0a7aff; }
+body[data-theme="mint"]     { --t-hue: #2fbf8f; --t-hue2: #7ad9c0; --t-accent: #1fae6a; }
+body[data-theme="sunset"]   { --t-hue: #ff8a4c; --t-hue2: #ff5f8a; --t-accent: #f2662f; }
+body[data-theme="rose"]     { --t-hue: #ff5c93; --t-hue2: #c86bff; --t-accent: #f0407a; }
+body[data-theme="lavender"] { --t-hue: #8e6cff; --t-hue2: #5d8bff; --t-accent: #7a5cff; }
+body[data-theme="sand"]     { --t-hue: #c9a46c; --t-hue2: #e3c29b; --t-accent: #b8803a; }
+body[data-theme="mono"]     { --t-hue: #8e8e93; --t-hue2: #8e8e93; --t-accent: #636366; }
+body[data-family="modern"][data-theme="mono"] { --m-mix: 0%; }
+body[data-theme="mono"][data-mode="dark"] { --t-accent: #8e8e93; }

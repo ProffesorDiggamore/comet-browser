@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════════════════════════
+   MOTION — every entrance/exit, selected by data attributes that
+   motion.js writes from Settings → Motion.  Durations scale with
+   --f-speed; curves come from --f-ease (incl. real spring linear()).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── tab opens ─────────────────────────────────────────────────── */
+[data-anim-tab-open="pop"] .tab.is-entering { animation: m-pop var(--f-med) var(--f-ease) both; }
+[data-anim-tab-open="grow"] .tab.is-entering { animation: m-grow var(--f-slow) var(--f-ease) both; }
+[data-anim-tab-open="slide"] .tab.is-entering { animation: m-rise var(--f-med) var(--f-ease) both; }
+[data-anim-tab-open="fade"] .tab.is-entering { animation: m-fade var(--f-med) var(--f-ease-out) both; }
+@keyframes m-pop { from { opacity: 0; transform: scale(0.6); } }
+@keyframes m-grow { from { opacity: 0; max-width: 0; min-width: 0; padding-left: 0; padding-right: 0; } }
+@keyframes m-rise { from { opacity: 0; transform: translateY(12px); } }
+@keyframes m-fade { from { opacity: 0; } }
+
+/* ── view + tab switches (panes and web pages) ─────────────────── */
+[data-anim-view="fade"] .pane-enter, [data-anim-view="fade"] webview.wv-enter { animation: m-fade var(--f-med) var(--f-ease-out) both; }
+[data-anim-view="fade-up"] .pane-enter, [data-anim-view="fade-up"] webview.wv-enter { animation: m-fade-up var(--f-med) var(--f-ease) both; }
+[data-anim-view="zoom"] .pane-enter, [data-anim-view="zoom"] webview.wv-enter { animation: m-zoom var(--f-med) var(--f-ease) both; }
+[data-anim-view="blur"] .pane-enter, [data-anim-view="blur"] webview.wv-enter { animation: m-blur var(--f-slow) var(--f-ease-out) both; }
+[data-anim-view="slide"] .pane-enter, [data-anim-view="slide"] webview.wv-enter { animation: m-slide var(--f-med) var(--f-ease) both; }
+@keyframes m-fade-up { from { opacity: 0; transform: translateY(10px); } }
+@keyframes m-zoom { from { opacity: 0; transform: scale(0.985); } }
+@keyframes m-blur { from { opacity: 0; filter: blur(10px); } }
+@keyframes m-slide { from { opacity: 0; transform: translateX(18px); } }
+
+/* settings groups cascade in */
+.pane-enter .set-group { animation: m-fade-up var(--f-med) var(--f-ease) both; }
+.pane-enter .set-group:nth-child(2) { animation-delay: calc(40ms * var(--f-speed)); }
+.pane-enter .set-group:nth-child(3) { animation-delay: calc(80ms * var(--f-speed)); }
+.pane-enter .set-group:nth-child(4) { animation-delay: calc(120ms * var(--f-speed)); }
+.pane-enter .set-group:nth-child(n+5) { animation-delay: calc(160ms * var(--f-speed)); }
+[data-anim-view="none"] .pane-enter .set-group { animation: none; }
+
+/* ── panels ────────────────────────────────────────────────────── */
+[data-anim-panel="slide"] #aipanel.is-entering { animation: m-panel-slide var(--f-slow) var(--f-ease) both; }
+[data-anim-panel="scale"] #aipanel.is-entering { animation: m-panel-scale var(--f-med) var(--f-ease) both; transform-origin: right center; }
+[data-anim-panel="fade"] #aipanel.is-entering { animation: m-fade var(--f-med) var(--f-ease-out) both; }
+@keyframes m-panel-slide { from { opacity: 0; transform: translateX(40px); } }
+@keyframes m-panel-scale { from { opacity: 0; transform: scale(0.94); } }
+
+/* ── popovers, menus, suggestions, palette ─────────────────────── */
+[data-anim-popover="scale"] .pop, [data-anim-popover="scale"] .ob-suggest, [data-anim-popover="scale"] .pal { animation: m-pop-in var(--f-med) var(--f-ease) both; }
+[data-anim-popover="drop"] .pop, [data-anim-popover="drop"] .ob-suggest, [data-anim-popover="drop"] .pal { animation: m-drop var(--f-med) var(--f-ease) both; }
+[data-anim-popover="fade"] .pop, [data-anim-popover="fade"] .ob-suggest, [data-anim-popover="fade"] .pal { animation: m-fade var(--f-fast) var(--f-ease-out) both; }
+@keyframes m-pop-in { from { opacity: 0; transform: scale(0.92); } }
+@keyframes m-drop { from { opacity: 0; transform: translateY(-8px); } }
+.pal-overlay { animation: m-fade var(--f-fast) var(--f-ease-out) both; }
+
+/* ── toasts ────────────────────────────────────────────────────── */
+[data-anim-toast="rise"] .toast { animation: m-rise var(--f-med) var(--f-ease) both; }
+[data-anim-toast="pop"] .toast { animation: m-pop var(--f-med) var(--f-ease) both; }
+[data-anim-toast="fade"] .toast { animation: m-fade var(--f-med) var(--f-ease-out) both; }
+
+/* ── home entrance (staggered) ─────────────────────────────────── */
+.home-hero > * { animation-fill-mode: both; animation-duration: var(--f-slow); animation-timing-function: var(--f-ease); }
+[data-anim-home="rise"] .home-hero > * { animation-name: m-rise-lg; }
+[data-anim-home="fade"] .home-hero > * { animation-name: m-fade; }
+[data-anim-home="scale"] .home-hero > * { animation-name: m-zoom-in; }
+.home-hero > :nth-child(2) { animation-delay: calc(50ms * var(--f-speed)); }
+.home-hero > :nth-child(3) { animation-delay: calc(90ms * var(--f-speed)); }
+.home-hero > :nth-child(4) { animation-delay: calc(140ms * var(--f-speed)); }
+.home-hero > :nth-child(5) { animation-delay: calc(190ms * var(--f-speed)); }
+.home-hero > :nth-child(6) { animation-delay: calc(240ms * var(--f-speed)); }
+@keyframes m-rise-lg { from { opacity: 0; transform: translateY(22px) scale(0.98); } }
+@keyframes m-zoom-in { from { opacity: 0; transform: scale(0.9); } }
+
+/* overview cards + ai messages */
+.ov-card { animation: m-pop-in var(--f-med) var(--f-ease) both; }
+.ai-msg { animation: m-fade-up var(--f-med) var(--f-ease) both; }
+.ai-step { animation: m-pop-in var(--f-med) var(--f-ease) both; }
+[data-motion="off"] .ov-card, [data-motion="off"] .ai-msg, [data-motion="off"] .ai-step { animation: none; }
+
+/* ── ambient nebula ribbons ────────────────────────────────────── */
+#ambient, .home-ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.home-ambient { position: absolute; }
+#ambient i, .home-ambient::before, .home-ambient::after {
+  content: ""; position: absolute; width: 140vmax; height: 26vmax; left: -20vmax; border-radius: 50%;
+  background: linear-gradient(90deg, transparent 5%, var(--f-ribbon-a) 35%, var(--f-ribbon-b) 55%, transparent 90%);
+  opacity: 0.55; transform: rotate(-32deg); will-change: transform;
+  -webkit-mask: radial-gradient(closest-side, #000 25%, transparent); mask: radial-gradient(closest-side, #000 25%, transparent);
+}
+#ambient i:nth-child(1) { top: -6vmax; }
+#ambient i:nth-child(2) { top: 40vmax; opacity: 0.4; background: linear-gradient(90deg, transparent 10%, var(--f-ribbon-b) 40%, var(--f-ribbon-c) 60%, transparent 92%); }
+#ambient i:nth-child(3) { top: 12vmax; left: 10vmax; height: 10vmax; opacity: 0.35; }
+.home-ambient::before { top: -10%; }
+.home-ambient::after { top: 55%; opacity: 0.35; background: linear-gradient(90deg, transparent 10%, var(--f-ribbon-b) 40%, var(--f-ribbon-c) 60%, transparent 92%); }
+
+[data-ambient="slow"] { --amb-dur: 48s; }
+[data-ambient="medium"] { --amb-dur: 26s; }
+[data-ambient="fast"] { --amb-dur: 13s; }
+[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(1), [data-ambient]:not([data-ambient="off"]) .home-ambient::before { animation: amb-a var(--amb-dur) ease-in-out infinite alternate; }
+[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(2), [data-ambient]:not([data-ambient="off"]) .home-ambient::after { animation: amb-b calc(var(--amb-dur) * 1.3) ease-in-out infinite alternate; }
+[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(3) { animation: amb-c calc(var(--amb-dur) * 0.8) ease-in-out infinite alternate; }
+@keyframes amb-a { to { transform: rotate(-26deg) translate(8vmax, 4vmax) scaleY(1.2); } }
+@keyframes amb-b { to { transform: rotate(-38deg) translate(-10vmax, -3vmax) scaleY(0.85); } }
+@keyframes amb-c { to { transform: rotate(-30deg) translate(14vmax, 6vmax); opacity: 0.55; } }
+
+/* ── orb ───────────────────────────────────────────────────────── */
+[data-orb="float"] .orb-body { animation: orb-float 6s ease-in-out infinite; }
+[data-orb="pulse"] .orb-body { animation: orb-pulse 3.2s ease-in-out infinite; }
+[data-orb="morph"] .orb-body { animation: orb-morph 9s ease-in-out infinite; }
+.orb.is-thinking .orb-body { animation: orb-think 1.6s var(--f-ease-out) infinite; }
+.orb.is-thinking .orb-rim { animation: orb-spin 1.4s linear infinite; }
+.orb.is-listening .orb-body { animation: orb-pulse 0.9s ease-in-out infinite; }
+@keyframes orb-float { 50% { transform: translateY(-7%) rotate(calc(var(--tilt, 0deg) - 4deg)); } }
+@keyframes orb-pulse { 50% { transform: scale(1.07); } }
+@keyframes orb-morph { 25% { border-radius: 46% 54% 38% 62% / 52% 40% 60% 48%; } 50% { border-radius: 58% 42% 52% 48% / 42% 58% 44% 56%; } 75% { border-radius: 40% 60% 60% 40% / 56% 46% 54% 44%; } }
+@keyframes orb-think { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.06) rotate(8deg); } }
+@keyframes orb-spin { to { transform: rotate(1turn); } }
+
+/* ── ripples ───────────────────────────────────────────────────── */
+.ripple { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgb(var(--ink) / 0.5), rgb(var(--ink) / 0) 70%); z-index: 3; }
+.tab, .side-item, .chip, .pill-btn, .mi, .engine, .seg button, .btn { overflow: hidden; }
+
+/* reduced: keep things still */
+[data-motion="reduced"] .orb-body, [data-motion="reduced"] #ambient i { animation: none !important; }

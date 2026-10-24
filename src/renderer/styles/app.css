@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════════════════════
+   APP LAYOUT — titlebar / sidebar / content stack, plus the shared
+   component styling (hot tabs, widgets, panels, toasts).
+   ═══════════════════════════════════════════════════════════════════ */
+#app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+#body { position: relative; flex: 1; display: flex; min-height: 0; }
+#content { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#stage { position: relative; flex: 1; min-height: 0; }
+
+/* ---- sidebar ----------------------------------------------- */
+#sidebar {
+  width: var(--f-sidebar-w); flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 14px 12px; overflow-y: auto; scrollbar-gutter: stable;
+}
+.side-item {
+  display: flex; align-items: center; gap: 9px; height: 30px;
+  padding: 0 9px; border-radius: 8px; font-size: 13px;
+  border: 0; width: 100%; text-align: left;
+  background: transparent; color: var(--f-text);
+  transition: background var(--f-fast) var(--f-ease-out);
+}
+.side-item:hover { background: rgb(var(--ink) / 0.06); }
+.side-item.is-active { background: rgb(var(--ink) / 0.11); }
+.side-item .ico { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: var(--f-accent-text); flex: 0 0 auto; }
+.side-divider { height: 0.5px; margin: 8px 8px; background: var(--f-sep); }
+.side-label { font-size: 11px; font-weight: 600; color: var(--f-text-3); margin: 10px 9px 3px; }
+.side-widget { padding: 8px 6px; }
+.side-notes { width: 100%; min-height: 66px; resize: vertical; border-radius: 9px; border: 0.5px solid rgb(var(--ink) / 0.1); background: rgb(var(--ink) / 0.05); padding: 7px 9px; color: var(--f-text); font-size: 12.5px; }
+.side-clock { font-variant-numeric: tabular-nums; font-size: 22px; text-align: center; color: var(--f-text); padding: 6px 0; }
+.side-edit-row { display: flex; gap: 6px; margin-top: auto; padding-top: 10px; }
+.mini-btn { flex: 1; height: 26px; border: 0.5px solid rgb(var(--ink) / 0.08); border-radius: 7px; background: var(--f-control); color: var(--f-text-dim); font-size: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.12); }
+.mini-btn:hover { color: var(--f-text); background: var(--f-control-hi); }
+
+/* ---- panes ------------------------------------------------ */
+.pane { position: absolute; inset: 0; }
+.pane--overlay { overflow: auto; scrollbar-gutter: stable; padding: 34px 40px 48px; background: var(--f-pane-bg); background-attachment: local; z-index: 2; }
+#tabs-host { background: var(--f-page-bg, #0b0b0d); z-index: 1; }   /* own stacking context: split divider stays under panes */
+#tabs-host webview { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+#tabs-host webview.is-hidden { visibility: hidden; pointer-events: none; }
+#tabs-host.is-resizing webview { pointer-events: none; }
+
+.pane-h { font-size: 22px; font-weight: 650; margin: 0 0 4px; }
+.pane-sub { color: var(--f-text-dim); margin: 0 0 26px; }
+
+/* ---- hot tabs (Home grid) ----------------------------- */
+.hot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 22px; max-width: 860px; }
+.hot {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: transparent; border: 0; cursor: pointer; color: var(--f-text);
+}
+.hot .squircle {
+  width: 82px; height: 82px; border-radius: 24px;
+  display: grid; place-items: center; overflow: hidden;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--f-accent) 60%, #23150d), #1a1109);
+  box-shadow: 0 14px 34px -10px rgba(0,0,0,0.6), inset 0 1px 0 rgb(var(--spec) / 0.16);
+  transition: transform var(--f-med) var(--f-ease), box-shadow var(--f-med) var(--f-ease);
+  font-size: 30px;
+}
+.hot .squircle img { width: 100%; height: 100%; object-fit: cover; }
+.hot:hover .squircle { transform: translateY(-4px) scale(1.03); box-shadow: 0 24px 46px -12px rgba(0,0,0,0.7), 0 0 0 1px var(--f-glow); }
+.hot:active .squircle { transform: scale(0.96); }
+.hot .cap { font-size: 12.5px; color: var(--f-text-dim); max-width: 100px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hot .kbd { font-size: 10px; opacity: 0.6; }
+.hot.add .squircle { background: transparent; border: 2px dashed var(--f-line); color: var(--f-text-dim); }
+
+/* ---- generic cards / forms ----------------------------- */
+.card { padding: 18px; border-radius: var(--f-radius); margin-bottom: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.row + .row { margin-top: 12px; }
+label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--f-text-dim); }
+label.field input, label.field textarea, label.field select { width: 100%; }
+
+/* ---- vision + companion panels ------------------------- */
+.chat-log { display: flex; flex-direction: column; gap: 12px; margin: 18px 0; }
+.msg { padding: 12px 14px; border-radius: 12px; max-width: 760px; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
+.msg.user { align-self: flex-end; background: color-mix(in srgb, var(--f-accent) 24%, var(--f-surface)); }
+.msg.ai { align-self: flex-start; background: var(--f-fill); }
+.msg.tool { align-self: flex-start; background: var(--f-fill); font-family: "SF Mono", ui-monospace, monospace; font-size: 12px; color: var(--f-text-dim); }
+.shot-preview { max-width: 340px; border-radius: 12px; border: 1px solid var(--f-line); margin: 8px 0; }
+.composer { position: sticky; bottom: 0; display: flex; gap: 10px; padding-top: 12px; }
+.composer textarea { flex: 1; min-height: 46px; max-height: 180px; }
+
+.approve-bar { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--f-fill); border: 1px solid var(--f-accent); margin: 10px 0; }
+.approve-bar pre { flex: 1; max-height: 220px; overflow: auto; margin: 0; font-size: 11.5px; -webkit-user-select: text; user-select: text; }
+
+/* ---- toasts ------------------------------------------- */
+#toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 9999; }
+.toast { padding: 10px 18px; border-radius: 999px; background: color-mix(in srgb, var(--f-bg) 55%, transparent); border: 1px solid var(--f-line); box-shadow: var(--f-shadow), inset 0 1px 0 rgb(var(--spec) / .18); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); font-size: 13px; }
+
+/* section seasoning — group headers only, never body copy */
+.micro { font: 600 10.5px/1.2 -apple-system, system-ui; letter-spacing: 0.06em; text-transform: uppercase; color: var(--f-text-3); }

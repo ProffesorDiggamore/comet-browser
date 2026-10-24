@@ -1,0 +1,47 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME · NEBULA GLASS — deep indigo night, violet light, Apple-neutral
+   labels and hairlines over crystal liquid glass.  The default look.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="nebula"] {
+  --f-accent: #8b7bff;
+
+  --f-bg: #0b0a18;
+  --f-bg-1: #12111f;
+
+  --f-tint: rgba(150, 140, 255, 0.035);
+  --f-text: rgba(255, 255, 255, 0.93);
+  --f-text-dim: rgba(235, 235, 245, 0.6);
+  --f-text-3: rgba(235, 235, 245, 0.32);
+  --f-line: rgba(255, 255, 255, 0.14);
+  --f-hair: rgba(255, 255, 255, 0.08);
+  --f-sep: rgba(255, 255, 255, 0.09);
+
+  --f-glow: rgba(139, 123, 255, 0.42);
+  --f-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.75), 0 4px 14px -6px rgba(0, 0, 0, 0.45);
+
+  --f-frame-bg: rgba(13, 11, 26, 0.9);
+  --f-page-bg: #0d0c18;
+  --f-vibrancy-tint: rgba(14, 10, 36, 0.46);
+
+  --f-ribbon-a: rgba(150, 110, 255, 0.55);
+  --f-ribbon-b: rgba(120, 150, 255, 0.42);
+  --f-ribbon-c: rgba(200, 170, 255, 0.35);
+
+  --f-ambient:
+    radial-gradient(900px 520px at 50% 28%, rgba(120, 110, 220, 0.20), transparent 70%),
+    radial-gradient(1100px 700px at 85% -10%, rgba(150, 110, 255, 0.22), transparent 60%),
+    radial-gradient(900px 640px at 0% 110%, rgba(80, 120, 255, 0.18), transparent 55%),
+    linear-gradient(180deg, #0e0c24, #08071a 70%);
+
+  --f-pane-bg:
+    radial-gradient(1100px 700px at 82% -12%, rgba(139, 123, 255, 0.13), transparent 58%),
+    radial-gradient(880px 560px at 4% 112%, rgba(80, 110, 220, 0.14), transparent 55%),
+    linear-gradient(180deg, #100e20, #0a0918);
+}
+
+body[data-theme="nebula"] {
+  background:
+    radial-gradient(1200px 800px at 85% -10%, rgba(150, 110, 255, 0.30), transparent 60%),
+    radial-gradient(1000px 700px at 5% 115%, rgba(90, 120, 255, 0.28), transparent 55%),
+    linear-gradient(160deg, #0c0a24, #06051a 60%, #0a0820);
+}

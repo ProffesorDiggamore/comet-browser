@@ -1,0 +1,79 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME · BLACKLINE NOIR
+   The blueprint negative: near-black ground, bone-white ink lines,
+   the same vermilion stamp.  All drafting decorations, panel rules
+   and the telemetry HUD live in blackline.css — its selectors match
+   [data-theme="blackline-noir"] too and read the --bl-* tokens, so
+   this file only inverts the tokens (plus the few paper-literal
+   gradients).  Same contract: zero backdrop blur, flat offsets,
+   mono callouts.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="blackline-noir"] {
+  --bl-ink: 232, 228, 218;                   /* bone, rgb triple       */
+  --bl-paper: #121110;
+  --bl-paper-2: #1a1917;
+  --bl-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* film grain, baked light-on-dark */
+  --bl-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.91 0 0 0 0 0.89 0 0 0 0 0.85 0 0 0 0.04 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+
+  --bl-card: rgba(255, 255, 255, 0.055);
+  --bl-card-2: rgba(255, 255, 255, 0.04);
+  --bl-card-hi: #272522;
+  --bl-sheet: rgba(24, 23, 21, 0.97);
+  --bl-pop: #1d1b19;
+  --bl-stamp: #e8e4da;                       /* bone stamp, dark text  */
+  --bl-stamp-fg: #171511;
+  --bl-ok: #58c389;
+  --bl-warn: #e09a52;
+  --bl-danger: #ff6a4d;
+  --bl-barcode: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='16'><g fill='%23e8e4da'><rect x='0' width='2' height='16'/><rect x='4' width='1' height='16'/><rect x='7' width='3' height='16'/><rect x='12' width='1' height='16'/><rect x='15' width='2' height='16'/><rect x='19' width='4' height='16'/><rect x='25' width='1' height='16'/><rect x='28' width='2' height='16'/><rect x='32' width='2' height='16'/></g></svg>");
+  --bl-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%23e8e4da' stroke-opacity='.7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E");
+
+  --f-accent: #e03416;
+
+  --f-bg: #121110;
+  --f-bg-1: #181714;
+
+  --f-text: rgba(232, 228, 218, 0.93);
+  --f-text-dim: rgba(232, 228, 218, 0.62);
+  --f-text-3: rgba(232, 228, 218, 0.38);
+  --f-sep: rgba(232, 228, 218, 0.14);
+  --f-line: rgba(232, 228, 218, 0.26);
+  --f-hair: rgba(232, 228, 218, 0.13);
+  --f-fill: rgba(232, 228, 218, 0.08);
+  --f-fill-hi: rgba(232, 228, 218, 0.13);
+  --f-control: rgba(232, 228, 218, 0.09);
+  --f-control-hi: rgba(232, 228, 218, 0.14);
+  --f-surface: rgba(255, 255, 255, 0.06);
+  --f-surface-2: rgba(232, 228, 218, 0.04);
+  --f-tint: rgba(18, 17, 16, 0.5);
+
+  --f-glow: transparent;                     /* no bloom on the plate  */
+  /* "shadows" print as bone offsets: white-line blueprint depth */
+  --f-shadow: 5px 5px 0 rgba(232, 228, 218, 0.08), 0 0 0 1px rgba(232, 228, 218, 0.12);
+
+  --f-radius: 5px;
+  --f-radius-sm: 3px;
+  --f-radius-lg: 7px;
+  --f-frame-r: 6px;
+
+  color-scheme: dark;
+}
+
+/* derived tokens: only what blackline.css's shared body block sets
+   from paper literals — everything var()-based inverts on its own */
+body[data-theme="blackline-noir"] {
+  --f-page-bg: #0c0b0a;
+  --f-vibrancy-tint: rgba(18, 17, 16, 0.92);
+  --f-accent-text: color-mix(in srgb, var(--f-accent) 72%, #fff);
+  --f-ambient:
+    repeating-linear-gradient(0deg,   rgba(var(--bl-ink), 0.05) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg,  rgba(var(--bl-ink), 0.05) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(0deg,   rgba(var(--bl-ink), 0.065) 0 1px, transparent 1px 156px),
+    repeating-linear-gradient(90deg,  rgba(var(--bl-ink), 0.065) 0 1px, transparent 1px 156px),
+    linear-gradient(180deg, #141312, #0d0c0b 160%);
+  --f-pane-bg:
+    repeating-linear-gradient(0deg,  rgba(var(--bl-ink), 0.04) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(var(--bl-ink), 0.04) 0 1px, transparent 1px 26px),
+    linear-gradient(180deg, #171615, #121110);
+}

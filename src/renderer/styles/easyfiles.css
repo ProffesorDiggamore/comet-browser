@@ -1,0 +1,25 @@
+/* ═══════════════════════════════════════════════════════════════════
+   EASY FILES — the upload picker a page's file input opens: clipboard
+   first, then recent downloads, then "Browse files…".
+   ═══════════════════════════════════════════════════════════════════ */
+.ef { display: flex; flex-direction: column; gap: 2px; position: relative; z-index: 2; }
+.ef-head { display: flex; align-items: center; gap: 10px; padding: 4px 6px 8px; }
+.ef-badge { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--f-accent); color: #fff; flex: 0 0 auto; box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.3); }
+.ef-title { font-size: 13.5px; font-weight: 650; }
+.ef-hint { font-size: 11.5px; color: var(--f-text-dim); }
+.ef-group { padding: 8px 8px 3px; }
+.ef-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; padding: 6px 8px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--f-text); text-align: left; transition: background var(--f-fast);
+}
+.ef-item:hover:not([disabled]) { background: rgb(var(--ink) / 0.07); }
+.ef-item[disabled] { opacity: 0.38; }
+.ef-thumb { width: 44px; height: 36px; border-radius: 7px; object-fit: cover; flex: 0 0 auto; box-shadow: 0 0 0 0.5px rgb(var(--ink) / 0.15); }
+.ef-ico { width: 44px; height: 36px; border-radius: 7px; display: grid; place-items: center; background: rgb(var(--ink) / 0.07); color: var(--f-text-dim); flex: 0 0 auto; }
+.ef-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ef-name { font-size: 13px; font-weight: 550; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ef-sub { font-size: 11.5px; color: var(--f-text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ef-go { color: var(--f-accent-text); opacity: 0; transition: opacity var(--f-fast); }
+.ef-item:hover .ef-go { opacity: 1; }
+.ef-foot { display: flex; justify-content: flex-end; padding: 8px 4px 2px; margin-top: 4px; border-top: 0.5px solid var(--f-sep); }
+.ef-foot .btn { display: inline-flex; align-items: center; gap: 6px; }

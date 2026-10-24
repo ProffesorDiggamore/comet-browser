@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src 'self' data: blob: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' data: blob:; font-src 'self'; media-src 'self' data: blob:" />
+  <title>Flux</title>
+  <link rel="stylesheet" href="styles/tokens.css" />
+  <link rel="stylesheet" href="styles/glass.css" />
+  <link rel="stylesheet" href="styles/app.css" />
+  <link rel="stylesheet" href="styles/controls.css" />
+  <link rel="stylesheet" href="styles/chrome.css" />
+  <link rel="stylesheet" href="styles/home.css" />
+  <link rel="stylesheet" href="styles/ai.css" />
+  <link rel="stylesheet" href="styles/surfaces.css" />
+  <link rel="stylesheet" href="styles/motion.css" />
+  <link rel="stylesheet" href="styles/settings.css" />
+  <link rel="stylesheet" href="styles/dia.css" />
+  <link rel="stylesheet" href="styles/themes/nebula.css" />
+  <link rel="stylesheet" href="styles/themes/ember.css" />
+  <link rel="stylesheet" href="styles/themes/midnight.css" />
+  <link rel="stylesheet" href="styles/themes/aurora.css" />
+  <link rel="stylesheet" href="styles/carbon-tex.css" />
+  <link rel="stylesheet" href="styles/themes/carbon.css" />
+  <link rel="stylesheet" href="styles/themes/blackline.css" />
+  <link rel="stylesheet" href="styles/themes/blackline-noir.css" />
+  <link rel="stylesheet" href="styles/themes/modern.css" />
+  <link rel="stylesheet" href="styles/widgets.css" />
+  <link rel="stylesheet" href="styles/easyfiles.css" />
+  <link rel="stylesheet" href="styles/light.css" />
+</head>
+<body data-theme="glass" data-family="modern" data-mode="dark">
+  <!-- refraction map for liquid-lens glass (Chromium backdrop-filter: url()) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="flux-lens" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.011 0.017" numOctaves="2" seed="7" result="noise" />
+      <feGaussianBlur in="noise" stdDeviation="2.4" result="soft" />
+      <feDisplacementMap in="SourceGraphic" in2="soft" scale="34" xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
+  <div id="ambient" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div id="app">
+    <header id="titlebar"></header>
+    <div id="body">
+      <aside id="vtabs"></aside>
+      <div id="vtabs-edge"></div>
+      <div id="sidebar-edge"></div>
+      <nav id="sidebar" class="glass glass--panel"></nav>
+      <main id="content">
+        <div id="toolbar"></div>
+        <div id="loadbar"></div>
+        <div id="stage">
+          <section id="tabs-host" class="pane"></section>
+          <section id="home" class="pane pane--overlay"></section>
+          <section id="library" class="pane pane--overlay" hidden></section>
+          <section id="vision" class="pane pane--overlay" hidden></section>
+          <section id="companion" class="pane pane--overlay" hidden></section>
+          <section id="settings" class="pane pane--overlay" hidden></section>
+          <div id="hoverurl"></div>
+        </div>
+      </main>
+      <aside id="aipanel" class="glass" hidden></aside>
+    </div>
+    <div id="toasts"></div>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

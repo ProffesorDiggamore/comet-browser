@@ -1,0 +1,144 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DIA LAYOUT — the default.  Vertical tabs in a translucent sidebar
+   that sits on the window glass, one slim toolbar that is part of the
+   window chrome, and the page as a floating card with soft rounded
+   corners all the way round.  Works in light and dark (ink tokens).
+   Classic (top tabs) is in Settings → Layout.
+   ═══════════════════════════════════════════════════════════════════ */
+#vtabs { display: none; }
+.dia-only { display: none !important; }
+
+[data-layout="dia"] #titlebar,
+[data-layout="dia"] #sidebar,
+[data-layout="dia"] #sidebar-edge { display: none !important; }
+[data-layout="dia"] .dia-only { display: inline-flex !important; }
+
+/* ── sidebar ───────────────────────────────────────────────────── */
+[data-layout="dia"] #vtabs {
+  display: block; position: relative; z-index: 9; flex: 0 0 auto; width: 240px; overflow: hidden;
+  transition: width var(--f-med) var(--f-ease), opacity var(--f-fast) var(--f-ease-out);
+}
+body.vt-collapsed #vtabs { width: 0; opacity: 0; }
+body.vt-collapsed #vtabs.is-peek {
+  position: absolute; left: 8px; top: 8px; bottom: 8px; width: 240px; opacity: 1; z-index: 60; border-radius: 14px;
+  background: var(--f-pop-bg); -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
+  box-shadow: var(--f-shadow), 0 0 0 0.5px rgb(var(--ink) / 0.1), inset 0 0.5px 0 rgb(var(--spec) / 0.14);
+}
+#vtabs-edge { display: none; }
+body.vt-collapsed[data-layout="dia"] #vtabs-edge { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; z-index: 59; }
+
+.vt { width: 240px; height: 100%; display: flex; flex-direction: column; padding: 0 10px 10px; }
+.vt-top { height: 46px; flex: 0 0 auto; -webkit-app-region: drag; }
+
+/* pinned sites: favicon tiles, big and legible */
+.vt-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 6px; flex: 0 0 auto; }
+.vt-tiles.is-empty { display: none; }
+body.vt-dragging .vt-tiles.is-empty { display: grid; min-height: 48px; border-radius: 12px; border: 1px dashed rgb(var(--ink) / 0.18); }
+body.vt-dragging .vt-tiles.is-empty::after { content: "Drop to pin"; grid-column: 1 / -1; align-self: center; text-align: center; font-size: 11.5px; color: var(--f-text-3); }
+.vt-tiles.is-drop { background: var(--f-accent-soft); border-radius: 12px; }
+.vt-tile {
+  height: 48px; border-radius: 12px; border: 0; position: relative; display: grid; place-items: center; color: var(--f-text-dim);
+  background: rgb(var(--ink) / 0.06);
+  box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.08), 0 0 0 0.5px rgb(var(--ink) / 0.05);
+  transition: background var(--f-fast), transform var(--f-fast) var(--f-ease), box-shadow var(--f-fast);
+}
+.vt-tile img { width: 22px; height: 22px; border-radius: 5px; }
+.vt-tile:hover { background: rgb(var(--ink) / 0.1); }
+.vt-tile:active { transform: scale(var(--f-press)); }
+.vt-tile.is-active { background: var(--f-frame-bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgb(var(--ink) / 0.08); }
+body[data-mode="dark"] .vt-tile.is-active { background: rgb(var(--ink) / 0.18); box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.12); }
+.vt-tile.is-audible::after { content: ""; position: absolute; bottom: 5px; width: 4px; height: 4px; border-radius: 50%; background: var(--f-accent); }
+
+.vt-sep { height: 0.5px; background: rgb(var(--ink) / 0.1); margin: 12px 4px 8px; flex: 0 0 auto; }
+.vt-tiles.is-empty + .vt-sep { display: none; }
+
+/* tab rows: favicon + title, the active one lifts out as a little card */
+.vt-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding: 0 4px; scrollbar-width: none; }
+.vt-scroll::-webkit-scrollbar { width: 0; }
+.vt-list { display: flex; flex-direction: column; gap: 2px; }
+.vt-row {
+  position: relative; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 10px; border-radius: 10px; flex: 0 0 auto;
+  border: 0; background: transparent; color: var(--f-text); font-size: 13px; font-weight: 500; text-align: left; width: 100%;
+  transition: background var(--f-fast) var(--f-ease-out), box-shadow var(--f-fast);
+}
+.vt-row:hover { background: rgb(var(--ink) / 0.06); }
+.vt-row.is-active { background: var(--f-frame-bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgb(var(--ink) / 0.07); }
+body[data-mode="dark"] .vt-row.is-active { background: rgb(var(--ink) / 0.12); box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.08); }
+.vt-row.is-asleep { color: var(--f-text-dim); }
+.vt-row.is-dragging { opacity: 0.4; }
+.vt-row.drop-before { box-shadow: inset 0 2px 0 var(--f-accent); }
+.vt-row.drop-after { box-shadow: inset 0 -2px 0 var(--f-accent); }
+.vt-row.is-split .vt-fav::after { content: ""; position: absolute; left: 2px; top: 10px; bottom: 10px; width: 2px; border-radius: 2px; background: var(--f-accent); }
+.vt-fav { width: 18px; height: 18px; display: inline-grid; place-items: center; flex: 0 0 auto; color: var(--f-text-dim); }
+.vt-fav img { width: 16px; height: 16px; border-radius: 4px; }
+.vt-row.is-loading .vt-fav { animation: tab-pulse 1.2s ease-in-out infinite; }
+.vt-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vt-thumb:empty { display: none; }
+.vt-thumb img { display: block; width: 40px; height: 26px; object-fit: cover; object-position: top; border-radius: 5px; border: 0.5px solid rgb(var(--ink) / 0.15); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
+.vt-row:hover .vt-thumb { display: none; }
+.vt-x, .vt-audio { width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--f-text-dim); display: none; place-items: center; flex: 0 0 auto; }
+.vt-audio:not([hidden]) { display: grid; color: var(--f-accent-text); }
+.vt-row:hover .vt-x { display: grid; }
+.vt-x:hover, .vt-audio:hover { background: rgb(var(--ink) / 0.1); color: var(--f-text); }
+.vt-new { color: var(--f-text-dim); font-weight: 400; }
+.vt-new:hover { color: var(--f-text); }
+.vt-row.is-entering { animation: m-rise var(--f-med) var(--f-ease) both; }
+
+.vt-bottom { display: flex; align-items: center; gap: 2px; padding-top: 8px; flex: 0 0 auto; }
+.vt-flex { flex: 1; }
+.vt-foot { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--f-text-dim); }
+.vt-foot:hover { background: rgb(var(--ink) / 0.07); color: var(--f-text); }
+body.ai-open .vt-ai { color: var(--f-accent-text); background: var(--f-accent-soft); }
+
+/* ── content: chrome toolbar + floating page card ──────────────── */
+[data-layout="dia"] #content { margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent; overflow: visible; }
+[data-layout="dia"] #toolbar { -webkit-app-region: drag; }
+[data-layout="dia"] .tl-inner { grid-template-columns: auto minmax(200px, 1fr) auto; gap: 14px; padding: 0 14px 0 4px; }
+body.vt-collapsed[data-layout="dia"] .tl-inner { padding-left: 84px; }
+[data-layout="dia"] .tl-nav { gap: 2px; }
+[data-layout="dia"] .tl-sep { display: none; }
+[data-layout="dia"] .tb-btn { color: var(--f-text-dim); width: 32px; height: 30px; border-radius: 9px; }
+[data-layout="dia"] .tb-btn:hover { color: var(--f-text); background: rgb(var(--ink) / 0.07); }
+
+/* the card: every pane (web, Home, Settings…) floats with a hairline + soft shadow */
+[data-layout="dia"] #content { --card-r: 12px; --card-gap: 8px; }
+[data-layout="dia"] #stage .pane,
+[data-layout="dia"] #stage #home {
+  top: var(--tb-h); right: var(--card-gap); bottom: var(--card-gap); left: 0;
+  border-radius: var(--card-r); overflow: hidden;
+}
+body.vt-collapsed[data-layout="dia"] #stage .pane { left: var(--card-gap); }
+[data-layout="dia"] #stage::after {
+  content: ""; position: absolute; top: var(--tb-h); right: var(--card-gap); bottom: var(--card-gap); left: 0; z-index: 25; pointer-events: none;
+  border-radius: var(--card-r);
+  box-shadow: 0 0 0 0.5px rgb(var(--ink) / 0.1), 0 10px 34px -14px rgba(0, 0, 0, 0.35), 0 2px 6px -2px rgba(0, 0, 0, 0.12);
+}
+body.vt-collapsed[data-layout="dia"] #stage::after { left: var(--card-gap); }
+[data-layout="dia"] #loadbar { left: 8px; right: calc(var(--card-gap) + 8px); }
+body:not(.vt-collapsed)[data-layout="dia"] #loadbar { left: 6px; }
+
+/* breadcrumb address: "site / Page title"; becomes a field on click */
+.crumb { display: none; }
+[data-layout="dia"] #address-wrap { background: transparent; border-color: transparent; box-shadow: none; justify-content: flex-start; position: relative; }
+[data-layout="dia"] #address-wrap:focus-within { background: var(--f-frame-bg); border-color: color-mix(in srgb, var(--f-accent) 70%, transparent); box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--f-accent) 28%, transparent); }
+[data-layout="dia"] #address-wrap:not(:focus-within) #address { position: absolute; width: 1px; opacity: 0; pointer-events: none; }
+[data-layout="dia"] #address-wrap:not(:focus-within) .crumb {
+  display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; height: 28px; padding: 0 8px; border: 0; border-radius: 8px;
+  background: transparent; font-size: 13px; white-space: nowrap; overflow: hidden;
+}
+[data-layout="dia"] .crumb:hover { background: rgb(var(--ink) / 0.06); }
+[data-layout="dia"] #address { text-align: left; }
+[data-layout="dia"] #address-wrap:not(:focus-within) .ob-chip:not(.ob-zoom):not(.ob-shield) { display: none; }
+[data-layout="dia"] .ob-ask { display: none !important; }
+.crumb-host { color: var(--f-text-dim); flex: 0 0 auto; }
+.crumb-sep { color: var(--f-text-3); flex: 0 0 auto; }
+.crumb-title { color: var(--f-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+/* AI panel docks beside the card */
+[data-layout="dia"] #aipanel { margin: var(--tb-h, 46px) 8px 8px 0; }
+[data-layout="dia"] #content { --tb-h: 46px; }
+
+/* focus mode + page fullscreen hide the sidebar too */
+body.focus-mode #vtabs, body.is-page-fullscreen #vtabs { display: none !important; }
+body.focus-mode[data-layout="dia"] #stage .pane, body.is-page-fullscreen[data-layout="dia"] #stage .pane { top: 0; right: 0; bottom: 0; left: 0; border-radius: 0; }
+body.focus-mode[data-layout="dia"] #stage::after, body.is-page-fullscreen[data-layout="dia"] #stage::after { display: none; }

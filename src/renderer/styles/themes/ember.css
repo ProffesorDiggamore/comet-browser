@@ -1,0 +1,33 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME · EMBER LANTERN — warm ambient orange, lantern glow, terracotta.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="ember"] {
+  --f-accent: #e8873c;
+
+  --f-bg: #140d0a;
+  --f-bg-1: #1d130c;
+
+  --f-tint: rgba(255, 170, 110, 0.06);
+  --f-surface: rgba(255, 236, 220, 0.11);
+  --f-surface-2: rgba(255, 236, 220, 0.045);
+  --f-line: rgba(255, 214, 180, 0.22);
+  --f-hair: rgba(255, 220, 190, 0.12);
+
+  --f-text: #f6e8d8;
+  --f-text-dim: #c6ac91;
+
+  --f-glow: rgba(233, 138, 61, 0.42);
+  --f-shadow: 0 28px 72px -22px rgba(0, 0, 0, 0.74);
+
+  --f-pane-bg:
+    radial-gradient(1200px 760px at 80% -14%, rgba(233,138,61,0.22), transparent 58%),
+    radial-gradient(900px 620px at 4% 112%, rgba(150,58,32,0.28), transparent 55%),
+    linear-gradient(180deg, #1a110b, #100b08);
+}
+
+[data-theme="ember"] body {
+  background:
+    radial-gradient(1100px 700px at 78% -12%, rgba(233,138,61,0.30), transparent 60%),
+    radial-gradient(900px 600px at 8% 108%, rgba(150,58,32,0.32), transparent 55%),
+    linear-gradient(180deg, #1a110b, #100b08);
+}

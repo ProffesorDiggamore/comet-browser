@@ -1,0 +1,169 @@
+/* ═══════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — an Apple-style system: SF type scale, label/fill/
+   separator colors from the macOS dark palette, concentric radii, and
+   Liquid Glass materials.  Themes override the --f-* values on
+   body[data-theme]; JS writes --f-glass / --f-blur / --f-accent and
+   the motion variables live.
+
+   Light + dark: body[data-mode] flips polarity.  --ink is the RGB
+   channel every neutral fill/hairline/text is drawn with (white on
+   dark, black on light): rgb(var(--ink) / 0.08).  --spec stays white —
+   it's the specular highlight along the top edge of glass.
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  /* geometry — concentric radii */
+  --f-radius: 14px;
+  --f-radius-sm: 8px;
+  --f-radius-lg: 22px;
+  --f-titlebar-h: 50px;
+  --f-sidebar-w: 248px;
+  --f-gap: 12px;
+
+  /* motion — every duration scales with --f-speed (Settings → Motion) */
+  --f-speed: 1;
+  --f-ease: cubic-bezier(0.34, 1.42, 0.64, 1);   /* overwritten live by motion.js */
+  --f-ease-out: cubic-bezier(0.22, 1, 0.36, 1);  /* never overshoots: fades, bars */
+  --f-fast: calc(140ms * var(--f-speed));
+  --f-med: calc(240ms * var(--f-speed));
+  --f-slow: calc(420ms * var(--f-speed));
+  --f-lift: 2px;
+  --f-press: 0.96;
+  --f-frame-r: 16px;
+
+  /* density — overridden by [data-density] */
+  --f-row-h: 44px;
+  --f-pad-y: 10px;
+  --f-pad-x: 14px;
+  --f-stack: 22px;
+
+  /* liquid glass — live-tuned by settings */
+  --f-glass: 0.6;
+  --f-blur: 28px;
+  --f-accent: #8b7bff;
+  --f-glass-w: calc(var(--f-glass) * 0.13);
+
+  /* polarity channels (see header) */
+  --ink: 255 255 255;
+  --spec: 255 255 255;
+
+  /* macOS dark system colors */
+  --f-bg: #0d0c14;
+  --f-bg-1: #15141d;
+  --f-text: rgba(255, 255, 255, 0.92);
+  --f-text-dim: rgba(235, 235, 245, 0.6);
+  --f-text-3: rgba(235, 235, 245, 0.32);
+  --f-sep: rgba(255, 255, 255, 0.09);
+  --f-line: rgba(255, 255, 255, 0.14);
+  --f-hair: rgba(255, 255, 255, 0.08);
+  --f-fill: rgba(120, 120, 128, 0.20);
+  --f-fill-hi: rgba(120, 120, 128, 0.32);
+  --f-control: rgba(255, 255, 255, 0.11);
+  --f-control-hi: rgba(255, 255, 255, 0.17);
+  --f-surface: rgba(255, 255, 255, 0.10);
+  --f-surface-2: rgba(255, 255, 255, 0.04);
+  --f-tint: rgba(255, 255, 255, 0.02);
+  --f-glow: rgba(139, 123, 255, 0.40);
+  --f-shadow: 0 24px 60px -18px rgba(0, 0, 0, 0.7), 0 4px 14px -6px rgba(0, 0, 0, 0.4);
+  --f-pane-bg: linear-gradient(180deg, #13121b, #0c0b12);
+
+  /* system tints */
+  --sys-blue: #0A84FF; --sys-green: #30D158; --sys-red: #FF453A; --sys-orange: #FF9F0A;
+  --sys-yellow: #FFD60A; --sys-pink: #FF375F; --sys-purple: #BF5AF2; --sys-teal: #40C8E0;
+
+  color-scheme: dark;
+}
+
+/* ── light mode: macOS light system colors ─────────────────────── */
+/* polarity applies to every light theme; the palette only to the modern
+   family (classic Blackline brings its own paper colors) */
+body[data-mode="light"] { --ink: 0 0 0; color-scheme: light; }
+body[data-mode="light"]:not([data-family="classic"]) {
+  --f-bg: #ececef;
+  --f-bg-1: #ffffff;
+  --f-text: rgba(0, 0, 0, 0.86);
+  --f-text-dim: rgba(60, 60, 67, 0.64);
+  --f-text-3: rgba(60, 60, 67, 0.36);
+  --f-sep: rgba(0, 0, 0, 0.08);
+  --f-line: rgba(0, 0, 0, 0.12);
+  --f-hair: rgba(0, 0, 0, 0.06);
+  --f-fill: rgba(120, 120, 128, 0.12);
+  --f-fill-hi: rgba(120, 120, 128, 0.2);
+  --f-control: rgba(0, 0, 0, 0.045);
+  --f-control-hi: rgba(0, 0, 0, 0.08);
+  --f-surface: rgba(255, 255, 255, 0.72);
+  --f-surface-2: rgba(255, 255, 255, 0.45);
+  --f-tint: rgba(255, 255, 255, 0.5);
+  --f-shadow: 0 22px 54px -22px rgba(0, 0, 0, 0.28), 0 3px 10px -4px rgba(0, 0, 0, 0.12);
+  --f-pane-bg: #f7f7f9;
+  --sys-blue: #007AFF; --sys-green: #28A745; --sys-red: #FF3B30; --sys-orange: #F08A00;
+  --sys-yellow: #E0B000; --sys-pink: #FF2D55; --sys-purple: #AF52DE; --sys-teal: #30B0C7;
+}
+
+/* derived per theme: defined on body (where [data-theme] lives) so they
+   resolve against the active theme's --f-bg / --f-accent */
+body {
+  --f-frame-bg: color-mix(in srgb, var(--f-bg) 90%, transparent);
+  --f-page-bg: #0b0b0d;
+  --f-ribbon-a: color-mix(in srgb, var(--f-accent) 50%, transparent);
+  --f-ribbon-b: color-mix(in srgb, var(--f-accent) 28%, transparent);
+  --f-ribbon-c: color-mix(in srgb, var(--f-accent) 36%, transparent);
+  --f-ambient: radial-gradient(1200px 760px at 70% -10%, color-mix(in srgb, var(--f-accent) 26%, transparent), transparent 60%), var(--f-bg);
+  --f-accent-soft: color-mix(in srgb, var(--f-accent) 20%, transparent);
+  --f-accent-text: color-mix(in srgb, var(--f-accent) 72%, #fff);
+  --f-vibrancy-tint: color-mix(in srgb, var(--f-bg) 55%, transparent);
+  --f-pop-bg: color-mix(in srgb, var(--f-bg-1) 86%, transparent);
+}
+body[data-mode="light"]:not([data-family="classic"]) {
+  --f-frame-bg: rgba(255, 255, 255, 0.92);
+  --f-page-bg: #ffffff;
+  --f-accent-text: color-mix(in srgb, var(--f-accent) 82%, #000);
+  --f-vibrancy-tint: rgba(240, 240, 243, 0.5);
+  --f-pop-bg: rgba(252, 252, 254, 0.82);
+  --f-ambient: radial-gradient(1200px 760px at 70% -10%, color-mix(in srgb, var(--f-accent) 16%, transparent), transparent 60%), var(--f-bg);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font: 13px/1.42 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+  letter-spacing: -0.003em;
+  color: var(--f-text);
+  background: var(--f-bg);
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "kern", "calt";
+}
+h1, h2, h3, .pane-h { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif; letter-spacing: -0.02em; }
+button, input, textarea, select { font: inherit; color: inherit; letter-spacing: inherit; }
+::selection { background: color-mix(in srgb, var(--f-accent) 45%, transparent); }
+
+/* overlay scrollbars, macOS-style */
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--ink) / 0.2); border-radius: 8px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--ink) / 0.32); background-clip: padding-box; border: 3px solid transparent; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+
+[data-motion="off"] *, [data-motion="off"] *::before, [data-motion="off"] *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+
+/* compact density */
+[data-density="compact"] {
+  --f-row-h: 36px;
+  --f-pad-y: 7px;
+  --f-pad-x: 12px;
+  --f-stack: 16px;
+}
+
+/* keyboard focus — Apple's soft accent ring */
+:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--f-accent) 55%, transparent); border-radius: 7px; }
+button, [role="button"], a, select { cursor: default; }
+input[type="text"], input[type="password"], input[type="url"], textarea { cursor: text; }
+
+/* macOS window glass: let the native material show through the chrome */
+body[data-vibrancy="true"], html:has(body[data-vibrancy="true"]) { background: transparent !important; }
+body[data-vibrancy="true"]::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: var(--f-vibrancy-tint);
+}
+body[data-vibrancy="true"] #ambient { opacity: 0.35; }

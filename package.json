@@ -1,0 +1,23 @@
+{
+  "name": "flux-browser",
+  "productName": "Flux",
+  "version": "0.6.0",
+  "description": "A fully custom, modular liquid-glass desktop browser for macOS.",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "node scripts/setup-electron.mjs && electron .",
+    "dev": "node scripts/setup-electron.mjs && electron . --dev",
+    "postinstall": "node scripts/setup-electron.mjs || true",
+    "fix-electron": "node scripts/setup-electron.mjs"
+  },
+  "author": "Landon (whoslandon)",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "33.4.11"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0"
+  }
+}

@@ -1,0 +1,33 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME · AURORA — near-black with teal/violet aurora wash, mint accent.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="aurora"] {
+  --f-accent: #5fe3b3;
+
+  --f-bg: #070b0a;
+  --f-bg-1: #0c1210;
+
+  --f-tint: rgba(120, 235, 200, 0.06);
+  --f-surface: rgba(226, 250, 242, 0.10);
+  --f-surface-2: rgba(226, 250, 242, 0.04);
+  --f-line: rgba(170, 255, 228, 0.20);
+  --f-hair: rgba(180, 255, 235, 0.11);
+
+  --f-text: #e9f6f0;
+  --f-text-dim: #9fbcb2;
+
+  --f-glow: rgba(95, 227, 179, 0.38);
+  --f-shadow: 0 28px 72px -22px rgba(0, 0, 0, 0.82);
+
+  --f-pane-bg:
+    radial-gradient(1050px 660px at 80% -14%, rgba(95,227,179,0.18), transparent 58%),
+    radial-gradient(900px 560px at 6% 114%, rgba(130,90,220,0.20), transparent 55%),
+    linear-gradient(180deg, #0a100e, #060908);
+}
+
+[data-theme="aurora"] body {
+  background:
+    radial-gradient(1000px 620px at 80% -12%, rgba(95,227,179,0.22), transparent 60%),
+    radial-gradient(900px 560px at 10% 112%, rgba(130,90,220,0.24), transparent 55%),
+    linear-gradient(180deg, #0a100e, #060908);
+}

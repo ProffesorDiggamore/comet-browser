@@ -1,0 +1,33 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME · MIDNIGHT GLASS — cool indigo, deep contrast, cyan accent.
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="midnight"] {
+  --f-accent: #6ea8ff;
+
+  --f-bg: #0a0c12;
+  --f-bg-1: #10131c;
+
+  --f-tint: rgba(120, 165, 255, 0.06);
+  --f-surface: rgba(224, 234, 255, 0.10);
+  --f-surface-2: rgba(224, 234, 255, 0.04);
+  --f-line: rgba(180, 205, 255, 0.20);
+  --f-hair: rgba(190, 210, 255, 0.11);
+
+  --f-text: #e9eefb;
+  --f-text-dim: #a2afce;
+
+  --f-glow: rgba(110, 168, 255, 0.40);
+  --f-shadow: 0 28px 72px -22px rgba(0, 0, 0, 0.8);
+
+  --f-pane-bg:
+    radial-gradient(1100px 700px at 82% -12%, rgba(110,168,255,0.18), transparent 58%),
+    radial-gradient(880px 560px at 4% 112%, rgba(70,90,180,0.22), transparent 55%),
+    linear-gradient(180deg, #0c0f18, #07090e);
+}
+
+[data-theme="midnight"] body {
+  background:
+    radial-gradient(1000px 640px at 82% -10%, rgba(110,168,255,0.22), transparent 60%),
+    radial-gradient(880px 560px at 6% 110%, rgba(70,90,180,0.26), transparent 55%),
+    linear-gradient(180deg, #0c0f18, #07090e);
+}

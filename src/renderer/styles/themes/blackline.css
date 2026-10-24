@@ -1,0 +1,498 @@
+/* ═══════════════════════════════════════════════════════════════════
+   THEME · BLACKLINE
+   Plotter paper + ink.  A reprographic / schematic look: warm paper
+   white, near-black linework, one vermilion stamp accent, hard offset
+   "print" shadows, mono-type callouts, ruler ticks, registration
+   marks, a barcode, tab index numbers and a CJK edge label — the busy
+   drafting detail lives in the margins while the controls stay flat
+   and quiet.  Zero backdrop blur anywhere: every glass surface is
+   solid paper, so compositing cost drops to almost nothing.
+   components/schematic.js adds the live telemetry readout (HUD).
+   ═══════════════════════════════════════════════════════════════════ */
+[data-theme="blackline"] {
+  --bl-ink: 23, 21, 17;                      /* rgb triple for rgba() */
+  --bl-paper: #f2f0e9;
+  --bl-paper-2: #faf8f2;
+  --bl-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* film-grain tile, baked once — not animated */
+  --bl-noise: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.09 0 0 0 0 0.085 0 0 0 0 0.07 0 0 0 0.05 0'/></filter><rect width='220' height='220' filter='url(%23n)'/></svg>");
+
+  /* shared surface tokens — blackline-noir redefines these, the rules
+     below are written against them so both themes reuse one rule set */
+  --bl-card: rgba(255, 255, 255, 0.55);      /* translucent card fill  */
+  --bl-card-2: rgba(255, 255, 255, 0.45);    /* quieter card (tabs)    */
+  --bl-card-hi: #fff;                        /* hover / active solid   */
+  --bl-sheet: rgba(250, 248, 242, 0.96);     /* solid sheet (frames)   */
+  --bl-pop: #f8f6f0;                         /* popover solid          */
+  --bl-stamp: #1a1813;                       /* inverse "ink stamp"    */
+  --bl-stamp-fg: #f4f2ec;
+  --bl-ok: #2e7d4f;
+  --bl-warn: #9c4a12;
+  --bl-danger: #c22912;
+  --bl-barcode: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34' height='16'><g fill='%23171511'><rect x='0' width='2' height='16'/><rect x='4' width='1' height='16'/><rect x='7' width='3' height='16'/><rect x='12' width='1' height='16'/><rect x='15' width='2' height='16'/><rect x='19' width='4' height='16'/><rect x='25' width='1' height='16'/><rect x='28' width='2' height='16'/><rect x='32' width='2' height='16'/></g></svg>");
+  --bl-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%23171511' stroke-opacity='.7' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E");
+
+  --f-accent: #e03416;
+
+  --f-bg: #f2f0e9;
+  --f-bg-1: #eae7df;
+
+  --f-text: rgba(23, 21, 17, 0.93);
+  --f-text-dim: rgba(23, 21, 17, 0.56);
+  --f-text-3: rgba(23, 21, 17, 0.35);
+  --f-sep: rgba(23, 21, 17, 0.13);
+  --f-line: rgba(23, 21, 17, 0.24);
+  --f-hair: rgba(23, 21, 17, 0.12);
+  --f-fill: rgba(23, 21, 17, 0.07);
+  --f-fill-hi: rgba(23, 21, 17, 0.12);
+  --f-control: rgba(23, 21, 17, 0.08);
+  --f-control-hi: rgba(23, 21, 17, 0.13);
+  --f-surface: rgba(255, 255, 255, 0.6);
+  --f-surface-2: rgba(23, 21, 17, 0.04);
+  --f-tint: rgba(255, 255, 255, 0.5);
+
+  --f-glow: transparent;                     /* no bloom on paper */
+  --f-shadow: 5px 5px 0 rgba(23, 21, 17, 0.08), 0 0 0 1px rgba(23, 21, 17, 0.1);
+
+  /* drafting corners */
+  --f-radius: 5px;
+  --f-radius-sm: 3px;
+  --f-radius-lg: 7px;
+  --f-frame-r: 6px;
+
+  color-scheme: light;
+}
+
+/* derived tokens live on body in tokens.css — retake them here */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) {
+  --f-frame-bg: var(--bl-sheet);
+  --f-page-bg: #dedbd2;
+  --f-vibrancy-tint: rgba(242, 240, 233, 0.92);
+  --f-accent-soft: color-mix(in srgb, var(--f-accent) 18%, transparent);
+  --f-accent-text: color-mix(in srgb, var(--f-accent) 82%, #000);
+  --f-ribbon-a: transparent;                 /* no nebula ribbons */
+  --f-ribbon-b: transparent;
+  --f-ribbon-c: transparent;
+  /* graph paper: fine grid + heavy line every 6 cells */
+  --f-ambient:
+    repeating-linear-gradient(0deg,   rgba(var(--bl-ink), 0.055) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg,  rgba(var(--bl-ink), 0.055) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(0deg,   rgba(var(--bl-ink), 0.07)  0 1px, transparent 1px 156px),
+    repeating-linear-gradient(90deg,  rgba(var(--bl-ink), 0.07)  0 1px, transparent 1px 156px),
+    linear-gradient(180deg, #f4f2ec, #ecead2 160%);
+  --f-pane-bg:
+    repeating-linear-gradient(0deg,  rgba(var(--bl-ink), 0.04) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, rgba(var(--bl-ink), 0.04) 0 1px, transparent 1px 26px),
+    linear-gradient(180deg, #f6f4ee, #eeebe3);
+
+  background: var(--bl-noise), var(--f-ambient);
+}
+/* paper stays opaque even with macOS vibrancy on (tokens.css forces
+   transparent with !important — outrank it) */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-vibrancy="true"] { background: var(--bl-noise), var(--f-ambient) !important; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-vibrancy="true"]::before { background: transparent; }
+/* nebula ribbons off: zero permanent compositing layers */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #ambient i { display: none; }
+
+/* ── registration marks at the window corners ──────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])::after {
+  content: ""; position: fixed; inset: 3px; z-index: 9999; pointer-events: none; opacity: 0.4;
+  background:
+    linear-gradient(var(--f-text), var(--f-text)) left 0 top 0 / 10px 1px,
+    linear-gradient(var(--f-text), var(--f-text)) left 0 top 0 / 1px 10px,
+    linear-gradient(var(--f-text), var(--f-text)) right 0 top 0 / 10px 1px,
+    linear-gradient(var(--f-text), var(--f-text)) right 0 top 0 / 1px 10px,
+    linear-gradient(var(--f-text), var(--f-text)) left 0 bottom 0 / 10px 1px,
+    linear-gradient(var(--f-text), var(--f-text)) left 0 bottom 0 / 1px 10px,
+    linear-gradient(var(--f-text), var(--f-text)) right 0 bottom 0 / 10px 1px,
+    linear-gradient(var(--f-text), var(--f-text)) right 0 bottom 0 / 1px 10px;
+  background-repeat: no-repeat;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).focus-mode::after,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).is-page-fullscreen::after { display: none; }
+
+/* ── glass → solid paper (kills every backdrop-filter) ─────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .glass,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .glass[data-lens] {
+  background-color: var(--bl-sheet);
+  background-image: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border: 1px solid rgba(var(--bl-ink), 0.26);
+  box-shadow: 4px 4px 0 rgba(var(--bl-ink), 0.08);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .glass::before,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .glass::after { background: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .glass--bar  { border-width: 0 0 1px; box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .glass--side { border-width: 0 0 0 1px; box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) [data-spotlight="true"] .glass.is-lit::after,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) [data-spotlight="true"] .lit.is-lit::after { background: radial-gradient(200px circle at var(--mx, 50%) var(--my, 50%), rgba(var(--bl-ink), 0.05), transparent 65%); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) [data-shimmer="true"] .lit:hover::before,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) [data-shimmer="true"] .glass--hover:hover::before { background: none; animation: none; }
+
+/* ── typography details ────────────────────────────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) ::selection { background: rgba(224, 52, 22, 0.28); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) ::-webkit-scrollbar-thumb { background: rgba(var(--bl-ink), 0.3); border-radius: 2px; border: 3px solid transparent; background-clip: padding-box; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) ::-webkit-scrollbar-thumb:hover { background: rgba(var(--bl-ink), 0.5); border: 3px solid transparent; background-clip: padding-box; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) :focus-visible { box-shadow: 0 0 0 1.5px var(--bl-paper), 0 0 0 3px var(--f-accent); border-radius: 3px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #address,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .crumb,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi-kbd,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #hoverurl,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-sub { font-family: var(--bl-mono); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #address { font-size: 12px; font-weight: 500; letter-spacing: 0; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .crumb { font-size: 11.5px; }
+
+/* ── title-bar buttons / clusters (both layouts) ───────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tb-btn { color: rgba(var(--bl-ink), 0.6); border-radius: 4px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tb-btn:hover { color: rgba(var(--bl-ink), 0.95); background: rgba(var(--bl-ink), 0.08); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tb-btn.is-on { color: var(--f-accent); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tb-cluster,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .pinned-box {
+  background: var(--bl-card);
+  border: 1px solid rgba(var(--bl-ink), 0.22);
+  border-radius: 6px;
+  box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.07);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .dl-badge { box-shadow: none; }
+
+/* classic top-tab pills become paper index tabs */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tab {
+  background: var(--bl-card-2);
+  border: 1px solid rgba(var(--bl-ink), 0.18);
+  border-radius: 4px 4px 0 0;
+  box-shadow: none;
+  color: var(--f-text-dim);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tab:hover { background: var(--bl-card-hi); color: var(--f-text); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tab.is-active {
+  background: var(--bl-paper-2);
+  border-color: rgba(var(--bl-ink), 0.32);
+  color: var(--f-text);
+  box-shadow: inset 0 2px 0 var(--f-accent);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tab .x:hover, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tab-audio:hover { background: rgba(var(--bl-ink), 0.14); }
+
+/* ── content frame: ink border, hard print shadow ──────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-frame="true"] #content {
+  border: 1px solid rgba(var(--bl-ink), 0.35);
+  box-shadow: 6px 6px 0 rgba(var(--bl-ink), 0.09);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #content { background: var(--f-frame-bg); }
+
+/* ruler ticks along the toolbar / page seam */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #toolbar::after {
+  content: ""; position: absolute; left: 10px; right: 10px; bottom: 0; height: 5px;
+  pointer-events: none; opacity: 0.32;
+  background:
+    repeating-linear-gradient(90deg, var(--f-text) 0 1px, transparent 1px 8px) left bottom / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, var(--f-text) 0 1px, transparent 1px 64px) left bottom / 100% 5px no-repeat;
+}
+body.on-home:is([data-theme="blackline"], [data-theme="blackline-noir"]) #toolbar::after { opacity: 0.18; }
+
+/* omnibox: paper field, stamp-offset focus */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #address-wrap { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.24); border-radius: 4px; box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #address-wrap:focus-within {
+  background: var(--bl-card-hi);
+  border-color: rgba(var(--bl-ink), 0.55);
+  box-shadow: 3px 3px 0 var(--f-accent-soft);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-chip:hover { background: rgba(var(--bl-ink), 0.1); color: var(--f-text); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-chip.is-insecure { color: var(--bl-warn); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-shield { color: var(--bl-ok); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-layout="dia"] #address-wrap { background: transparent; border-color: transparent; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-layout="dia"] #address-wrap:focus-within { background: var(--bl-card-hi); border-color: rgba(var(--bl-ink), 0.55); box-shadow: 3px 3px 0 var(--f-accent-soft); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-layout="dia"] .crumb:hover { background: rgba(var(--bl-ink), 0.06); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .crumb-host { color: rgba(var(--bl-ink), 0.48); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .crumb-sep { color: rgba(var(--bl-ink), 0.3); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .crumb-title { color: rgba(var(--bl-ink), 0.92); }
+
+/* ask pill → rubber stamp */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ask-pill {
+  background: var(--bl-card);
+  border: 1px solid rgba(var(--bl-ink), 0.3);
+  border-radius: 3px;
+  box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.08);
+  font-family: var(--bl-mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ask-pill:hover { background: var(--bl-card-hi); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).ai-open .ask-pill { background: var(--f-accent); border-color: var(--f-accent); box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.2); }
+
+/* load bar: solid plotter head, no glow */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #loadbar::after { background: var(--f-accent); border-radius: 0; box-shadow: none; }
+
+/* hovered-link readout */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #hoverurl {
+  background: var(--bl-sheet);
+  border: 1px solid rgba(var(--bl-ink), 0.3);
+  border-radius: 3px;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  font-size: 11px;
+  box-shadow: 3px 3px 0 rgba(var(--bl-ink), 0.08);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .split-divider::after { background: rgba(var(--bl-ink), 0.25); }
+
+/* ── Dia sidebar: index sheet ──────────────────────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt { position: relative; }
+/* vertical CJK edge label, behind the rows */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt::before {
+  content: "流動体 — FLUX BROWSER — 回路図 0.5";
+  position: absolute; right: 1px; top: 56px; z-index: 0; pointer-events: none;
+  writing-mode: vertical-rl;
+  font: 600 8px/1 var(--bl-mono); letter-spacing: 0.4em;
+  color: rgba(var(--bl-ink), 0.26);
+}
+/* sidebar wordmark in the drag strip (left of it sit the traffic lights) */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-top { position: relative; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-top::after {
+  content: "FLUX ⌖ 00.5 / BLK"; position: absolute; right: 2px; bottom: 6px; pointer-events: none;
+  font: 700 8px/1 var(--bl-mono); letter-spacing: 0.22em;
+  color: rgba(var(--bl-ink), 0.45);
+}
+/* barcode in the footer row (pseudo-element: doesn't break :first-child) */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-bottom::before {
+  content: ""; flex: 0 0 auto; width: 34px; height: 16px; margin-right: 6px; opacity: 0.55;
+  background: var(--bl-barcode) no-repeat;
+}
+
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-tile { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.2); border-radius: 4px; box-shadow: none; color: var(--f-text-dim); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-tile:hover { background: var(--bl-card-hi); box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.1); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-tile.is-active { background: var(--bl-card-hi); border-color: rgba(var(--bl-ink), 0.5); box-shadow: 2px 2px 0 var(--f-accent-soft); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-sep { background: rgba(var(--bl-ink), 0.18); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).vt-dragging .vt-tiles.is-empty { border-color: rgba(var(--bl-ink), 0.3); }
+
+/* numbered rows, like a drawing index */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-list { counter-reset: bl-tab; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-list .vt-row:not(.vt-new) { counter-increment: bl-tab; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-list .vt-row:not(.vt-new)::before {
+  content: counter(bl-tab, decimal-leading-zero);
+  flex: 0 0 auto; width: 15px;
+  font: 600 8.5px/1 var(--bl-mono); letter-spacing: 0.04em;
+  color: currentColor; opacity: 0.42;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row { position: relative; z-index: 1; color: rgba(var(--bl-ink), 0.82); border-radius: 3px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row:hover { background: rgba(var(--bl-ink), 0.06); }
+/* active tab = ink stamp with a red register tick */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row.is-active {
+  background: var(--bl-stamp); color: var(--bl-stamp-fg);
+  box-shadow: inset 2.5px 0 0 var(--f-accent);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row.is-active .vt-fav { color: color-mix(in srgb, var(--bl-stamp-fg) 70%, transparent); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row.is-asleep { color: rgba(var(--bl-ink), 0.45); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-thumb img { border-color: rgba(var(--bl-ink), 0.3); box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-x:hover, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-audio:hover { background: color-mix(in srgb, var(--bl-stamp-fg) 22%, transparent); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row:not(.is-active) .vt-x:hover { background: rgba(var(--bl-ink), 0.12); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-foot:hover { background: rgba(var(--bl-ink), 0.07); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).ai-open .vt-foot:first-child { background: rgba(var(--bl-ink), 0.09); }
+/* collapsed-sidebar peek sheet */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).vt-collapsed #vtabs.is-peek {
+  background: var(--bl-sheet);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border-right: 1px solid rgba(var(--bl-ink), 0.35);
+  box-shadow: 8px 8px 0 rgba(var(--bl-ink), 0.1);
+}
+
+/* page card seam: full ink hairline instead of the white specular */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-layout="dia"] #stage::after { box-shadow: inset 0 0 0 1px rgba(var(--bl-ink), 0.22); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"])[data-layout="dia"] #stage { box-shadow: none; }
+
+/* ── telemetry HUD (components/schematic.js) ───────────────────── */
+#schem-hud { display: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #schem-hud {
+  position: fixed; left: 84px; top: 8px; z-index: 50; pointer-events: none;
+  display: flex; gap: 7px; align-items: baseline;
+  font: 600 7.5px/1 var(--bl-mono); letter-spacing: 0.08em;
+  color: rgba(var(--bl-ink), 0.46);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #schem-hud .sh-t { color: var(--f-accent); opacity: 0.8; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #schem-hud[hidden],
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]):not([data-layout="dia"]) #schem-hud,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).vt-collapsed #schem-hud,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).focus-mode #schem-hud,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]).is-page-fullscreen #schem-hud { display: none; }
+
+/* ── popovers, menus, suggestions: paper cards ──────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .pop,
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-suggest {
+  background-color: var(--bl-pop);
+  border: 1px solid rgba(var(--bl-ink), 0.32);
+  border-radius: 5px;
+  box-shadow: 6px 6px 0 rgba(var(--bl-ink), 0.1);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi { border-radius: 3px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi:hover, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi:focus-visible { background: var(--bl-stamp); color: var(--bl-stamp-fg); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi:hover .mi-ico, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi:hover .mi-kbd { color: color-mix(in srgb, var(--bl-stamp-fg) 75%, transparent); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi.is-danger { color: var(--bl-danger); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mi.is-danger:hover { background: var(--f-accent); color: #fff; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-item { border-radius: 3px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-item.is-sel { background: var(--f-accent); color: #fff; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-item.is-sel .ob-ico, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ob-item.is-sel .ob-sub { color: rgba(255, 255, 255, 0.85); }
+
+/* ── panels, chat, toasts on paper ─────────────────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .side-item:hover { background: rgba(var(--bl-ink), 0.06); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .side-item.is-active { background: rgba(var(--bl-ink), 0.1); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .side-notes { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.2); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mini-btn { border: 1px solid rgba(var(--bl-ink), 0.2); box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .msg { border-radius: 5px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .msg.tool { background: rgba(var(--bl-ink), 0.06); border: 1px solid rgba(var(--bl-ink), 0.12); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .approve-bar { background: rgba(var(--bl-ink), 0.05); border: 1px solid var(--f-accent); border-radius: 5px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .toast {
+  background: var(--bl-stamp); color: var(--bl-stamp-fg); border: 1px solid var(--bl-stamp); border-radius: 4px;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 4px 4px 0 rgba(var(--bl-ink), 0.18);
+  font-family: var(--bl-mono); font-size: 11.5px;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .hot .squircle { border-radius: 16px; box-shadow: 4px 4px 0 rgba(var(--bl-ink), 0.12); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .hot:hover .squircle { box-shadow: 6px 6px 0 rgba(var(--bl-ink), 0.16); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   INNER PANELS — controls.css / settings.css / ai.css / surfaces.css /
+   home.css style dark glass with white hairlines; restate them as
+   flat paper hardware.  Everything below reads from the --bl-* tokens
+   so blackline-noir inherits the same rules inverted.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── generic controls: flat ink hardware ───────────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn {
+  border: 1px solid rgba(var(--bl-ink), 0.28);
+  background: var(--bl-card);
+  border-radius: 4px;
+  box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.07);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn:hover { background: var(--bl-card-hi); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn:active { background: rgba(var(--bl-ink), 0.12); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--accent {
+  background: var(--f-accent); border-color: var(--f-accent); color: #fff;
+  box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.18);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--accent:hover { background: color-mix(in srgb, var(--f-accent) 86%, var(--bl-stamp)); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--ghost, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--plain { border-color: transparent; background: transparent; box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--pill { border: 1px solid rgba(var(--bl-ink), 0.25); background: var(--bl-card); box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--danger {
+  background: transparent; color: var(--bl-danger);
+  border-color: color-mix(in srgb, var(--bl-danger) 45%, transparent); box-shadow: none;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .btn--danger:hover { background: color-mix(in srgb, var(--bl-danger) 10%, transparent); }
+
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) :where(input[type="text"], input[type="password"], input[type="url"], input[type="email"], input[type="search"], input[type="number"], textarea, input.field, textarea.field):not(.pal-input, .ov-search, .home-input, .ai-input) {
+  border: 1px solid rgba(var(--bl-ink), 0.3);
+  background: var(--bl-card);
+  border-radius: 4px;
+  box-shadow: none;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) :where(input[type="text"], input[type="password"], input[type="url"], input[type="email"], input[type="search"], input[type="number"], textarea, input.field, textarea.field):not(.pal-input, .ov-search, .home-input, .ai-input):focus {
+  background: var(--bl-card-hi);
+  border-color: rgba(var(--bl-ink), 0.55);
+  box-shadow: 3px 3px 0 var(--f-accent-soft);
+}
+
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) :where(select), body:is([data-theme="blackline"], [data-theme="blackline-noir"]) select.popup {
+  border: 1px solid rgba(var(--bl-ink), 0.3); border-radius: 4px;
+  background: var(--bl-chevron) no-repeat right 9px center, var(--bl-card);
+  box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.06);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) :where(select):hover, body:is([data-theme="blackline"], [data-theme="blackline-noir"]) select.popup:hover { background-color: var(--bl-card-hi); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) :where(select) option { background: var(--bl-paper-2); color: var(--f-text); }
+
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .switch .track { background: rgba(var(--bl-ink), 0.16); box-shadow: inset 0 0 0 1px rgba(var(--bl-ink), 0.25); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .switch input:checked + .track { background: var(--f-accent); box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .seg { background: rgba(var(--bl-ink), 0.08); border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(var(--bl-ink), 0.16); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .seg-thumb { background: var(--bl-card-hi); border-radius: 3px; box-shadow: 0 0 0 1px rgba(var(--bl-ink), 0.32); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .seg button.is-on { color: var(--f-text); }
+
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) kbd {
+  background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.28); border-bottom-width: 2px;
+  border-radius: 3px; font-family: var(--bl-mono); color: var(--f-text-dim);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .get-x { background: rgba(var(--bl-ink), 0.12); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tile { box-shadow: 0 0 0 1px rgba(var(--bl-ink), 0.2); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tile::after { background: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tag { background: rgba(var(--bl-ink), 0.08); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tag.ok { background: color-mix(in srgb, var(--bl-ok) 15%, transparent); color: var(--bl-ok); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .tag.warn { background: color-mix(in srgb, var(--bl-warn) 15%, transparent); color: var(--bl-warn); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .cap { background: rgba(var(--bl-ink), 0.08); color: var(--f-text-dim); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .danger { color: var(--bl-danger); }
+
+/* ── settings: paper index sheet + grouped forms ───────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-nav {
+  background: var(--bl-card);
+  border: 1px solid rgba(var(--bl-ink), 0.26);
+  border-radius: 8px;
+  box-shadow: 4px 4px 0 rgba(var(--bl-ink), 0.08);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-search-wrap { background: rgba(var(--bl-ink), 0.07); border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(var(--bl-ink), 0.12); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-profile:hover { background: rgba(var(--bl-ink), 0.06); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-avatar { background: var(--bl-stamp); color: var(--bl-stamp-fg); box-shadow: none; font-family: var(--bl-mono); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-nav-item { border-radius: 4px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-nav-item:hover { background: rgba(var(--bl-ink), 0.07); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-nav-item.is-active { box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .set-box {
+  background: var(--bl-card);
+  border: 1px solid rgba(var(--bl-ink), 0.22);
+  border-radius: 6px;
+  box-shadow: none;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .model-row:hover { background: rgba(var(--bl-ink), 0.05); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .engine { background: var(--bl-card); border-radius: 5px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .engine:hover { background: var(--bl-card-hi); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .engine .dot { box-shadow: none; border-radius: 3px; }
+
+/* ── AI panel: paper column (outranks #aipanel's dark glass) ───── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #aipanel {
+  background-color: var(--bl-sheet);
+  --f-blur: 0;
+  border-left: 1px solid rgba(var(--bl-ink), 0.26);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-model { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.25); box-shadow: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-bubble { background: var(--f-accent); border-radius: 6px 6px 3px 6px; box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.15); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-step { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.16); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-step.is-error { color: var(--bl-danger); border-color: color-mix(in srgb, var(--bl-danger) 40%, transparent); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-src { background: rgba(var(--bl-ink), 0.07); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-error {
+  background: color-mix(in srgb, var(--bl-danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--bl-danger) 35%, transparent);
+  color: var(--bl-danger);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-composer { background-color: var(--bl-card); border-radius: 10px; }
+/* flat vermilion working state instead of the Siri rainbow */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #aipanel.is-busy .ai-composer::before { background: var(--f-accent); animation: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) #aipanel.is-busy .ai-composer { box-shadow: 3px 3px 0 var(--f-accent-soft); animation: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-send { background: var(--f-accent); box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.2); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ai-send.is-stop { background: var(--bl-stamp); color: var(--bl-stamp-fg); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .md-code { background: rgba(var(--bl-ink), 0.07); border-color: rgba(var(--bl-ink), 0.18); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .md-link { color: var(--f-accent-text); border-bottom-color: color-mix(in srgb, var(--f-accent) 45%, transparent); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .md-pre { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.22); border-radius: 6px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .md-pre-head { background: rgba(var(--bl-ink), 0.06); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .md-table th { background: rgba(var(--bl-ink), 0.06); }
+
+/* ── palette / overview / library / site info ──────────────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .pal {
+  background-color: var(--bl-pop);
+  --f-blur: 0;
+  border: 1px solid rgba(var(--bl-ink), 0.35);
+  border-radius: 8px;
+  box-shadow: 8px 8px 0 rgba(var(--bl-ink), 0.12);
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ov { background: color-mix(in srgb, var(--f-bg) 94%, transparent); -webkit-backdrop-filter: none; backdrop-filter: none; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ov-thumb { background: rgba(var(--bl-ink), 0.08); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .ov-x:hover { background: rgba(var(--bl-ink), 0.14); color: var(--f-text); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .lib-searchbox { background: var(--bl-card); border-color: rgba(var(--bl-ink), 0.24); border-radius: 6px; }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .si-ico.ok { background: color-mix(in srgb, var(--bl-ok) 14%, transparent); color: var(--bl-ok); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .si-ico.warn { background: color-mix(in srgb, var(--bl-warn) 14%, transparent); color: var(--bl-warn); }
+
+/* ── home: ink headline, stamp mic, paper site tiles ───────────── */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .home-headline {
+  background: none; color: var(--f-text);
+  -webkit-text-fill-color: var(--f-text);
+  text-shadow: none;
+}
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .pill-btn.mic { background: var(--bl-stamp); color: var(--bl-stamp-fg); box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.2); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .pill-btn.mic:hover { background: var(--bl-stamp); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .site-ico { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.2); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .chip.glass { box-shadow: 2px 2px 0 rgba(var(--bl-ink), 0.07); }
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .home-search:focus-within { box-shadow: 3px 3px 0 var(--f-accent-soft); transform: none; }

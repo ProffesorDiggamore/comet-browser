@@ -1,0 +1,15 @@
+/* ═══════════════════════════════════════════════════════════════════
+   LIGHT MODE — the few places where flipping --ink isn't enough:
+   macOS light controls use a white thumb on a gray track, and shadows
+   get much softer on a bright window.
+   ═══════════════════════════════════════════════════════════════════ */
+body[data-mode="light"] .seg { background: rgba(120, 120, 128, 0.14); box-shadow: inset 0 0.5px 1px rgba(0, 0, 0, 0.08); }
+body[data-mode="light"] .seg-thumb { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.05); }
+body[data-mode="light"] .switch .track { background: rgba(120, 120, 128, 0.22); box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.06); }
+body[data-mode="light"] .toast { box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6); }
+body[data-mode="light"] .pop,
+body[data-mode="light"] .ob-suggest,
+body[data-mode="light"] .pal { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 20px 50px -18px rgba(0, 0, 0, 0.3); }
+body[data-mode="light"] #tabs-host { background: #fff; }
+body[data-mode="light"] .msg.tool { color: var(--f-text-dim); }
+body[data-mode="light"][data-vibrancy="true"]::before { background: var(--f-vibrancy-tint); }
