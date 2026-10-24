@@ -30,15 +30,15 @@ function remember (host, k, value) {
   store.set("siteSettings", all)
 }
 
+// one reply channel for every profile's session (initPermissions runs once per session)
+const waiting = new Map()   // id -> resolve
+let seq = 0
+ipcMain.on("flux:perm:reply", (_e, { id, allow, remember: rem }) => {
+  const r = waiting.get(id)
+  if (r) { waiting.delete(id); r(Boolean(allow), Boolean(rem)) }
+})
+
 function initPermissions (ses, getWin) {
-  const waiting = new Map()   // id -> resolve
-  let seq = 0
-
-  ipcMain.on("flux:perm:reply", (_e, { id, allow, remember: rem }) => {
-    const r = waiting.get(id)
-    if (r) { waiting.delete(id); r(Boolean(allow), Boolean(rem)) }
-  })
-
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     if (ALWAYS.has(permission)) return callback(true)
     if (!ASK.has(permission)) return callback(false)

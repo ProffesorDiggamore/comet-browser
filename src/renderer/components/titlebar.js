@@ -17,6 +17,7 @@ import { toggleBookmark, isBookmarked } from "./library.js"
 import { openSiteInfo } from "./siteinfo.js"
 import { openDownloads, downloadsBadge } from "./downloads.js"
 import * as T from "../core/tabs.js"
+import { profileButton } from "./profiles.js"
 
 const els = new Map()       // tabId -> element
 let strip, pinnedBox, address, omni, btnStar, btnDl, btnBack, btnFwd, btnReload, chipZoom, chipShield, chipSite, addrWrap, crumb, btnStar2, btnDl2
@@ -212,7 +213,8 @@ export function initTitlebar () {
     h("div.tb-tabs", {}, [strip, btnNew]),
     h("div.tb-fill"),
     h("div.tb-cluster.no-drag", {}, [btnStar, btnDl]),
-    h("div.tb-cluster.no-drag", {}, [btnAI, btnOverview])
+    h("div.tb-cluster.no-drag", {}, [btnAI, btnOverview]),
+    h("div.tb-cluster.no-drag", {}, [profileButton({ compact: true })])
   ]))
 
   // ── toolbar inside the frame ─────────────────────────────────────
@@ -225,7 +227,7 @@ export function initTitlebar () {
   address = h("input#address.no-drag", {
     type: "text", placeholder: "Search, ask, or enter address",
     spellcheck: false, autocapitalize: "off", autocomplete: "off",
-    onfocus: () => { address.value = address.dataset.full || address.value; requestAnimationFrame(() => address.select()) },
+    onfocus: () => { address.value = address.dataset.full || address.value; address.select() },
     onblur: () => setTimeout(() => { if (document.activeElement !== address) setAddress(T.getActive()) }, 150),
     onkeydown: (e) => { if (e.key === "Escape") { setAddress(T.getActive()); address.blur() } }
   })
@@ -233,7 +235,9 @@ export function initTitlebar () {
   chipZoom = h("button.ob-chip.ob-zoom.no-drag", { title: "Reset zoom", hidden: true, onclick: () => T.zoomReset() })
   chipShield = h("button.ob-chip.ob-shield.no-drag", { title: "Trackers blocked on this page", hidden: true, onclick: () => openSiteInfo(chipSite) }, [ico("shield", 13), h("span")])
   const chipAI = h("button.ob-chip.ob-ask.no-drag", { title: "Ask Flux AI about this page (⇧⌘J)", onclick: () => bus.emit("ai:ask", { text: "", focusOnly: true, withPage: true }) }, [ico("spark", 13), h("span", { text: "Ask" })])
-  crumb = h("button.crumb.no-drag", { title: "Edit address (⌘L)", onclick: () => { address.focus(); address.select() } })
+  // mousedown, not click: focusing the crumb flips #address-wrap to :focus-within,
+  // which hides the crumb before mouseup, so a click event would never land
+  crumb = h("button.crumb.no-drag", { title: "Edit address (⌘L)", tabindex: -1, onmousedown: (e) => { e.preventDefault(); address.focus() } })
   addrWrap = h("div#address-wrap.no-drag", {}, [chipSite, address, crumb, chipZoom, chipShield, chipAI])
   omni = attachOmnibox(address, { anchor: addrWrap, place: "toolbar" })
 

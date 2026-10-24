@@ -3,11 +3,11 @@
 //  user-data dir, one entry per URL (visits counted), capped and
 //  written on a debounce.  Ranked by "frecency" for suggestions.
 // ───────────────────────────────────────────────────────────────────
-const { app } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
+const { profiles } = require("./profiles")
 
-const FILE = path.join(app.getPath("userData"), "history.json")
+let FILE = path.join(profiles.dir(), "history.json")
 const CAP = 6000
 
 let entries = load()          // [{ url, title, ts, visits }]
@@ -46,6 +46,13 @@ function frecency (e, now) {
 }
 
 const history = {
+  // profile switch: write this profile's history, then load another's
+  useDir (dir) {
+    flush()
+    FILE = path.join(dir, "history.json")
+    entries = load()
+    byUrl = new Map(entries.map((e) => [e.url, e]))
+  },
   record ({ url, title }) {
     if (skip(url)) return
     const now = Date.now()

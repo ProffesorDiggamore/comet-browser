@@ -4,11 +4,11 @@
 //  blocks stay valid when a chat is resumed) plus a light "display"
 //  log the panel re-renders from.  Oldest chats roll off past the cap.
 // ───────────────────────────────────────────────────────────────────
-const { app } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
+const { profiles } = require("../profiles")
 
-const FILE = path.join(app.getPath("userData"), "ai-chats.json")
+let FILE = path.join(profiles.dir(), "ai-chats.json")
 const MAX_CHATS = 40
 const MAX_BYTES = 40 * 1024 * 1024
 
@@ -60,7 +60,13 @@ const store = {
   },
   remove (id) { chats = chats.filter((c) => c.id !== id); flush(); return true },
   clear () { chats = []; flush(); return true },
-  flush
+  flush,
+  // profile switch: save this profile's chats, then load another's
+  useDir (dir) {
+    flush()
+    FILE = path.join(dir, "ai-chats.json")
+    chats = load()
+  }
 }
 
 module.exports = { chats: store }

@@ -30,6 +30,7 @@ import { closeReader } from "./components/reader.js"
 import { closePopover, isPopoverOpen } from "./components/popover.js"
 import { initSchematic } from "./components/schematic.js"
 import { initEasyFiles } from "./components/easyfiles.js"
+import { initProfiles, switchProfile, openProfileSheet } from "./components/profiles.js"
 
 const PANES = ["home", "library", "vision", "companion", "settings"]
 
@@ -107,6 +108,9 @@ function runAction (action, extra = {}) {
     case "ai-summarize": return bus.emit("ai:ask", { text: "Summarize this page: key points, then anything I should act on.", withPage: true })
     case "ai-organize": return bus.emit("ai:ask", { text: "Look at my open tabs. Close exact duplicates, then tell me how you'd group the rest and which ones look finished." })
     case "settings": return bus.emit("view", "settings")
+    case "profile-switch": return switchProfile(extra.id)
+    case "profile-add": return openProfileSheet()
+    case "profile-manage": return bus.emit("settings:goto", "profiles")
   }
 }
 
@@ -120,6 +124,7 @@ async function main () {
   initMotion()
   sfx.bindGlobal()
   startPerfLoop()
+  await initProfiles()
 
   initTitlebar()
   initSidebar()

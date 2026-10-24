@@ -7,8 +7,11 @@ const { app, safeStorage } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
 
-const DATA_DIR = path.join(app.getPath("userData"))
-const CONFIG_PATH = path.join(DATA_DIR, "config.json")
+const { profiles } = require("./profiles")
+
+// config.json lives in the active profile's dir; switching profiles re-points it (useDir)
+let DATA_DIR = profiles.dir()
+let CONFIG_PATH = path.join(DATA_DIR, "config.json")
 
 const DEFAULTS = {
   general: {
@@ -198,8 +201,9 @@ const NEBULA_LOOK = {
   background: { kind: "css", value: "var(--f-ambient)" }
 }
 
-// secrets live in their own file so config.json can be shared/inspected safely
-const SECRETS_PATH = path.join(DATA_DIR, "secrets.json")
+// secrets live in their own file so config.json can be shared/inspected safely;
+// API keys are the person's, not the profile's, so every profile shares them
+const SECRETS_PATH = path.join(profiles.BASE, "secrets.json")
 
 function deepMerge (base, over) {
   if (Array.isArray(base) || Array.isArray(over)) return over ?? base
@@ -232,52 +236,59 @@ function writeJson (p, obj, mode) {
   }
 }
 
-const RAW = readJson(CONFIG_PATH, null)
-let cache = deepMerge(DEFAULTS, RAW ?? {})
+let cache = {}
 let saveTimer = null
 
-// one-time v0.4 migration: switch to the Nebula look, keeping the old look
-// as an installed modpack so it is one click to go back.  Adds the AI and
-// Library entries to an existing sidebar.
-if (RAW && (RAW.meta?.schema ?? 0) < 4) {
-  const t = cache.theme ?? {}
-  const prev = {
-    id: "previous-look",
-    name: "My previous look",
-    theme: { active: t.active, accent: t.accent, glass: t.glass, blur: t.blur, customCss: t.customCss ?? "" },
-    audio: { pack: cache.audio?.pack, events: cache.audio?.events },
-    background: cache.home?.background
-  }
-  cache.modpacks.installed = [...(cache.modpacks.installed ?? []).filter((p) => p.id !== prev.id), prev]
-  cache.modpacks.active = "nebula-glass"
-  cache.theme = { ...t, ...NEBULA_LOOK.theme }
-  cache.home = { ...cache.home, background: NEBULA_LOOK.background }
-  const w = cache.sidebar?.widgets ?? []
-  if (!w.some((x) => x.target === "ai")) {
-    w.splice(1, 0,
-      { id: "w_ai", type: "nav", label: "Flux AI", target: "ai", icon: "spark" },
-      { id: "w_library", type: "nav", label: "Library", target: "library", icon: "clock" })
-  }
-  cache.meta = { schema: 4 }
-  writeJson(CONFIG_PATH, cache)
-}
+function loadConfig () {
+  const RAW = readJson(CONFIG_PATH, null)
+  // a fresh copy: deepMerge hands arrays through by reference, and several
+  // profiles load into one process, so nothing may alias DEFAULTS
+  cache = deepMerge(structuredClone(DEFAULTS), RAW ?? {})
 
-// one-time v0.6 migration: the light/dark redesign.  The old look is kept
-// as an installed modpack (one click back), then the new default applies.
-if (RAW && (RAW.meta?.schema ?? 0) < 5) {
-  const t = cache.theme ?? {}
-  const prev = {
-    id: "pre-v6-look",
-    name: "My look before v0.6",
-    theme: { active: t.active, accent: t.accent, accentCustom: t.accentCustom, glass: t.glass, blur: t.blur, customCss: t.customCss ?? "" },
-    background: cache.home?.background
+  // one-time v0.4 migration: switch to the Nebula look, keeping the old look
+  // as an installed modpack so it is one click to go back.  Adds the AI and
+  // Library entries to an existing sidebar.
+  if (RAW && (RAW.meta?.schema ?? 0) < 4) {
+    const t = cache.theme ?? {}
+    const prev = {
+      id: "previous-look",
+      name: "My previous look",
+      theme: { active: t.active, accent: t.accent, glass: t.glass, blur: t.blur, customCss: t.customCss ?? "" },
+      audio: { pack: cache.audio?.pack, events: cache.audio?.events },
+      background: cache.home?.background
+    }
+    cache.modpacks.installed = [...(cache.modpacks.installed ?? []).filter((p) => p.id !== prev.id), prev]
+    cache.modpacks.active = "nebula-glass"
+    cache.theme = { ...t, ...NEBULA_LOOK.theme }
+    cache.home = { ...cache.home, background: NEBULA_LOOK.background }
+    const w = cache.sidebar?.widgets ?? []
+    if (!w.some((x) => x.target === "ai")) {
+      w.splice(1, 0,
+        { id: "w_ai", type: "nav", label: "Flux AI", target: "ai", icon: "spark" },
+        { id: "w_library", type: "nav", label: "Library", target: "library", icon: "clock" })
+    }
+    cache.meta = { schema: 4 }
+    writeJson(CONFIG_PATH, cache)
   }
-  cache.modpacks.installed = [...(cache.modpacks.installed ?? []).filter((p) => p.id !== prev.id), prev]
-  cache.modpacks.active = null
-  cache.theme = { ...t, active: "glass", mode: "auto", accent: "#0a84ff", accentCustom: false, glass: 0.6, blur: 28 }
-  cache.meta = { schema: 5 }
-  writeJson(CONFIG_PATH, cache)
+
+  // one-time v0.6 migration: the light/dark redesign.  The old look is kept
+  // as an installed modpack (one click back), then the new default applies.
+  if (RAW && (RAW.meta?.schema ?? 0) < 5) {
+    const t = cache.theme ?? {}
+    const prev = {
+      id: "pre-v6-look",
+      name: "My look before v0.6",
+      theme: { active: t.active, accent: t.accent, accentCustom: t.accentCustom, glass: t.glass, blur: t.blur, customCss: t.customCss ?? "" },
+      background: cache.home?.background
+    }
+    cache.modpacks.installed = [...(cache.modpacks.installed ?? []).filter((p) => p.id !== prev.id), prev]
+    cache.modpacks.active = null
+    cache.theme = { ...t, active: "glass", mode: "auto", accent: "#0a84ff", accentCustom: false, glass: 0.6, blur: 28 }
+    cache.meta = { schema: 5 }
+    writeJson(CONFIG_PATH, cache)
+  }
 }
+loadConfig()
 
 const store = {
   all () { return cache },
@@ -306,6 +317,14 @@ const store = {
     saveTimer = setTimeout(() => writeJson(CONFIG_PATH, cache), 60)
   },
   saveNow () { clearTimeout(saveTimer); return writeJson(CONFIG_PATH, cache) },
+  // profile switch: flush this profile, then load another's config.json
+  useDir (dir) {
+    this.saveNow()
+    DATA_DIR = dir
+    CONFIG_PATH = path.join(dir, "config.json")
+    loadConfig()
+    return cache
+  },
 
   // ---- secrets ---------------------------------------------------
   getSecret (name) {
@@ -330,7 +349,7 @@ const store = {
   hasSecret (name) { return Boolean(this.getSecret(name)) },
 
   DEFAULTS,
-  paths: { DATA_DIR, CONFIG_PATH, SECRETS_PATH }
+  paths: { get DATA_DIR () { return DATA_DIR }, get CONFIG_PATH () { return CONFIG_PATH }, SECRETS_PATH }
 }
 
 module.exports = { store }

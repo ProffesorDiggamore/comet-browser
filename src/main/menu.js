@@ -5,6 +5,7 @@
 //  work.  Each item forwards an action to the renderer bus.
 // ───────────────────────────────────────────────────────────────────
 const { app, Menu } = require("electron")
+const { profiles } = require("./profiles")
 
 function buildMenu (getWin) {
   const go = (action) => () => {
@@ -12,6 +13,19 @@ function buildMenu (getWin) {
     if (w && !w.isDestroyed()) w.webContents.send("flux:menu", { action })
   }
   const item = (label, accelerator, action) => ({ label, accelerator, click: go(action) })
+  // the renderer saves its tabs before switching, so profile picks go through it
+  const send = (payload) => () => {
+    const w = getWin()
+    if (w && !w.isDestroyed()) w.webContents.send("flux:menu", payload)
+  }
+  const active = profiles.activeId()
+  const profileItems = profiles.list().map((p, i) => ({
+    label: p.emoji ? `${p.emoji}  ${p.name}` : p.name,
+    type: "checkbox",
+    checked: p.id === active,
+    accelerator: i < 9 ? `Ctrl+CmdOrCtrl+${i + 1}` : undefined,
+    click: send({ action: "profile-switch", id: p.id })
+  }))
 
   const template = [
     {
@@ -119,6 +133,15 @@ function buildMenu (getWin) {
         { type: "separator" },
         item("Summarize Page", "", "ai-summarize"),
         item("Organize My Tabs", "", "ai-organize")
+      ]
+    },
+    {
+      label: "Profiles",
+      submenu: [
+        ...profileItems,
+        { type: "separator" },
+        item("Add Profile…", "", "profile-add"),
+        item("Manage Profiles…", "", "profile-manage")
       ]
     },
     { role: "windowMenu" }

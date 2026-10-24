@@ -10,7 +10,7 @@ const { downloads } = require("./downloads")
 const { shieldStats } = require("./shield")
 const { store } = require("./store")
 
-function registerBrowserIpc ({ ses }) {
+function registerBrowserIpc ({ getSes }) {
   // ---- history ------------------------------------------------------
   ipcMain.on("flux:history:record", (_e, entry) => { if (store.get("privacy.recordHistory") !== false) history.record(entry ?? {}) })
   ipcMain.on("flux:history:title", (_e, entry) => history.title(entry ?? {}))
@@ -47,6 +47,7 @@ function registerBrowserIpc ({ ses }) {
       const storages = []
       if (kinds?.cookies) storages.push("cookies")
       if (kinds?.storage) storages.push("localstorage", "indexdb", "websql", "filesystem", "serviceworkers", "cachestorage")
+      const ses = getSes()
       if (kinds?.cache) await ses.clearCache()
       if (storages.length) await ses.clearStorageData({ storages })
       if (kinds?.history) history.clear()

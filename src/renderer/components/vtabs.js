@@ -12,6 +12,7 @@ import { tabMenu, openDownloadsPopover } from "./titlebar.js"
 import { state, resolvedMode } from "../core/state.js"
 import { themeById } from "../data/themes.js"
 import * as T from "../core/tabs.js"
+import { profileButton } from "./profiles.js"
 
 let root, tiles, list
 const rows = new Map()
@@ -143,7 +144,7 @@ export function initVTabs () {
   })
   list = h("div.vt-list")
   mount(root, h("div.vt", {}, [
-    h("div.vt-top"),
+    h("div.vt-top", {}, [profileButton()]),
     tiles,
     h("div.vt-sep"),
     h("div.vt-scroll", {}, [

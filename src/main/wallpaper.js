@@ -9,7 +9,9 @@ const fs = require("node:fs")
 const os = require("node:os")
 const path = require("node:path")
 
-const FILE = () => path.join(app.getPath("userData"), "wallpaper.jpg")
+const { profiles } = require("./profiles")
+
+const FILE = () => path.join(profiles.dir(), "wallpaper.jpg")
 const HOME_WIDGETS_IMAGES = path.join(os.homedir(), "Library", "Application Support", "HomeWidgets", "Images")
 const MAX_W = 2880
 

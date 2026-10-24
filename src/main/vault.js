@@ -3,15 +3,17 @@
 //  rest with Electron safeStorage (OS keychain); 0600 on disk.  The
 //  renderer only ever gets metadata unless it explicitly reveals one.
 // ───────────────────────────────────────────────────────────────────
-const { app, safeStorage } = require("electron")
+const { safeStorage } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
+const { profiles } = require("./profiles")
 
-const FILE = path.join(app.getPath("userData"), "vault.bin")
+// each profile keeps its own logins
+const FILE = () => path.join(profiles.dir(), "vault.bin")
 
 function load () {
   try {
-    const raw = fs.readFileSync(FILE)
+    const raw = fs.readFileSync(FILE())
     const json = safeStorage.isEncryptionAvailable()
       ? safeStorage.decryptString(raw)
       : raw.toString("utf8")
@@ -26,7 +28,7 @@ function save (data) {
   const buf = safeStorage.isEncryptionAvailable()
     ? safeStorage.encryptString(json)
     : Buffer.from(json, "utf8")
-  fs.writeFileSync(FILE, buf, { mode: 0o600 })
+  fs.writeFileSync(FILE(), buf, { mode: 0o600 })
 }
 
 function hostOf (url) {

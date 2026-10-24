@@ -5,12 +5,13 @@
 //  hero header and grouped inset lists.  Search filters every row.
 // ───────────────────────────────────────────────────────────────────
 import { h, mount } from "../../core/dom.js"
-import { state } from "../../core/state.js"
 import { bus } from "../../core/bus.js"
 import { ico } from "../../core/icons.js"
 import { tile } from "./kit.js"
+import { avatar, currentProfile, allProfiles } from "../profiles.js"
 
 export const META = {
+  profiles: { tint: "#64D2FF", group: "General", desc: "Separate worlds for school, work and home: each has its own tabs, bookmarks, history, logins and look." },
   search: { tint: "#0A84FF", group: "General", desc: "Search engine, keyword shortcuts and how new tabs behave." },
   home: { tint: "#5E5CE6", group: "General", desc: "Your New Tab page — greeting, background and shortcuts." },
   layout: { tint: "#40C8E0", group: "General", desc: "Sidebar, content frame and panel sizes." },
@@ -43,8 +44,8 @@ export function initShell (CATS) {
     const prevMain = pane.querySelector(".set-main")
     if (prevMain) scrollMemo.set(activeCat, prevMain.scrollTop)
 
-    const name = (state.get("user.name") ?? "").trim()
-    const initials = name ? name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() : ""
+    const prof = currentProfile()
+    const count = allProfiles().length
     const searchInput = h("input.set-search", {
       type: "text", placeholder: "Search", value: query, spellcheck: false,
       oninput: () => { query = searchInput.value.trim().toLowerCase(); paintMain() }
@@ -59,11 +60,11 @@ export function initShell (CATS) {
 
     const nav = h("nav.set-nav", {}, [
       h("div.set-search-wrap", {}, [ico("search", 13), searchInput]),
-      h("button.set-profile", { onclick: () => { activeCat = "home"; query = ""; render() } }, [
-        h("span.set-avatar", { text: initials || "" }, initials ? [] : [ico("spark", 18)]),
+      h("button.set-profile", { onclick: () => { activeCat = "profiles"; query = ""; render() } }, [
+        avatar(prof, 40),
         h("span.set-profile-text", {}, [
-          h("strong", { text: name || "Set your name" }),
-          h("span", { text: "Flux · Liquid Glass" })
+          h("strong", { text: prof.name }),
+          h("span", { text: count > 1 ? `${count} profiles · Switch or add` : "Profile · Add school, work…" })
         ])
       ]),
       ...navGroups

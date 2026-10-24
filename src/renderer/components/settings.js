@@ -18,6 +18,7 @@ import * as T from "../core/tabs.js"
 import { group, row, seg, sw, rng, textField, btn } from "./settings/kit.js"
 import { initShell } from "./settings/shell.js"
 import { catAI, catMotion, catLayout, catKeywords, catPrivacy as catShield } from "./settings/extra.js"
+import { catProfiles } from "./profiles.js"
 
 // ── categories ────────────────────────────────────────────────────
 function catSearch () {
@@ -431,6 +432,7 @@ function restoreRow (branch) {
 }
 
 const CATS = [
+  { id: "profiles", label: "Profiles", icon: "users", render: catProfiles },
   { id: "search", label: "Search & Tabs", icon: "search", render: () => [...catSearch(), ...catKeywords()] },
   { id: "appearance", label: "Appearance", icon: "palette", render: catAppearance },
   { id: "passwords", label: "Passwords", icon: "key", render: catPasswords },

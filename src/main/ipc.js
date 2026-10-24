@@ -14,6 +14,7 @@ const { addExtension, removeExtension, listExtensions } = require("./extensions"
 const { chat } = require("./companion/agent")
 const importer = require("./import-browser")
 const { vault } = require("./vault")
+const { profiles } = require("./profiles")
 
 function registerIpc ({ getWin, ROOT }) {
   // ---- config -------------------------------------------------------
@@ -80,7 +81,7 @@ function registerIpc ({ getWin, ROOT }) {
   ipcMain.handle("flux:vision:captureScreen", () => captureScreen())
 
   // ---- extensions ---------------------------------------------
-  const webSes = () => session.fromPartition("persist:flux")
+  const webSes = () => profiles.session()
   ipcMain.handle("flux:ext:list", () => listExtensions(webSes()))
   ipcMain.handle("flux:ext:add", async () => {
     const r = await dialog.showOpenDialog(getWin(), { title: "Pick an unpacked extension folder", properties: ["openDirectory"] })

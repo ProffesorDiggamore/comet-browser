@@ -1,0 +1,104 @@
+/* ═══════════════════════════════════════════════════════════════════
+   PROFILES — avatar, sidebar switcher, switcher menu, create/edit sheet.
+   Neutrals go through rgb(var(--ink) / a) so light and dark both work;
+   the only color is each profile's own (--pf).
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── avatar ────────────────────────────────────────────────────── */
+.pf-av {
+  --pf-s: 22px;
+  width: var(--pf-s); height: var(--pf-s); flex: 0 0 auto; border-radius: 50%;
+  display: inline-grid; place-items: center;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--pf) 72%, #fff), var(--pf) 70%);
+  color: #fff; font-size: calc(var(--pf-s) * 0.42); font-weight: 650; letter-spacing: 0.01em; line-height: 1;
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.35), 0 0 0 0.5px rgb(0 0 0 / 0.12);
+  text-shadow: 0 0.5px 1px rgb(0 0 0 / 0.18);
+  user-select: none;
+}
+.pf-av.is-emoji { font-size: calc(var(--pf-s) * 0.56); text-shadow: none; background: color-mix(in srgb, var(--pf) 26%, rgb(var(--ink) / 0.06)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pf) 45%, transparent); }
+
+/* ── switcher button ───────────────────────────────────────────── */
+.pf-btn {
+  display: inline-flex; align-items: center; gap: 7px; height: 28px; max-width: 150px; padding: 0 8px 0 4px;
+  border: 0; border-radius: 999px; background: transparent; color: var(--f-text); font-size: 12.5px; font-weight: 550;
+  transition: background var(--f-fast);
+}
+.pf-btn:hover { background: rgb(var(--ink) / 0.07); }
+.pf-btn:active { background: rgb(var(--ink) / 0.11); }
+.pf-btn svg { color: var(--f-text-3); flex: 0 0 auto; }
+.pf-btn-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-btn.is-compact { width: 32px; height: 32px; padding: 0; justify-content: center; }
+
+/* sidebar: right of the traffic lights, in the drag strip */
+.vt-top { display: flex; align-items: center; justify-content: flex-end; padding-right: 2px; }
+.vt-top .pf-btn { -webkit-app-region: no-drag; }
+/* classic layout: avatar in the title bar; the sidebar owns it in Dia */
+[data-layout="dia"] .tb-cluster .pf-btn { display: none; }
+
+/* ── switcher menu ─────────────────────────────────────────────── */
+.pf-head { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 9px; }
+.pf-head-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.pf-head-text strong { font-size: 13.5px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-head-text span { font-size: 11.5px; color: var(--f-text-dim); }
+.pf-head-edit { width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 7px; background: transparent; color: var(--f-text-dim); }
+.pf-head-edit:hover { background: rgb(var(--ink) / 0.08); color: var(--f-text); }
+.pf-mi { height: 30px; }
+.pf-mi .pf-av { box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.0); }
+.pf-mi:hover .pf-av { box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.7); }
+
+/* ── sheet ─────────────────────────────────────────────────────── */
+.pf-scrim {
+  position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center;
+  background: rgb(0 0 0 / 0.32);
+  animation: pf-fade var(--f-med, 220ms) var(--f-ease-out, ease-out) both;
+}
+.pf-scrim.is-leaving { animation: pf-fade 160ms ease-in reverse both; }
+.pf-scrim.is-leaving .pf-sheet { animation: pf-rise 160ms ease-in reverse both; }
+.pf-sheet {
+  width: min(400px, calc(100vw - 32px)); padding: 26px 24px 20px; border-radius: 22px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px; text-align: center;
+  background-color: var(--f-pop-bg); --f-blur: 50px;
+  box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(var(--ink) / 0.12);
+  animation: pf-rise 320ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+.pf-preview { display: flex; justify-content: center; margin-bottom: 6px; }
+.pf-preview .pf-av { box-shadow: 0 10px 28px -10px var(--pf), inset 0 0.5px 0 rgb(255 255 255 / 0.35); transition: background var(--f-fast); }
+.pf-title { margin: 4px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.pf-sub { margin: 0 8px 10px; font-size: 12.5px; line-height: 1.4; color: var(--f-text-dim); }
+.pf-sheet input.pf-name { height: 34px; font-size: 14px; text-align: center; border-radius: 10px; }
+.pf-label { margin: 12px 2px 4px; font-size: 11px; font-weight: 600; color: var(--f-text-3); text-align: left; }
+.pf-swatches { display: flex; justify-content: space-between; gap: 6px; }
+.pf-swatch {
+  width: 26px; height: 26px; padding: 0; border: 0; border-radius: 50%; background: var(--pf);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.3), 0 0 0 0.5px rgb(0 0 0 / 0.15);
+  transition: transform var(--f-fast) var(--f-ease), box-shadow var(--f-fast);
+}
+.pf-swatch:hover { transform: scale(1.1); }
+.pf-swatch.is-on { box-shadow: 0 0 0 2px var(--f-pop-bg, #1c1c1e), 0 0 0 4px var(--pf); }
+.pf-emojis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.pf-emoji {
+  height: 34px; padding: 0; border: 0; border-radius: 9px; background: rgb(var(--ink) / 0.05);
+  font-size: 18px; line-height: 1; color: var(--f-text); transition: background var(--f-fast), box-shadow var(--f-fast);
+}
+.pf-emoji:hover { background: rgb(var(--ink) / 0.1); }
+.pf-emoji.is-on { background: color-mix(in srgb, var(--pf, var(--f-accent)) 22%, transparent); box-shadow: inset 0 0 0 1.5px var(--pf, var(--f-accent)); }
+.pf-emoji-ab { font-size: 12px; font-weight: 650; color: var(--f-text-dim); }
+.pf-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
+.pf-actions .btn { min-width: 84px; }
+.pf-sheet--confirm .pf-sub { margin-bottom: 0; }
+
+/* ── Settings → Profiles ───────────────────────────────────────── */
+.pf-row { gap: 12px; }
+.pf-row .control { display: flex; align-items: center; gap: 6px; }
+.pf-badge { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--f-accent-text); background: var(--f-accent-soft); }
+.btn.btn--icon { width: 28px; padding: 0; }
+.pf-add { gap: 6px; }
+
+/* the whole UI eases out while a profile switch reloads it */
+body.is-switching-profile #app { opacity: 0; transform: scale(0.992); transition: opacity 160ms ease-in, transform 160ms ease-in; }
+
+@keyframes pf-fade { from { opacity: 0; } }
+@keyframes pf-rise { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+@media (prefers-reduced-motion: reduce) {
+  .pf-scrim, .pf-sheet, .pf-scrim.is-leaving, .pf-scrim.is-leaving .pf-sheet { animation-duration: 1ms; }
+}

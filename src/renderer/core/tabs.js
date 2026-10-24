@@ -106,7 +106,7 @@ export function refreshSite (id) { const t = rawTab(id); if (t) applySite(t) }
 export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null } = {}) {
   const id = `tab_${++seq}`
   const wv = document.createElement("webview")
-  wv.setAttribute("partition", "persist:flux")
+  wv.setAttribute("partition", window.flux.paths.partition ?? "persist:flux")
   wv.setAttribute("allowpopups", "")
   wv.setAttribute("preload", `file://${window.flux.paths.webviewPreload}`)
   applyPerfFlags(wv)
@@ -462,16 +462,26 @@ window.flux.shield.onCounts(({ counts }) => {
 // ── session save / restore ────────────────────────────────────────
 let saveT = null
 let restoring = false
-function saveSession () {
-  if (restoring) return
-  clearTimeout(saveT)
-  saveT = setTimeout(() => {
-    const list = tabs.filter((t) => !t.isHome || t.pinned).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null }))
-      .filter((t) => t.url && t.url !== "about:blank")
-    const active = Math.max(0, tabs.filter((t) => !t.isHome).findIndex((t) => t.id === activeId))
-    state.set("session", { tabs: list.slice(0, 200), active })
-  }, 1200)
+let frozen = false
+function writeSession () {
+  const list = tabs.filter((t) => !t.isHome || t.pinned).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null }))
+    .filter((t) => t.url && t.url !== "about:blank")
+  const active = Math.max(0, tabs.filter((t) => !t.isHome).findIndex((t) => t.id === activeId))
+  return state.set("session", { tabs: list.slice(0, 200), active })
 }
+function saveSession () {
+  if (restoring || frozen) return
+  clearTimeout(saveT)
+  saveT = setTimeout(writeSession, 1200)
+}
+// before a profile switch: save these tabs now, then stop saving so nothing
+// lands in the next profile's config while the UI reloads
+export async function flushSession () {
+  clearTimeout(saveT)
+  frozen = true
+  await writeSession()
+}
+export function thawSession () { frozen = false }
 
 export function restoreSession () {
   const s = state.get("session")

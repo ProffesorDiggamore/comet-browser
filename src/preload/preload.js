@@ -19,7 +19,7 @@ function on (channel, cb) {
 }
 
 contextBridge.exposeInMainWorld("flux", {
-  paths, // { root, userData, webviewPreload }
+  paths, // { root, userData, webviewPreload, partition, profile }
 
   config: {
     all: () => ipcRenderer.invoke("flux:config:all"),
@@ -167,6 +167,15 @@ contextBridge.exposeInMainWorld("flux", {
   },
 
   web: { clearData: (kinds) => ipcRenderer.invoke("flux:web:clearData", kinds) },
+
+  // Chrome-style profiles: switching reloads the UI into the other profile
+  profiles: {
+    list: () => ipcRenderer.invoke("flux:profiles:list"),
+    create: (patch, opts) => ipcRenderer.invoke("flux:profiles:create", patch, opts),
+    update: (id, patch) => ipcRenderer.invoke("flux:profiles:update", id, patch),
+    remove: (id) => ipcRenderer.invoke("flux:profiles:remove", id),
+    switch: (id) => ipcRenderer.invoke("flux:profiles:switch", id)
+  },
   onMenu: (cb) => on("flux:menu", cb),
 
   openExternal: (url) => ipcRenderer.invoke("flux:open-external", url),
