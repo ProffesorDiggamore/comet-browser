@@ -18,6 +18,12 @@ ELECTRON="$ROOT/node_modules/electron/dist/Electron.app"
 DEST="${FLUX_DEST:-/Applications}"
 [ -w "$DEST" ] || { DEST="$HOME/Applications"; mkdir -p "$DEST"; }
 
+# swapping the bundle under a running Flux breaks its next tab (helpers vanish mid-run)
+if pgrep -f "$DEST/Flux.app/Contents/MacOS/" >/dev/null; then
+  echo "Flux is open. Quit it (⌘Q, your tabs are saved), then run this again."
+  exit 1
+fi
+
 # build outside ~/Documents: iCloud re-adds FinderInfo mid-build and breaks codesign
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/flux-build.XXXXXX")"
 APP="$STAGE/Flux.app"

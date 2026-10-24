@@ -16,7 +16,7 @@
   "author": "Landon (whoslandon)",
   "license": "UNLICENSED",
   "devDependencies": {
-    "electron": "33.4.11"
+    "electron": "44.9.3"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0"

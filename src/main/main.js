@@ -218,9 +218,22 @@ app.whenReady().then(async () => {
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit() })
 app.on("will-quit", () => { globalShortcut.unregisterAll(); store.saveNow(); history.flush(); flushChats() })
 
-// harden: block new-window popups into OS browser; route them as tabs instead
+// links that open a new window become tabs; sized pop-ups (window.open with
+// features) stay real windows, because "Sign in with Google" and other OAuth
+// pop-ups hand the result back through window.opener, which a tab doesn't have
 app.on("web-contents-created", (_e, contents) => {
   contents.setWindowOpenHandler(({ url, disposition }) => {
+    if (disposition === "new-window" && /^https?:/.test(url) && contents !== win?.webContents) {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          parent: win && !win.isDestroyed() ? win : undefined,
+          backgroundColor: solidBg(),
+          autoHideMenuBar: true,
+          webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false }
+        }
+      }
+    }
     const background = disposition === "background-tab"
     if (win && !win.isDestroyed()) win.webContents.send("flux:open-tab", { url, background })
     return { action: "deny" }

@@ -6,13 +6,16 @@
 const fs = require("node:fs")
 const { store } = require("./store")
 
+// Electron 36+ moved these onto session.extensions (the session methods are deprecated)
+const api = (ses) => ses.extensions ?? ses
+
 async function loadSavedExtensions (ses) {
   const paths = store.get("extensions.paths") ?? []
   const kept = []
   for (const p of paths) {
     if (!fs.existsSync(p)) continue
     try {
-      await ses.loadExtension(p, { allowFileAccess: true })
+      await api(ses).loadExtension(p, { allowFileAccess: true })
       kept.push(p)
     } catch (e) {
       console.error("[ext] load failed", p, e.message)
@@ -24,7 +27,7 @@ async function loadSavedExtensions (ses) {
 async function addExtension (ses, dirPath) {
   if (!dirPath || !fs.existsSync(dirPath)) return { ok: false, text: "Folder not found." }
   try {
-    const ext = await ses.loadExtension(dirPath, { allowFileAccess: true })
+    const ext = await api(ses).loadExtension(dirPath, { allowFileAccess: true })
     const paths = new Set(store.get("extensions.paths") ?? [])
     paths.add(dirPath)
     store.set("extensions.paths", [...paths])
@@ -36,9 +39,9 @@ async function addExtension (ses, dirPath) {
 
 async function removeExtension (ses, id) {
   try {
-    const all = ses.getAllExtensions()
+    const all = api(ses).getAllExtensions()
     const found = all.find((x) => x.id === id)
-    ses.removeExtension(id)
+    api(ses).removeExtension(id)
     if (found?.path) {
       const paths = (store.get("extensions.paths") ?? []).filter((p) => p !== found.path)
       store.set("extensions.paths", paths)
@@ -50,7 +53,7 @@ async function removeExtension (ses, id) {
 }
 
 function listExtensions (ses) {
-  return ses.getAllExtensions().map((x) => ({ id: x.id, name: x.name, version: x.version, path: x.path }))
+  return api(ses).getAllExtensions().map((x) => ({ id: x.id, name: x.name, version: x.version, path: x.path }))
 }
 
 module.exports = { loadSavedExtensions, addExtension, removeExtension, listExtensions }
