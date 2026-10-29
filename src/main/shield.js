@@ -5,6 +5,7 @@
 //  ever applied to sub-resources — a page you navigate to always loads.
 // ───────────────────────────────────────────────────────────────────
 const { store } = require("./store")
+const { applyRequestQuirks } = require("./quirks")
 
 // Curated list: the ad exchanges + analytics beacons that cover the bulk
 // of third-party tracking without breaking logins, players or CDNs.
@@ -97,11 +98,13 @@ function initShield (ses, getWin) {
     cb({})
   })
 
+  // a session gets one header hook, so site quirks ride along here
   ses.webRequest.onBeforeSendHeaders({ urls: ["<all_urls>"] }, (details, cb) => {
     if (store.get("privacy.sendGpc") !== false) {
       details.requestHeaders["Sec-GPC"] = "1"
       details.requestHeaders.DNT = "1"
     }
+    applyRequestQuirks(details)
     cb({ requestHeaders: details.requestHeaders })
   })
 }
