@@ -2,22 +2,27 @@
 //  quirks.js — site-specific compatibility fixes, the way qutebrowser
 //  and WebKit ship them.  Kept to the narrowest URL that needs it.
 //
-//  Google sign-in turns away Chromium engines that live inside an app
-//  (Electron, QtWebEngine): "Couldn't sign you in — This browser or app
-//  may not be secure."  qutebrowser's built-in "ua-google" quirk sends a
-//  Firefox user agent on requests to accounts.google.com only; Flux does
-//  the same.  Every other site, and the page's own JavaScript, still see
-//  Flux's real Chromium identity.  Toggle: privacy.googleSignInFix.
+//  Google sign-in: "Couldn't sign you in — This browser or app may not
+//  be secure."  Flux drops its Flux/Electron tokens from the user agent
+//  (main.js) because many sites wall off browsers they don't know.  That
+//  leaves a user agent claiming to be plain Chrome, and Google's sign-in
+//  turns away a browser that claims to be Chrome (or Firefox) but isn't.
+//  Shown Flux's real user agent, the same page lets it in.
+//
+//  Measured 2026-11-13, Electron 44.9.3, email step, fresh sessions:
+//    real user agent on accounts.google.com   9/9 accepted
+//    Firefox user agent (the previous quirk)  3/3 rejected
+//    Chrome-shaped user agent (no quirk)      1/1 rejected
+//
+//  Header only: switching the page-side user agent as well means a
+//  webContents.setUserAgent() during the redirect into sign-in, which
+//  reloads the navigation and hung the test.  Toggle: privacy.googleSignInFix.
 // ───────────────────────────────────────────────────────────────────
+const { app } = require("electron")
 const { store } = require("./store")
 
-// Firefox ships every 4 weeks (141 on 2025-07-22); claim the release before
-// the current one so the string never goes stale or names a future version
-const FIREFOX_141 = Date.UTC(2025, 6, 22)
-function firefoxVersion () {
-  return 141 + Math.max(0, Math.floor((Date.now() - FIREFOX_141) / (28 * 864e5)) - 1)
-}
-const firefoxUA = () => { const v = firefoxVersion(); return `Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:${v}.0) Gecko/20100101 Firefox/${v}.0` }
+// Electron's untouched default: "… Flux/0.7.0 Chrome/152.x Electron/44.x Safari/537.36"
+const realUA = () => app.userAgentFallback
 
 function isGoogleSignIn (url) {
   try { const u = new URL(url); return u.protocol === "https:" && u.hostname === "accounts.google.com" } catch { return false }
@@ -26,8 +31,8 @@ function isGoogleSignIn (url) {
 // called from the session's one onBeforeSendHeaders hook (shield.js)
 function applyRequestQuirks (details) {
   if (store.get("privacy.googleSignInFix") !== false && isGoogleSignIn(details.url)) {
-    details.requestHeaders["User-Agent"] = firefoxUA()
+    details.requestHeaders["User-Agent"] = realUA()
   }
 }
 
-module.exports = { applyRequestQuirks, firefoxUA }
+module.exports = { applyRequestQuirks }

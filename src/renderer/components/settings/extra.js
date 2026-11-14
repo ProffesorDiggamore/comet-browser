@@ -262,7 +262,7 @@ export function catPrivacy () {
       row("Shield stats", stats),
       row("HTTPS-only", sw(!!p.httpsOnly, (v) => state.set("privacy.httpsOnly", v)), "Upgrades http:// pages to https:// (local addresses excluded)."),
       row("Send Global Privacy Control", sw(p.sendGpc !== false, (v) => state.set("privacy.sendGpc", v)), "Tells sites not to sell or share your data (GPC + DNT headers)."),
-      row("Google sign-in fix", sw(p.googleSignInFix !== false, (v) => state.set("privacy.googleSignInFix", v)), "Google turns away browsers built like Flux (“This browser or app may not be secure”). This shows accounts.google.com a Firefox browser ID, the same fix qutebrowser ships. Every other site sees Flux as it is.")
+      row("Google sign-in fix", sw(p.googleSignInFix !== false, (v) => state.set("privacy.googleSignInFix", v)), "Google turns away browsers built like Flux (“This browser or app may not be secure”). Flux hides its name from most sites so they don't block it, and that disguise is what Google rejects. With this on, accounts.google.com sees Flux's real browser ID, which Google accepts. Every other site is unchanged.")
     ]),
     group("History", [
       row("Remember browsing history", sw(p.recordHistory !== false, (v) => state.set("privacy.recordHistory", v)), "Powers address-bar suggestions and the Library. Stored only on this Mac."),

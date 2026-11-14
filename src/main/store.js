@@ -176,7 +176,7 @@ const DEFAULTS = {
     blockTrackers: true,
     httpsOnly: false,
     sendGpc: true,              // Global Privacy Control + DNT headers
-    googleSignInFix: true,      // Firefox user agent for accounts.google.com only (main/quirks.js)
+    googleSignInFix: true,      // Flux's real user agent for accounts.google.com only (main/quirks.js)
     recordHistory: true
   },
   bookmarks: [],                // [{ id, url, title, ts }]
