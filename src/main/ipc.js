@@ -7,11 +7,7 @@ const { ipcMain, dialog, shell, session, app, BrowserWindow } = require("electro
 const fs = require("node:fs")
 const path = require("node:path")
 const { store } = require("./store")
-const { analyze, providerStatus } = require("./vision")
-const { captureScreen } = require("./screenshot")
-const { applyVisionHotkey } = require("./shortcuts")
 const { addExtension, removeExtension, listExtensions } = require("./extensions")
-const { chat } = require("./companion/agent")
 const importer = require("./import-browser")
 const { vault } = require("./vault")
 const { profiles } = require("./profiles")
@@ -23,7 +19,6 @@ function registerIpc ({ getWin, ROOT }) {
   ipcMain.handle("flux:config:get", (_e, key) => store.get(key))
   ipcMain.handle("flux:config:set", (_e, key, value) => {
     store.set(key, value)
-    if (key === "vision.hotkey") applyVisionHotkey(getWin)
     broadcast(getWin, "flux:config:changed", { key, value })
     return store.get(key)
   })
@@ -35,7 +30,7 @@ function registerIpc ({ getWin, ROOT }) {
 
   // ---- secrets (write-only from renderer; values never read back) ---
   ipcMain.handle("flux:secret:set", (_e, name, value) => ({ ok: store.setSecret(name, value) }))
-  ipcMain.handle("flux:secret:status", () => providerStatus())
+  ipcMain.handle("flux:secret:status", () => ({ anthropic: store.hasSecret("anthropic"), openai: store.hasSecret("openai"), gemini: store.hasSecret("gemini") }))
 
   // ---- file pickers ----------------------------------------------
   ipcMain.handle("flux:pick:image", async () => {
@@ -76,10 +71,6 @@ function registerIpc ({ getWin, ROOT }) {
     catch (e) { return { ok: false, text: e.message } }
   })
 
-  // ---- vision ---------------------------------------------------
-  ipcMain.handle("flux:vision:analyze", (_e, args) => analyze(args))
-  ipcMain.handle("flux:vision:captureScreen", () => captureScreen())
-
   // ---- extensions ---------------------------------------------
   const webSes = () => profiles.session()
   ipcMain.handle("flux:ext:list", () => listExtensions(webSes()))
@@ -90,31 +81,6 @@ function registerIpc ({ getWin, ROOT }) {
   })
   ipcMain.handle("flux:ext:remove", (_e, id) => removeExtension(webSes(), id))
 
-  // ---- companion ---------------------------------------------
-  ipcMain.handle("flux:companion:chat", async (e, { messages }) => {
-    const wc = e.sender
-    return chat({
-      messages,
-      onEvent: (ev) => wc.send("flux:companion:event", ev),
-      approve: (change) => new Promise((resolve) => {
-        const id = `apr_${Date.now()}_${Math.random().toString(36).slice(2)}`
-        const onReply = (_ev, payload) => {
-          if (payload.id !== id) return
-          ipcMain.removeListener("flux:companion:approve-reply", onReply)
-          resolve(Boolean(payload.ok))
-        }
-        ipcMain.on("flux:companion:approve-reply", onReply)
-        wc.send("flux:companion:approve", { id, change })
-      })
-    })
-  })
-  ipcMain.handle("flux:companion:setProject", async () => {
-    const r = await dialog.showOpenDialog(getWin(), { title: "Companion project folder", properties: ["openDirectory"] })
-    if (r.canceled || !r.filePaths[0]) return { ok: false }
-    store.set("companion.projectPath", r.filePaths[0])
-    return { ok: true, path: r.filePaths[0] }
-  })
-
   // ---- window controls / misc ------------------------------
   ipcMain.handle("flux:win:min", () => getWin()?.minimize())
   ipcMain.handle("flux:win:max", () => {
@@ -122,6 +88,7 @@ function registerIpc ({ getWin, ROOT }) {
     w.isMaximized() ? w.unmaximize() : w.maximize()
   })
   ipcMain.handle("flux:win:close", () => getWin()?.close())
+  ipcMain.handle("flux:win:is-fullscreen", () => !!getWin()?.isFullScreen())
   ipcMain.handle("flux:open-external", (_e, url) => { if (/^https?:/.test(url ?? "")) shell.openExternal(url) })
   ipcMain.handle("flux:reload-ui", () => { store.saveNow(); getWin()?.webContents.reloadIgnoringCache() })
   ipcMain.handle("flux:paths:info", () => ({ root: ROOT, userData: app.getPath("userData"), config: store.paths.CONFIG_PATH }))
@@ -180,6 +147,9 @@ function registerIpc ({ getWin, ROOT }) {
   ipcMain.handle("flux:vault:remove", (_e, id) => vault.remove(id))
   ipcMain.handle("flux:vault:clear", () => vault.clear())
   ipcMain.handle("flux:vault:match", (_e, url) => vault.match(url))
+  ipcMain.handle("flux:vault:match-all", (_e, url) => vault.matchAll(String(url ?? "")))
+  ipcMain.handle("flux:vault:fill", (_e, profileId, id) => vault.fill(String(profileId), String(id)))
+  ipcMain.handle("flux:vault:known", (_e, url, username, password) => vault.known(String(url ?? ""), String(username ?? ""), String(password ?? "")))
 }
 
 function broadcast (getWin, channel, payload) {

@@ -1,7 +1,7 @@
 // ───────────────────────────────────────────────────────────────────
 //  contextmenu.js — native right-click menus.  Web pages get the full
-//  browser set (links, images, selection, spelling, Ask Flux AI,
-//  inspect); the Flux UI itself gets editing basics in text fields.
+//  browser set (links, images, selection, spelling, Ask Comet AI,
+//  inspect); the Comet UI itself gets editing basics in text fields.
 //  Actions that need the tab model are forwarded to the renderer.
 // ───────────────────────────────────────────────────────────────────
 const { Menu, clipboard, shell } = require("electron")
@@ -32,21 +32,24 @@ function attachContextMenu (contents, getWin) {
 
     if (isPage && p.linkURL) {
       t.push(
-        { label: "Open Link in New Tab", click: () => send("flux:open-tab", { url: p.linkURL, background: true }) },
+        { label: "Open Link in New Tab", click: () => send("flux:open-tab", { url: p.linkURL, background: true, from: contents.id }) },
+        { label: "Open Link in Private Tab", click: () => send("flux:open-tab", { url: p.linkURL, private: true }) },
         { label: "Open Link in Split View", click: () => send("flux:menu", { action: "split-with-url", url: p.linkURL }) },
         { label: "Open Link in System Browser", click: () => /^https?:/.test(p.linkURL) && shell.openExternal(p.linkURL) },
         { label: "Copy Link", click: () => clipboard.writeText(p.linkURL) },
-        { label: "Ask Flux AI About Link", click: () => send("flux:ai:ask", { text: `What's at this link? ${p.linkURL}`, openLink: p.linkURL }) }
+        { label: "Ask Comet AI About Link", click: () => send("flux:ai:ask", { text: `What's at this link? ${p.linkURL}`, openLink: p.linkURL }) }
       )
       sep()
     }
 
     if (isPage && p.mediaType === "image" && p.srcURL) {
       t.push(
-        { label: "Open Image in New Tab", click: () => send("flux:open-tab", { url: p.srcURL, background: true }) },
+        { label: "Open Image in New Tab", click: () => send("flux:open-tab", { url: p.srcURL, background: true, from: contents.id }) },
         { label: "Save Image…", click: () => contents.downloadURL(p.srcURL) },
         { label: "Copy Image", click: () => contents.copyImageAt(p.x, p.y) },
-        { label: "Copy Image Address", click: () => clipboard.writeText(p.srcURL) }
+        { label: "Copy Image Address", click: () => clipboard.writeText(p.srcURL) },
+        { type: "separator", visible: /^https?:/i.test(p.srcURL) },
+        { label: "Search Image with Google Lens", visible: /^https?:/i.test(p.srcURL), click: () => send("flux:open-tab", { url: `https://lens.google.com/uploadbyurl?url=${encodeURIComponent(p.srcURL)}`, from: contents.id }) }
       )
       sep()
     }
@@ -76,8 +79,8 @@ function attachContextMenu (contents, getWin) {
     if (isPage && sel) {
       t.push(
         { label: `Search for “${trim(sel, 24)}”`, click: () => send("flux:open-tab", { url: sel, background: false, search: true }) },
-        { label: `Ask Flux AI: “${trim(sel, 22)}”`, click: () => send("flux:ai:ask", { text: `Explain this:\n\n"${sel.slice(0, 4000)}"` }) },
-        { label: "Translate with Flux AI", click: () => send("flux:ai:ask", { text: `Translate this to English (or to Spanish if it's already English):\n\n"${sel.slice(0, 4000)}"` }) },
+        { label: `Ask Comet AI: “${trim(sel, 22)}”`, click: () => send("flux:ai:ask", { text: `Explain this:\n\n"${sel.slice(0, 4000)}"` }) },
+        { label: "Translate with Comet AI", click: () => send("flux:ai:ask", { text: `Translate this to English (or to Spanish if it's already English):\n\n"${sel.slice(0, 4000)}"` }) },
         { label: "Look Up", click: () => contents.showDefinitionForSelection?.() }
       )
       sep()
@@ -90,7 +93,7 @@ function attachContextMenu (contents, getWin) {
         { label: "Forward", enabled: nh?.canGoForward?.() ?? contents.canGoForward(), click: () => (nh?.goForward ? nh.goForward() : contents.goForward()) },
         { label: "Reload", click: () => contents.reload() },
         { type: "separator" },
-        { label: "Summarize Page with Flux AI", click: () => send("flux:ai:ask", { text: "Summarize this page: key points, then anything I should act on.", withPage: true }) },
+        { label: "Summarize Page with Comet AI", click: () => send("flux:ai:ask", { text: "Summarize this page: key points, then anything I should act on.", withPage: true }) },
         { label: "Reader Mode", click: () => send("flux:menu", { action: "reader" }) },
         { label: "Bookmark Page", click: () => send("flux:menu", { action: "bookmark" }) },
         { label: "Copy Page Link", click: () => clipboard.writeText(contents.getURL()) },

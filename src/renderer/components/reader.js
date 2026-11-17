@@ -76,7 +76,7 @@ export async function openReader () {
     seg([[600, "Narrow"], [700, "Medium"], [860, "Wide"]], prefs.width, (v) => { prefs.width = v; apply() }),
     seg([["dusk", "Dusk"], ["sepia", "Sepia"], ["paper", "Paper"]], prefs.theme, (v) => { prefs.theme = v; apply() }),
     speakBtn,
-    h("button.tb-btn", { title: "Summarize with Flux AI", onclick: () => bus.emit("ai:ask", { text: "Summarize this article: the key points, then what's worth acting on.", withPage: true }) }, [ico("spark", 15)]),
+    h("button.tb-btn", { title: "Summarize with Comet AI", onclick: () => bus.emit("ai:ask", { text: "Summarize this article: the key points, then what's worth acting on.", withPage: true }) }, [ico("spark", 15)]),
     h("button.tb-btn", { title: "Close reader (Esc)", onclick: closeReader }, [ico("close", 15)])
   ])
 

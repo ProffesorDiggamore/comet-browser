@@ -12,7 +12,7 @@ export function isRecording () { return !!rec }
 export async function toggleVoice (onText) {
   if (rec) { rec.stop(); return }
   const perm = await window.flux.voice.permission()
-  if (!perm.ok) { toast("Microphone access is off — enable Flux/Electron in System Settings → Privacy → Microphone."); return }
+  if (!perm.ok) { toast("Microphone access is off — enable Comet/Electron in System Settings → Privacy → Microphone."); return }
   let stream
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }) }
   catch (e) { toast(`Mic unavailable: ${e.message}`); return }

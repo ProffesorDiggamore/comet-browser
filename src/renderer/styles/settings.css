@@ -150,3 +150,18 @@
 .cust-well { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: var(--f-text-dim); }
 .cust-well input[type="color"] { width: 40px; height: 40px; padding: 3px; border-radius: 50%; }
 .cust-well input[type="color"]::-webkit-color-swatch { border-radius: 50%; }
+
+/* Appearance → Style cards: a still frame of each live pattern */
+.style-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; width: 100%; }
+.style-card { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: none; color: var(--f-text-dim); font-size: 12px; }
+.style-prev {
+  position: relative; width: 100%; aspect-ratio: 16 / 10; border-radius: 12px; overflow: hidden; display: grid; place-items: center;
+  background: radial-gradient(120% 90% at 80% 0%, color-mix(in srgb, var(--f-accent) 16%, transparent), transparent 70%), rgb(var(--ink) / 0.05);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--ink) / 0.14);
+  transition: transform var(--f-fast) var(--f-ease), box-shadow var(--f-fast);
+}
+.style-cv { position: absolute; inset: 0; width: 100%; height: 100%; }
+.style-none { color: var(--f-text-3); }
+.style-card:hover .style-prev { transform: translateY(-1px); }
+.style-card.is-on { color: var(--f-text); font-weight: 600; }
+.style-card.is-on .style-prev { box-shadow: 0 0 0 2.5px var(--f-accent), 0 2px 8px rgba(0, 0, 0, 0.15); }

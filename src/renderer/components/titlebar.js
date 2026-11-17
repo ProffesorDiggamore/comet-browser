@@ -9,8 +9,7 @@ import { h, mount } from "../core/dom.js"
 import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { state } from "../core/state.js"
-import { flip, leave } from "../core/motion.js"
-import { fillActiveTab } from "./passwords.js"
+import { flip, leave, effectiveMode, ms } from "../core/motion.js"
 import { attachOmnibox } from "./omnibox.js"
 import { menu } from "./popover.js"
 import { toggleBookmark, isBookmarked } from "./library.js"
@@ -20,14 +19,26 @@ import * as T from "../core/tabs.js"
 import { profileButton } from "./profiles.js"
 
 const els = new Map()       // tabId -> element
-let strip, pinnedBox, address, omni, btnStar, btnDl, btnBack, btnFwd, btnReload, chipZoom, chipShield, chipSite, addrWrap, crumb, btnStar2, btnDl2
+let strip, pinnedBox, address, omni, btnStar, btnDl, btnBack, btnFwd, btnReload, chipZoom, chipShield, chipSite, chipCopy, addrWrap, crumb, btnStar2
+let crumbKey = ""
+let lastOrder = "", lastActive = null
 let dragId = null
 
 function iconBtn (name, title, onclick, cls = "") {
   return h(`button.tb-btn.no-drag${cls}`, { title, "aria-label": title, onclick }, [ico(name, 16)])
 }
 
-export function openDownloadsPopover () { openDownloads(btnDl2?.offsetParent ? btnDl2 : btnDl) }
+// restart a one-shot CSS animation class (icon spin, bookmark pop)
+function kick (el, cls) {
+  el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls)
+  el.addEventListener("animationend", () => el.classList.remove(cls), { once: true })
+}
+
+// sidebar layout: from the sidebar's Downloads button; classic: the title bar's
+export function openDownloadsPopover () {
+  const side = document.querySelector('.vt-bottom [aria-label^="Downloads"]')
+  openDownloads(side?.offsetParent ? side : btnDl)
+}
 
 export function tabMenu (t, anchor) {
   menu(anchor, [
@@ -44,7 +55,7 @@ export function tabMenu (t, anchor) {
     { label: "Reload", icon: "reload", run: () => T.reload(t.id), disabled: t.isHome },
     { label: "Sleep Tab", icon: "sleep", run: () => T.sleepTab(t.id), disabled: t.id === T.getActiveId() || t.isHome },
     { label: "Copy Link", icon: "link", run: () => { navigator.clipboard.writeText(t.url); toast("Link copied") }, disabled: t.isHome },
-    { label: "Ask Flux AI About This Tab", icon: "spark", disabled: t.isHome, run: () => { T.setActive(t.id); bus.emit("ai:ask", { text: "Summarize this page.", withPage: true }) } },
+    { label: "Ask Comet AI About This Tab", icon: "spark", disabled: t.isHome, run: () => { T.setActive(t.id); bus.emit("ai:ask", { text: "Summarize this page.", withPage: true }) } },
     "-",
     { label: "Close Other Tabs", icon: "layers", run: () => T.closeOthers(t.id) },
     { label: "Close Tabs to the Right", icon: "forward", run: () => T.closeRight(t.id) },
@@ -53,7 +64,7 @@ export function tabMenu (t, anchor) {
 }
 
 function favNode (t) {
-  if (t.isHome) return ico("spark", 13)
+  if (t.isHome) return ico("flux", 13)
   if (t.asleep && !t.favicon) return ico("sleep", 13)
   if (t.favicon) return h("img", { src: t.favicon, draggable: false, onerror: (e) => e.target.replaceWith(ico("globe", 13)) })
   return ico("globe", 13)
@@ -88,7 +99,7 @@ function tabEl (t) {
     }
   })
   el.dataset.id = t.id
-  el.append(h("span.tab-fav"), h("span.tab-title"), h("button.tab-audio.no-drag", { title: "Mute tab", onclick: (e) => { e.stopPropagation(); T.setMuted(t.id) } }), h("button.x.no-drag", { title: "Close (⌘W)", onclick: (e) => { e.stopPropagation(); T.closeTab(t.id) } }, [ico("close", 12)]))
+  el.append(h("span.tab-fav"), h("span.tab-title"), h("button.tab-audio.no-drag", { title: "Mute tab", onclick: (e) => { e.stopPropagation(); T.setMuted(t.id) } }), h("span.tab-gap"), h("button.x.no-drag", { title: "Close (⌘W)", onclick: (e) => { e.stopPropagation(); T.closeTab(t.id) } }, [ico("close", 12)]))
   return el
 }
 
@@ -98,6 +109,7 @@ function updateTabEl (el, t, activeId) {
   el.classList.toggle("is-loading", !!t.loading)
   el.classList.toggle("is-split", !!t.inSplit)
   el.classList.toggle("is-pinned", !!t.pinned)
+  el.classList.toggle("is-private", !!t.private)
   const title = t.isHome ? "New Tab" : (t.title || t.url || "New Tab")
   el.title = t.asleep ? `${title} — sleeping (click to wake)` : title
   const fav = el.querySelector(".tab-fav")
@@ -122,7 +134,10 @@ function renderTabs ({ tabs, activeId }) {
   }, [favNode(t)])))
 
   // keyed tab pills
-  const before = flip([...strip.querySelectorAll(".tab:not(.is-leaving)")])
+  const orderKey = normal.map((t) => t.id).join(",")
+  const reordered = orderKey !== lastOrder
+  lastOrder = orderKey
+  const before = reordered ? flip([...strip.querySelectorAll(".tab:not(.is-leaving)")]) : () => {}
   const keep = new Set(normal.map((t) => t.id))
   for (const [id, el] of els) {
     if (keep.has(id)) continue
@@ -150,6 +165,7 @@ function renderTabs ({ tabs, activeId }) {
   const a = tabs.find((t) => t.id === activeId)
   const web = a && !a.isHome
   document.body.classList.toggle("on-home", !web)
+  document.body.classList.toggle("is-private-tab", !!a?.private)
   if (document.activeElement !== address) setAddress(a)
   btnBack.toggleAttribute("disabled", !web)
   btnFwd.toggleAttribute("disabled", !web)
@@ -159,7 +175,8 @@ function renderTabs ({ tabs, activeId }) {
   btnStar2?.classList.toggle("is-on", !!(web && isBookmarked(a.url)))
   chipShield.hidden = !web || !a.blocked
   chipShield.querySelector("span").textContent = a?.blocked ?? ""
-  strip.querySelector(".tab.is-active")?.scrollIntoView({ inline: "nearest", block: "nearest" })
+  if (reordered || activeId !== lastActive) strip.querySelector(".tab.is-active")?.scrollIntoView({ inline: "nearest", block: "nearest" })
+  lastActive = activeId
   updateZoomChip()
 }
 
@@ -176,12 +193,24 @@ function setAddress (a) {
     let hostName = ""
     try { hostName = url ? new URL(url).host.replace(/^www\./, "") : "" } catch {}
     const title = a && !a.isHome ? (a.title && a.title !== url ? a.title : "") : ""
-    crumb.replaceChildren(
-      hostName ? h("span.crumb-host", { text: hostName }) : h("span.crumb-host", { text: "Search or enter address" }),
-      title ? h("span.crumb-sep", { text: "/" }) : "",
-      title ? h("span.crumb-title", { text: title }) : ""
-    )
+    const key = `${hostName}\n${title}`
+    if (key !== crumbKey) {
+      const swapSite = key.split("\n")[0] !== crumbKey.split("\n")[0]
+      crumbKey = key
+      crumb.replaceChildren(
+        hostName ? h("span.crumb-host", { text: hostName }) : h("span.crumb-host.is-empty", { text: "Search or enter address" }),
+        title ? h("span.crumb-sep", { text: "/" }) : "",
+        title ? h("span.crumb-title", { text: title }) : ""
+      )
+      // a new site slides in; a new title on the same site just settles
+      if (effectiveMode() !== "off") {
+        (swapSite ? crumb : crumb.lastElementChild)?.animate(
+          [{ opacity: 0, transform: `translateY(${swapSite ? 5 : 3}px)` }, { opacity: 1, transform: "none" }],
+          { duration: ms("med"), easing: "cubic-bezier(0.22, 1, 0.36, 1)" })
+      }
+    }
   }
+  if (chipCopy) chipCopy.hidden = !url
   const secure = url.startsWith("https:")
   chipSite.replaceChildren(ico(!url ? "search" : secure ? "lock" : "info", 13))
   chipSite.classList.toggle("is-insecure", !!url && !secure)
@@ -204,7 +233,7 @@ export function initTitlebar () {
   btnStar = iconBtn("bookmark", "Bookmark this page (⌘D)", () => toggleBookmark(), ".tb-circle")
   btnDl = iconBtn("download", "Downloads (⌥⌘L)", () => openDownloads(btnDl), ".tb-circle")
   btnDl.append(downloadsBadge())
-  const btnAI = iconBtn("spark", "Flux AI (⌘J)", () => bus.emit("ai:toggle"), ".tb-circle.tb-ai")
+  const btnAI = iconBtn("spark", "Comet AI (⌘J)", () => bus.emit("ai:toggle"), ".tb-circle.tb-ai")
   const btnOverview = iconBtn("overview", "Tab overview (⇧⌘\\)", () => bus.emit("overview:open"), ".tb-circle")
 
   mount(bar, h("div.tb-row", {}, [
@@ -218,17 +247,16 @@ export function initTitlebar () {
   ]))
 
   // ── toolbar inside the frame ─────────────────────────────────────
-  btnBack = iconBtn("back", "Back (⌘[)", () => T.back())
-  btnFwd = iconBtn("forward", "Forward (⌘])", () => T.forward())
-  btnReload = iconBtn("reload", "Reload (⌘R)", () => (T.getActive()?.loading ? T.stop() : T.reload()))
-  const btnShare = iconBtn("share", "Copy link", () => { const u = T.getActive()?.url; if (u) { navigator.clipboard.writeText(u); toast("Link copied") } })
+  btnBack = iconBtn("back", "Back (⌘[)", () => T.back(), ".tb-back")
+  btnFwd = iconBtn("forward", "Forward (⌘])", () => T.forward(), ".tb-fwd")
+  btnReload = iconBtn("reload", "Reload (⌘R)", () => { if (T.getActive()?.loading) T.stop(); else { kick(btnReload, "is-spin"); T.reload() } })
   btnBack.addEventListener("contextmenu", (e) => { e.preventDefault(); bus.emit("view", "library") })
 
   address = h("input#address.no-drag", {
     type: "text", placeholder: "Search, ask, or enter address",
     spellcheck: false, autocapitalize: "off", autocomplete: "off",
-    onfocus: () => { address.value = address.dataset.full || address.value; address.select() },
-    onblur: () => setTimeout(() => { if (document.activeElement !== address) setAddress(T.getActive()) }, 150),
+    onfocus: () => { addrWrap.classList.add("is-editing"); address.value = address.dataset.full || address.value; address.select() },
+    onblur: () => { addrWrap.classList.remove("is-editing"); setTimeout(() => { if (document.activeElement !== address) setAddress(T.getActive()) }, 150) },
     onkeydown: (e) => { if (e.key === "Escape") { setAddress(T.getActive()); address.blur() } }
   })
   chipSite = h("button.ob-chip.no-drag", { title: "Site info & permissions", onclick: () => openSiteInfo(chipSite) })
@@ -236,32 +264,46 @@ export function initTitlebar () {
   address.addEventListener("input", () => { if (address.value !== address.dataset.full) chipSite.replaceChildren(ico("search", 13)) })
   chipZoom = h("button.ob-chip.ob-zoom.no-drag", { title: "Reset zoom", hidden: true, onclick: () => T.zoomReset() })
   chipShield = h("button.ob-chip.ob-shield.no-drag", { title: "Trackers blocked on this page", hidden: true, onclick: () => openSiteInfo(chipSite) }, [ico("shield", 13), h("span")])
-  const chipAI = h("button.ob-chip.ob-ask.no-drag", { title: "Ask Flux AI about this page (⇧⌘J)", onclick: () => bus.emit("ai:ask", { text: "", focusOnly: true, withPage: true }) }, [ico("spark", 13), h("span", { text: "Ask" })])
+  chipCopy = h("button.ob-chip.ob-copy.no-drag", { title: "Copy link", hidden: true, onclick: () => {
+    const u = T.getActive()?.url
+    if (!u) return
+    navigator.clipboard.writeText(u); toast("Link copied")
+    chipCopy.replaceChildren(ico("check", 13)); setTimeout(() => chipCopy.replaceChildren(ico("link", 13)), 1200)
+  } }, [ico("link", 13)])
+  const chipAI = h("button.ob-chip.ob-ask.no-drag", { title: "Ask Comet AI about this page (⇧⌘J)", onclick: () => bus.emit("ai:ask", { text: "", focusOnly: true, withPage: true }) }, [ico("spark", 13), h("span", { text: "Ask" })])
   // mousedown, not click: focusing the crumb flips #address-wrap to :focus-within,
   // which hides the crumb before mouseup, so a click event would never land
-  crumb = h("button.crumb.no-drag", { title: "Edit address (⌘L)", tabindex: -1, onmousedown: (e) => { e.preventDefault(); address.focus() } })
-  addrWrap = h("div#address-wrap.no-drag", {}, [chipSite, address, crumb, chipZoom, chipShield, chipAI])
+  crumb = h("button.crumb.no-drag", { "aria-label": "Edit address", tabindex: -1, onmousedown: (e) => { e.preventDefault(); address.focus() } })
+  // shown while the active tab is private (body.is-private-tab)
+  const chipPrivate = h("span.ob-chip.ob-private", { title: "Private tab: no history, and its cookies and logins are forgotten when you close it" }, [ico("eyeoff", 13), h("span", { text: "Private" })])
+  addrWrap = h("div#address-wrap.no-drag", {}, [chipSite, address, crumb, chipPrivate, chipZoom, chipShield, chipCopy, chipAI])
+  // the chips act without taking focus (which would flip the pill in or out of editing);
+  // any other click on the pill starts editing
+  for (const c of [chipSite, chipZoom, chipShield, chipCopy]) c.addEventListener("mousedown", (e) => e.preventDefault())
+  addrWrap.addEventListener("mousedown", (e) => { if (e.target === addrWrap) { e.preventDefault(); address.focus() } })
   omni = attachOmnibox(address, { anchor: addrWrap, place: "toolbar" })
 
-  const btnReader = iconBtn("book", "Reader mode (⌥⌘R)", () => bus.emit("reader:toggle"))
-  const btnKey = iconBtn("key", "Fill saved login", () => fillActiveTab())
-  const btnMore = iconBtn("more", "More", () => moreMenu(btnMore))
+  const btnReader = iconBtn("book", "Reader mode (⌥⌘R)", () => bus.emit("reader:toggle"), ".web-only")
+  // the sidebar layout has More at the bottom of the sidebar instead
+  const btnMore = iconBtn("more", "More", () => moreMenu(btnMore), ".classic-only")
 
   // Dia-only pieces (hidden in the classic layout)
   const btnSide = iconBtn("sidebar", "Toggle sidebar (⌘B)", () => bus.emit("sidebar:toggle"), ".dia-only")
-  btnStar2 = iconBtn("bookmark", "Bookmark (⌘D)", () => toggleBookmark(), ".dia-only")
-  btnDl2 = iconBtn("download", "Downloads (⌥⌘L)", () => openDownloads(btnDl2), ".dia-only")
-  btnDl2.append(downloadsBadge())
+  btnStar2 = iconBtn("bookmark", "Bookmark this page (⌘D)", () => toggleBookmark(), ".dia-only.web-only")
 
   mount(toolbar, h("div.tl-inner", {}, [
-    h("div.tl-nav", {}, [btnSide, btnBack, h("span.tl-sep"), btnFwd, btnReload, btnShare]),
+    h("div.tl-nav", {}, [btnSide, btnBack, h("span.tl-sep"), btnFwd, btnReload]),
     addrWrap,
-    h("div.tl-actions", {}, [btnReader, btnKey, btnStar2, btnDl2, btnMore])
+    h("div.tl-actions", {}, [btnReader, btnStar2, btnMore])
   ]))
 
   bus.on("tabs", renderTabs)
   bus.on("shield", () => renderTabs({ tabs: T.getTabs(), activeId: T.getActiveId() }))
-  bus.on("bookmarks", () => renderTabs({ tabs: T.getTabs(), activeId: T.getActiveId() }))
+  bus.on("bookmarks", () => {
+    const was = btnStar2.classList.contains("is-on")
+    renderTabs({ tabs: T.getTabs(), activeId: T.getActiveId() })
+    if (!was && btnStar2.classList.contains("is-on")) { kick(btnStar2, "is-pop"); kick(btnStar, "is-pop") }
+  })
   bus.on("zoom", updateZoomChip)
   bus.on("focus-address", () => {
     if (T.getActive()?.isHome) { bus.emit("home:focus"); return }
@@ -272,11 +314,12 @@ export function initTitlebar () {
   renderTabs({ tabs: T.getTabs(), activeId: T.getActiveId() })
 }
 
-function moreMenu (anchor) {
+export function moreMenu (anchor, opts = {}) {
   const a = T.getActive()
   const web = a && !a.isHome
   menu(anchor, [
     { label: "New Tab", icon: "plus", kbd: "⌘T", run: () => T.newTab() },
+    { label: "New Private Tab", icon: "eyeoff", kbd: "⇧⌘N", run: () => T.newTab(null, { private: true }) },
     { label: "Command Palette", icon: "grid", kbd: "⌘K", run: () => bus.emit("palette:open") },
     "-",
     { label: "Find in Page", icon: "search", kbd: "⌘F", disabled: !web, run: () => bus.emit("find:open") },
@@ -290,8 +333,8 @@ function moreMenu (anchor) {
     { label: "Bookmarks", icon: "bookmark", kbd: "⌥⌘B", run: () => bus.emit("library:open", "bookmarks") },
     { label: "Downloads", icon: "download", run: () => openDownloads(anchor) },
     "-",
-    { label: "Ask Flux AI", icon: "spark", kbd: "⌘J", run: () => bus.emit("ai:toggle") },
+    { label: "Ask Comet AI", icon: "spark", kbd: "⌘J", run: () => bus.emit("ai:toggle") },
     { label: "Focus Mode", icon: "focus", kbd: "⇧⌘F", run: () => bus.emit("focus:toggle") },
     { label: "Settings", icon: "gear", kbd: "⌘,", run: () => bus.emit("view", "settings") }
-  ], { align: "end" })
+  ], { align: "end", ...opts })
 }

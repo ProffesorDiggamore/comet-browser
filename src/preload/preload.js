@@ -42,24 +42,10 @@ contextBridge.exposeInMainWorld("flux", {
     jsonSave: (defaultName, data) => ipcRenderer.invoke("flux:pick:json", { save: true, defaultName, data })
   },
 
-  vision: {
-    analyze: (args) => ipcRenderer.invoke("flux:vision:analyze", args),
-    captureScreen: () => ipcRenderer.invoke("flux:vision:captureScreen"),
-    onHotkey: (cb) => on("flux:hotkey:vision", cb)
-  },
-
   extensions: {
     list: () => ipcRenderer.invoke("flux:ext:list"),
     add: () => ipcRenderer.invoke("flux:ext:add"),
     remove: (id) => ipcRenderer.invoke("flux:ext:remove", id)
-  },
-
-  companion: {
-    chat: (messages) => ipcRenderer.invoke("flux:companion:chat", { messages }),
-    setProject: () => ipcRenderer.invoke("flux:companion:setProject"),
-    onEvent: (cb) => on("flux:companion:event", cb),
-    onApprove: (cb) => on("flux:companion:approve", cb),
-    reply: (id, ok) => ipcRenderer.send("flux:companion:approve-reply", { id, ok })
   },
 
   win: {
@@ -67,7 +53,10 @@ contextBridge.exposeInMainWorld("flux", {
     max: () => ipcRenderer.invoke("flux:win:max"),
     close: () => ipcRenderer.invoke("flux:win:close"),
     vibrancy: (on) => ipcRenderer.invoke("flux:win:vibrancy", on),
-    appearance: () => ipcRenderer.invoke("flux:win:appearance")
+    appearance: () => ipcRenderer.invoke("flux:win:appearance"),
+    isFullscreen: () => ipcRenderer.invoke("flux:win:is-fullscreen"),
+    onFullscreen: (cb) => on("flux:win:fullscreen", cb),
+    onActive: (cb) => on("flux:win:active", cb)
   },
 
   files: {
@@ -78,6 +67,12 @@ contextBridge.exposeInMainWorld("flux", {
 
   weather: (city, unit) => ipcRenderer.invoke("flux:weather", { city, unit }),
 
+  // search by image with Google Lens (lens.js)
+  lens: {
+    upload: (wcId, bytes) => ipcRenderer.invoke("flux:lens:upload", wcId, bytes),
+    clipboard: () => ipcRenderer.invoke("flux:lens:clipboard"),
+    pick: () => ipcRenderer.invoke("flux:lens:pick")
+  },
   wallpaper: {
     get: () => ipcRenderer.invoke("flux:wallpaper:get"),
     pick: () => ipcRenderer.invoke("flux:wallpaper:pick"),
@@ -92,6 +87,11 @@ contextBridge.exposeInMainWorld("flux", {
     restart: () => ipcRenderer.invoke("flux:app:restart")
   },
 
+  power: {
+    onBattery: () => ipcRenderer.invoke("flux:power:battery"),
+    onChange: (cb) => on("flux:power", cb)
+  },
+
   import: {
     sources: () => ipcRenderer.invoke("flux:import:sources"),
     run: (opts) => ipcRenderer.invoke("flux:import:run", opts)
@@ -103,7 +103,10 @@ contextBridge.exposeInMainWorld("flux", {
     add: (entry) => ipcRenderer.invoke("flux:vault:add", entry),
     remove: (id) => ipcRenderer.invoke("flux:vault:remove", id),
     clear: () => ipcRenderer.invoke("flux:vault:clear"),
-    match: (url) => ipcRenderer.invoke("flux:vault:match", url)
+    match: (url) => ipcRenderer.invoke("flux:vault:match", url),
+    matchAll: (url) => ipcRenderer.invoke("flux:vault:match-all", url),
+    fill: (profileId, id) => ipcRenderer.invoke("flux:vault:fill", profileId, id),
+    known: (url, username, password) => ipcRenderer.invoke("flux:vault:known", url, username, password)
   },
 
   ai: {
@@ -174,12 +177,20 @@ contextBridge.exposeInMainWorld("flux", {
     create: (patch, opts) => ipcRenderer.invoke("flux:profiles:create", patch, opts),
     update: (id, patch) => ipcRenderer.invoke("flux:profiles:update", id, patch),
     remove: (id) => ipcRenderer.invoke("flux:profiles:remove", id),
-    switch: (id) => ipcRenderer.invoke("flux:profiles:switch", id)
+    switch: (id) => ipcRenderer.invoke("flux:profiles:switch", id),
+    pickPicture: () => ipcRenderer.invoke("flux:profiles:pickPicture"),
+    pictureOriginal: (id) => ipcRenderer.invoke("flux:profiles:pictureOriginal", id)
   },
   onMenu: (cb) => on("flux:menu", cb),
 
   openExternal: (url) => ipcRenderer.invoke("flux:open-external", url),
   reloadUi: () => ipcRenderer.invoke("flux:reload-ui"),
   info: () => ipcRenderer.invoke("flux:paths:info"),
-  onOpenTab: (cb) => on("flux:open-tab", cb)
+  onOpenTab: (cb) => on("flux:open-tab", cb),
+  privateSession: { clear: () => ipcRenderer.invoke("flux:private:clear") },
+  takeOpenUrls: () => ipcRenderer.invoke("flux:open-urls:take"),
+  defaultBrowser: {
+    get: () => ipcRenderer.invoke("flux:default-browser:get"),
+    set: () => ipcRenderer.invoke("flux:default-browser:set")
+  }
 })

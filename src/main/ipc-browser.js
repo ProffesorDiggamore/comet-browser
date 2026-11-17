@@ -31,7 +31,7 @@ function registerBrowserIpc ({ getSes }) {
     try {
       const img = nativeImage.createFromDataURL(dataUrl)
       if (img.isEmpty()) return { ok: false, text: "Empty image" }
-      const safe = String(name || "Flux screenshot").replace(/[/\\:*?"<>|]+/g, "-").slice(0, 80)
+      const safe = String(name || "Comet screenshot").replace(/[/\\:*?"<>|]+/g, "-").slice(0, 80)
       let p = path.join(app.getPath("downloads"), `${safe}.png`)
       for (let i = 1; fs.existsSync(p); i++) p = path.join(app.getPath("downloads"), `${safe} (${i}).png`)
       fs.writeFileSync(p, img.toPNG())

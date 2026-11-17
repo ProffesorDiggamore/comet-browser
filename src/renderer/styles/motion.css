@@ -46,7 +46,60 @@
 [data-anim-popover="fade"] .pop, [data-anim-popover="fade"] .ob-suggest, [data-anim-popover="fade"] .pal { animation: m-fade var(--f-fast) var(--f-ease-out) both; }
 @keyframes m-pop-in { from { opacity: 0; transform: scale(0.92); } }
 @keyframes m-drop { from { opacity: 0; transform: translateY(-8px); } }
-.pal-overlay { animation: m-fade var(--f-fast) var(--f-ease-out) both; }
+/* scrims fade their color, never their opacity: an opacity animation (even a
+   finished one that still fills) makes the scrim the backdrop root, and the
+   glass inside it stops blurring the page behind it */
+@keyframes m-scrim { from { background-color: transparent; } }
+.pal-overlay { animation: m-scrim var(--f-fast) var(--f-ease-out) backwards; }
+
+/* ── chrome micro-interactions ─────────────────────────────────── */
+.tb-btn svg, .vt-foot svg, .vt-new svg, .ob-chip svg { transition: transform var(--f-med) var(--f-ease); }
+.tb-back:active svg { transform: translateX(-3px); }
+.tb-fwd:active svg { transform: translateX(3px); }
+.tb-btn.is-spin svg { animation: m-spin calc(560ms * var(--f-speed)) var(--f-ease-out); }
+.tb-btn.is-pop svg { animation: m-star calc(460ms * var(--f-speed)) var(--f-ease); }
+.vt-new:hover svg { transform: rotate(90deg); }
+.vt-foot:first-child:hover svg { transform: rotate(40deg); }   /* settings gear */
+.ob-copy:active svg { transform: scale(0.8); }
+
+/* clock: hover winds it forward one hour — the minute hand makes one calm lap
+   while the hour hand ticks ahead a twelfth, both settling at the end */
+.i-clock .i-min, .i-clock .i-hour { transform-box: view-box; transform-origin: 12px 12px; }
+:is(button, .mi, [role="button"]):hover > svg.i-clock .i-min { animation: i-lap calc(900ms * var(--f-speed)) cubic-bezier(0.45, 0, 0.25, 1); }
+:is(button, .mi, [role="button"]):hover > svg.i-clock .i-hour { animation: i-turn calc(900ms * var(--f-speed)) cubic-bezier(0.45, 0, 0.25, 1); }
+@keyframes i-lap { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes i-turn { from { transform: rotate(0deg); } to { transform: rotate(30deg); } }
+
+/* private eye: the slash (and the gap it cuts in the eye) draws in from the top
+   left while the pupil narrows, as if the eye shuts behind it */
+.i-eyeoff .i-slash { stroke-dasharray: 1 1; stroke-dashoffset: 0; }
+.i-eyeoff .i-pupil { transform-box: fill-box; transform-origin: center; }
+:is(button, .mi, [role="button"]):hover > svg.i-eyeoff .i-slash { animation: i-slit calc(620ms * var(--f-speed)) cubic-bezier(0.5, 0, 0.2, 1); }
+:is(button, .mi, [role="button"]):hover > svg.i-eyeoff .i-pupil { animation: i-squint calc(620ms * var(--f-speed)) cubic-bezier(0.5, 0, 0.2, 1); }
+@keyframes i-slit { 0%, 18% { stroke-dashoffset: 1; } 100% { stroke-dashoffset: 0; } }
+@keyframes i-squint { 0% { transform: none; } 35% { transform: scaleY(0.35); } 100% { transform: none; } }
+
+/* download: the arrow drops through the tray, then falls back in from the top */
+:is(button, .mi, [role="button"]):hover > svg.i-download .i-arrow { animation: i-drop calc(760ms * var(--f-speed)) linear; }
+@keyframes i-drop {
+  0%   { transform: translateY(0);     animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.5); }
+  42%  { transform: translateY(17px);  }
+  43%  { transform: translateY(-16px); animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1.25); }
+  100% { transform: translateY(0); }
+}
+
+/* appearance: a quarter turn when the mode changes */
+.vt-mode.is-turn svg { animation: i-flip calc(520ms * var(--f-speed)) var(--f-ease); }
+@keyframes i-flip { from { transform: rotate(-180deg) scale(0.6); opacity: 0.2; } }
+
+[data-motion="off"] :is(.i-min, .i-hour, .i-arrow, .i-slash, .i-pupil) { animation: none !important; }
+@keyframes m-spin { to { transform: rotate(360deg); } }
+@keyframes m-star { 0% { transform: scale(0.55); } 55% { transform: scale(1.3); } }
+/* first paint: the chrome settles in instead of popping */
+#app:not([data-ready]) #vtabs, #app:not([data-ready]) #toolbar, #app:not([data-ready]) #titlebar { opacity: 0; }
+#app[data-ready] #vtabs, #app[data-ready] #toolbar, #app[data-ready] #titlebar { animation: m-fade var(--f-slow) var(--f-ease-out) backwards; }
+#app[data-ready] #stage { animation: m-settle var(--f-slow) var(--f-ease-out) backwards; }
+@keyframes m-settle { from { opacity: 0; transform: scale(0.985) translateY(6px); } }
 
 /* ── toasts ────────────────────────────────────────────────────── */
 [data-anim-toast="rise"] .toast { animation: m-rise var(--f-med) var(--f-ease) both; }
@@ -87,27 +140,18 @@
 .home-ambient::before { top: -10%; }
 .home-ambient::after { top: 55%; opacity: 0.35; background: linear-gradient(90deg, transparent 10%, var(--f-ribbon-b) 40%, var(--f-ribbon-c) 60%, transparent 92%); }
 
-[data-ambient="slow"] { --amb-dur: 48s; }
-[data-ambient="medium"] { --amb-dur: 26s; }
-[data-ambient="fast"] { --amb-dur: 13s; }
-[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(1), [data-ambient]:not([data-ambient="off"]) .home-ambient::before { animation: amb-a var(--amb-dur) ease-in-out infinite alternate; }
-[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(2), [data-ambient]:not([data-ambient="off"]) .home-ambient::after { animation: amb-b calc(var(--amb-dur) * 1.3) ease-in-out infinite alternate; }
-[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(3) { animation: amb-c calc(var(--amb-dur) * 0.8) ease-in-out infinite alternate; }
+/* the drift moves a few px a second, so it steps ~4×/s instead of
+   re-compositing the blurred glass above it 60×/s (energy) */
+[data-ambient="slow"] { --amb-dur: 48s; --amb-steps: steps(200); }
+[data-ambient="medium"] { --amb-dur: 26s; --amb-steps: steps(130); }
+[data-ambient="fast"] { --amb-dur: 13s; --amb-steps: steps(80); }
+[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(1), [data-ambient]:not([data-ambient="off"]) .home-ambient::before { animation: amb-a var(--amb-dur) var(--amb-steps) infinite alternate; }
+[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(2), [data-ambient]:not([data-ambient="off"]) .home-ambient::after { animation: amb-b calc(var(--amb-dur) * 1.3) var(--amb-steps) infinite alternate; }
+[data-ambient]:not([data-ambient="off"]) #ambient i:nth-child(3) { animation: amb-c calc(var(--amb-dur) * 0.8) var(--amb-steps) infinite alternate; }
 @keyframes amb-a { to { transform: rotate(-26deg) translate(8vmax, 4vmax) scaleY(1.2); } }
 @keyframes amb-b { to { transform: rotate(-38deg) translate(-10vmax, -3vmax) scaleY(0.85); } }
 @keyframes amb-c { to { transform: rotate(-30deg) translate(14vmax, 6vmax); opacity: 0.55; } }
 
-/* ── orb ───────────────────────────────────────────────────────── */
-[data-orb="float"] .orb-body { animation: orb-float 6s ease-in-out infinite; }
-[data-orb="pulse"] .orb-body { animation: orb-pulse 3.2s ease-in-out infinite; }
-[data-orb="morph"] .orb-body { animation: orb-morph 9s ease-in-out infinite; }
-.orb.is-thinking .orb-body { animation: orb-think 1.6s var(--f-ease-out) infinite; }
-.orb.is-thinking .orb-rim { animation: orb-spin 1.4s linear infinite; }
-.orb.is-listening .orb-body { animation: orb-pulse 0.9s ease-in-out infinite; }
-@keyframes orb-float { 50% { transform: translateY(-7%) rotate(calc(var(--tilt, 0deg) - 4deg)); } }
-@keyframes orb-pulse { 50% { transform: scale(1.07); } }
-@keyframes orb-morph { 25% { border-radius: 46% 54% 38% 62% / 52% 40% 60% 48%; } 50% { border-radius: 58% 42% 52% 48% / 42% 58% 44% 56%; } 75% { border-radius: 40% 60% 60% 40% / 56% 46% 54% 44%; } }
-@keyframes orb-think { 0%, 100% { transform: scale(1) rotate(0deg); } 50% { transform: scale(1.06) rotate(8deg); } }
 @keyframes orb-spin { to { transform: rotate(1turn); } }
 
 /* ── ripples ───────────────────────────────────────────────────── */
@@ -115,4 +159,17 @@
 .tab, .side-item, .chip, .pill-btn, .mi, .engine, .seg button, .btn { overflow: hidden; }
 
 /* reduced: keep things still */
-[data-motion="reduced"] .orb-body, [data-motion="reduced"] #ambient i { animation: none !important; }
+[data-motion="reduced"] #ambient i { animation: none !important; }
+
+/* energy: nothing loops while Comet isn't the app in front, and the ambient
+   ribbons only drift on Home (elsewhere they're mostly covered by the page) */
+body[data-win-active="false"] #ambient i,
+body[data-win-active="false"] .home-ambient::before, body[data-win-active="false"] .home-ambient::after,
+body:not(.on-home) #ambient i,
+body:not(:has(#home .home-wrap > .wall-theme)) #ambient i,    /* a photo / preset wallpaper covers them anyway */
+body[data-win-active="false"] .vt-row.is-loading .vt-fav,
+body[data-win-active="false"] .tab.is-loading .tab-fav,
+body[data-win-active="false"] .dl-bar i.is-indet,
+body[data-win-active="false"] .spin,
+body[data-win-active="false"] .shimmer-text,
+body[data-win-active="false"] .hw-grid.is-editing .hw { animation-play-state: paused !important; }

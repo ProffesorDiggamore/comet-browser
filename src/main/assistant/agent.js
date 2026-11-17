@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  assistant/agent.js — Flux AI.  One tool-use loop, two brains:
+//  assistant/agent.js — Comet AI.  One tool-use loop, two brains:
 //    • local  — any Ollama model on this Mac (free, private)  [default]
 //    • claude — Anthropic's Claude via API key (cloud, paid)
 //  History is stored in one canonical (Anthropic-shaped) format so a
@@ -18,11 +18,11 @@ const CLAUDE_MODELS = ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5
 const FALLBACK_OK = new Set(["claude-opus-5-5", "claude-sonnet-5-5", "claude-fable-5-1"])
 const MAX_STEPS = 40
 
-const SYSTEM = `You are Flux AI, the assistant built into Flux — a fast, customizable liquid-glass web browser for macOS. You live in a panel beside the user's tabs and can operate the browser for them with tools.
+const SYSTEM = `You are Comet AI, the assistant built into Comet — a fast, customizable liquid-glass web browser for macOS. You live in a panel beside the user's tabs and can operate the browser for them with tools.
 
 How to work:
 - Answer questions directly and well. For anything current, changing, or where sources matter, search the web and cite the pages you relied on as markdown links.
-- When the user asks for something in the browser — open, close, switch, organize or compare tabs; read or summarize a page; search a site; change how Flux looks — do it with your tools right away instead of explaining how. Tab and appearance changes need no confirmation.
+- When the user asks for something in the browser — open, close, switch, organize or compare tabs; read or summarize a page; search a site; change how Comet looks — do it with your tools right away instead of explaining how. Tab and appearance changes need no confirmation.
 - "This page", "this tab", "here" mean the active tab in <browser_state>. Use read_page for its content and screenshot_tab when the visual matters.
 - For research across sites, open the pages (in the background unless the user wants to watch), read them, then answer with links.
 - Before closing tabs the user may still want, say what you will close in one line, then do it — unless they were explicit.
@@ -67,14 +67,14 @@ function imageBlock (dataUrl) {
 }
 
 function friendlyError (err) {
-  if (err instanceof Anthropic.AuthenticationError) return "Your Anthropic API key was rejected. Update it in Settings → Flux AI."
-  if (err instanceof Anthropic.PermissionDeniedError) return "This API key can't use the selected model. Try another model in Settings → Flux AI."
-  if (err instanceof Anthropic.NotFoundError) return "That model isn't available on your account. Pick another in Settings → Flux AI."
+  if (err instanceof Anthropic.AuthenticationError) return "Your Anthropic API key was rejected. Update it in Settings → Comet AI."
+  if (err instanceof Anthropic.PermissionDeniedError) return "This API key can't use the selected model. Try another model in Settings → Comet AI."
+  if (err instanceof Anthropic.NotFoundError) return "That model isn't available on your account. Pick another in Settings → Comet AI."
   if (err instanceof Anthropic.RateLimitError) return "Rate limited by the API — give it a few seconds and try again."
   if (err instanceof Anthropic.BadRequestError) return `The request was rejected: ${err.message}`
   if (err instanceof Anthropic.APIConnectionError) return "Couldn't reach the Claude API. Check your connection."
   if (err instanceof Anthropic.APIError) return err.status >= 500 ? "Claude is overloaded right now — try again in a moment." : `API error ${err.status}: ${err.message}`
-  if (/fetch failed|ECONNREFUSED/.test(err?.message ?? "")) return "Couldn't reach Ollama. Open Settings → Flux AI to start it."
+  if (/fetch failed|ECONNREFUSED/.test(err?.message ?? "")) return "Couldn't reach Ollama. Open Settings → Comet AI to start it."
   return err?.message ?? String(err)
 }
 
@@ -165,7 +165,7 @@ async function localStep ({ ai, messages, signal, emit, view }) {
     onText: (d) => { if (textPart) textPart.text += d; emit("text", { delta: d }) },
     onThinking: (d) => { view.thinking += d; emit("thinking", { delta: d }) }
   })
-  if (!r.toolsCapable && !view.warned) { view.warned = true; emit("notice", { text: "This model can't use tools, so it can chat but not control the browser. Pick a model marked “Tools” in Settings → Flux AI." }) }
+  if (!r.toolsCapable && !view.warned) { view.warned = true; emit("notice", { text: "This model can't use tools, so it can chat but not control the browser. Pick a model marked “Tools” in Settings → Comet AI." }) }
   return r
 }
 
@@ -173,7 +173,7 @@ async function send (wc, { chatId, text, images = [], context = {}, page = null 
   const ai = store.get("ai") ?? {}
   const local = (ai.provider ?? "local") === "local"
   const api = local ? null : getClient()
-  if (!local && !api) return { ok: false, needsKey: true, text: "Add your Anthropic API key, or switch Flux AI to a free local model." }
+  if (!local && !api) return { ok: false, needsKey: true, text: "Add your Anthropic API key, or switch Comet AI to a free local model." }
 
   const chat = chats.ensure(chatId)
   if (running.has(chat.id)) return { ok: false, text: "Still working on the last message." }

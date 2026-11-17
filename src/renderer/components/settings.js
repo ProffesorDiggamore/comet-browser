@@ -10,6 +10,7 @@ import { ico } from "../core/icons.js"
 import { sfx } from "../audio/sfx.js"
 import { ENGINES } from "../data/engines.js"
 import { THEMES, themeById } from "../data/themes.js"
+import { STYLES, STYLE_LIST, drawPreview } from "../core/backdrop.js"
 import { wallpaperPicker } from "./home.js"
 import { allPacks, applyPack, installPack, exportCurrent } from "../modpacks/index.js"
 import { watchMetrics } from "../core/perf.js"
@@ -21,6 +22,22 @@ import { catAI, catMotion, catLayout, catKeywords, catPrivacy as catShield } fro
 import { catProfiles } from "./profiles.js"
 
 // ── categories ────────────────────────────────────────────────────
+// "Make default" → macOS asks to confirm, so the answer is re-read when the window regains focus
+function defaultBrowserRow () {
+  const slot = h("span")
+  const paint = (st) => {
+    clear(slot)
+    if (!st.can) slot.append(h("span.rdesc", { text: "Install Comet.app first (npm run install-app)" }))
+    else if (st.is) slot.append(h("span.rdesc", { text: "Comet is your default browser" }))
+    else slot.append(btn("Make default", async () => {
+      paint(await window.flux.defaultBrowser.set())
+      window.addEventListener("focus", () => window.flux.defaultBrowser.get().then(paint), { once: true })
+    }))
+  }
+  window.flux.defaultBrowser.get().then(paint)
+  return row("Default browser", slot, "Links you click in Mail, Messages and other apps open in Comet.")
+}
+
 function catSearch () {
   const id = state.get("general.searchEngineId")
   const grid = h("div.engine-grid", {}, ENGINES.map((e) => h("button", {
@@ -42,7 +59,8 @@ function catSearch () {
       row("Restore tabs on launch", sw(state.get("general.restoreTabs"), (v) => state.set("general.restoreTabs", v))),
       row("Easy Files uploads", sw(state.get("general.easyFiles") !== false, (v) => state.set("general.easyFiles", v)), "When a site asks for a file, offer what you copied and your recent downloads first. Applies to pages loaded after the change."),
       row("Default page zoom", rng(state.get("general.defaultZoom") ?? 1, 0.5, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => state.set("general.defaultZoom", v)), "Applied to newly opened tabs.")
-    ])
+    ]),
+    group("Links", [defaultBrowserRow()])
   ]
 }
 
@@ -55,7 +73,10 @@ function themeGrid (active) {
       : t.sw
     return h(`button.theme-card${t.id === active ? ".is-on" : ""}`, {
       title: t.family === "classic" ? `${t.name} — ${t.mode ?? "dark"} only` : t.id === "custom" ? "Custom — your own colors, light & dark" : `${t.name} — light & dark`,
-      onclick: () => { state.set("theme.active", t.id); state.set("theme.accentCustom", false); bus.emit("settings:rerender") }
+      onclick: () => {
+        state.set("theme.active", t.id); state.set("theme.accentCustom", false)
+        bus.emit("settings:rerender")
+      }
     }, [
       h("span.theme-sw", {}, [
         h("i", { style: { background: sw[0] } }),
@@ -74,6 +95,30 @@ function themeGrid (active) {
       ])
     ])
   ]
+}
+
+// Style: a live pattern over any theme (core/backdrop.js), with a still preview per card
+function styleGroup (t) {
+  const active = STYLES[t.style] ? t.style : "none"
+  const cards = STYLE_LIST.map((s) => {
+    const cv = h("canvas.style-cv", { "aria-hidden": "true" })
+    const card = h(`button.style-card${s.id === active ? ".is-on" : ""}`, {
+      title: s.id === "none" ? "No pattern — just the theme" : `${s.name} — live, in your theme's colors`,
+      onclick: () => {
+        state.set("theme.style", s.id)
+        // the pattern fills the New Tab page too (pick another wallpaper to undo)
+        if (s.id !== "none") state.set("home.wallpaper", { kind: "theme" })
+        bus.emit("settings:rerender")
+      }
+    }, [h("span.style-prev", {}, [s.id === "none" ? h("span.style-none", {}, [ico("x", 16)]) : cv]), h("span.theme-name", { text: s.name })])
+    if (s.id !== "none") requestAnimationFrame(() => drawPreview(cv, s.id))
+    return card
+  })
+  return group("Style", [
+    h("div.set-row", { dataset: { search: "style pattern background topographic topo contour dot grid waves constellation stars starfield live animated" } }, [h("div.style-grid", {}, cards)]),
+    active !== "none" && row("Strength", rng(t.styleStrength ?? 1, 0.4, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => state.set("theme.styleStrength", v)), "How bold the lines and dots are."),
+    active !== "none" && row("Animate", sw(t.styleLive !== false, (v) => state.set("theme.styleLive", v)), "Off draws one still frame. It also holds still with Reduce Motion or Battery Saver.")
+  ].filter(Boolean), "A live pattern behind the sidebar, top bar and New Tab. It works with every theme and uses the theme's accent color — pick both.")
 }
 
 // Custom theme: three color wells, live as you drag
@@ -107,6 +152,7 @@ function catAppearance () {
       row("Density", seg([{ v: "comfortable", label: "Comfortable" }, { v: "compact", label: "Compact" }], t.density ?? "comfortable", (v) => state.set("theme.density", v)), "Compact tightens spacing across the whole UI."),
       t.active !== "custom" && row("Accent color", [accent, t.accentCustom && btn("Use theme color", () => { state.set("theme.accentCustom", false); bus.emit("settings:rerender") }, "btn btn--plain")])
     ]),
+    styleGroup(t),
     group("Liquid glass", [
       row("macOS window glass", sw(t.vibrancy !== false, (v) => { state.set("theme.vibrancy", v); window.flux.win.vibrancy(v) }), "Your real desktop shows through the sidebar, blurred — like Apple's own apps."),
       row("Translucency", rng(t.glass, 0.3, 1, 0.02, (v) => `${Math.round(v * 100)}%`, (v) => state.set("theme.glass", v))),
@@ -125,10 +171,11 @@ function catHome () {
       h("div.set-row", { dataset: { search: "wallpaper background photo desktop picture home widgets dim style frosted liquid solid tinted clear" } }, [wallpaperPicker()])
     ]),
     group("Home screen", [
+      row("Greeting", sw(state.get("home.showGreeting") !== false, (v) => state.set("home.showGreeting", v)), "“Good morning, …” with this profile's name and picture."),
       row("Search field", sw(state.get("home.showSearch") !== false, (v) => state.set("home.showSearch", v))),
       row("24-hour clock", sw(state.get("home.clock24") === true, (v) => state.set("home.clock24", v))),
       row("Temperature", seg([{ v: "f", label: "°F" }, { v: "c", label: "°C" }], state.get("home.tempUnit") ?? "f", (v) => state.set("home.tempUnit", v))),
-      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "Used by Flux AI" })),
+      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "Used by Comet AI" })),
       row("Widgets", btn("Reset to default widgets", async () => {
         const d = await window.flux.config.defaults()
         state.set("home.widgets", d.home.widgets); toast("Widgets reset")
@@ -169,8 +216,7 @@ function catAudio () {
 
 let visionStatus = {}
 
-function catVision () {
-  const v = state.get("vision")
+function catKeys () {
   const keyRows = ["anthropic", "openai", "gemini"].map((p) => {
     const input = h("input", { type: "password", placeholder: `Paste ${p} key`, style: { minWidth: "260px" } })
     input.addEventListener("change", async () => { if (input.value) { await window.flux.secrets.set(p, input.value); input.value = ""; toast(`${p} key saved`); bus.emit("settings:rerender") } })
@@ -184,29 +230,8 @@ function catVision () {
     ])
   })
   return [
-    group("Provider", [
-      row("Active model", seg([{ v: "anthropic", label: "Anthropic" }, { v: "openai", label: "OpenAI" }, { v: "gemini", label: "Gemini" }], v.provider, (val) => state.set("vision.provider", val))),
-      h("div.rdesc", { text: "Keys are encrypted at rest (OS keychain) and never exposed to the page. The Companion uses the Anthropic key too." })
-    ]),
     group("API keys", keyRows),
-    group("Capture", [
-      row("Screenshot scope", seg([{ v: "page", label: "Browser page" }, { v: "screen", label: "Whole screen" }], v.captureScope, (val) => state.set("vision.captureScope", val)), "Whole-screen needs macOS Screen Recording permission."),
-      row("Global capture hotkey", textField(v.hotkey, (val) => state.set("vision.hotkey", val), { placeholder: "CmdOrCtrl+Shift+Space" }))
-    ])
-  ]
-}
-
-function catCompanion () {
-  const c = state.get("companion")
-  return [
-    group("Self-coding companion", [
-      row("Model (Anthropic)", textField(c.model, (v) => state.set("companion.model", v))),
-      row("Project folder", [
-        h("span.tag", { text: (c.projectPath || "Flux source").split("/").slice(-2).join("/") }),
-        btn("Change…", async () => { const r = await window.flux.companion.setProject(); if (r.ok) bus.emit("settings:rerender") }, "btn btn--ghost")
-      ], "The agent can read/search/write anything under this folder."),
-      row("Autonomous writes", sw(c.autonomous, (v) => state.set("companion.autonomous", v)), "Off = every file write shows an Approve bar first.")
-    ])
+    h("div.rdesc", { text: "Keys are encrypted at rest (OS keychain) and never exposed to web pages. Comet AI uses the Anthropic key for Claude." })
   ]
 }
 
@@ -232,6 +257,10 @@ function catPerformance () {
   })
 
   return [
+    group("Battery", [
+      row("Battery Saver", seg([{ v: "auto", label: "On battery" }, { v: "always", label: "Always" }, { v: "off", label: "Off" }], p.batterySaver ?? "auto", (v) => state.set("perf.batterySaver", v)),
+        "Unloads background tabs after 3 minutes (they keep their link and reload when you go back) and stops the always-running effects: drifting background, cursor glow, glass shimmer.")
+    ]),
     group("Tab sleeping", [
       row("Sleep idle background tabs", sw(p.sleepEnabled, (v) => state.set("perf.sleepEnabled", v)), "Unloads tabs you haven't touched to free memory. They reload instantly when clicked."),
       row("Sleep after", rng(p.sleepAfterMin, 2, 60, 1, (v) => `${v} min`, (v) => state.set("perf.sleepAfterMin", v))),
@@ -243,7 +272,7 @@ function catPerformance () {
       row("Throttle background tabs", sw(p.backgroundThrottle, (v) => { state.set("perf.backgroundThrottle", v); T.refreshPerfFlags() }), "Pauses timers/animation in hidden tabs."),
       row("Hardware acceleration", [
         sw(p.hardwareAccel, (v) => state.set("perf.hardwareAccel", v)),
-        btn("Restart Flux", () => window.flux.app.restart(), "btn btn--ghost")
+        btn("Restart Comet", () => window.flux.app.restart(), "btn btn--ghost")
       ], "GPU rendering. Turning off can fix flicker on some machines. Needs a restart.")
     ]),
     group("Process monitor", [procWrap])
@@ -263,13 +292,13 @@ function catExtensions () {
 }
 
 const SHORTCUTS = [
-  ["Ask Flux AI", "⌘J"], ["Ask about this page", "⇧⌘J"], ["New AI chat", "⌥⌘J"], ["Command palette", "⌘K"],
-  ["New tab", "⌘T"], ["Close tab", "⌘W"], ["Reopen closed tab", "⇧⌘T"], ["Next / previous tab", "⌃Tab / ⌃⇧Tab"],
-  ["Focus address bar", "⌘L"], ["Reload page", "⌘R"], ["Reload Flux UI", "⇧⌘R"], ["Back / Forward", "⌘[  /  ⌘]"],
+  ["Ask Comet AI", "⌘J"], ["Ask about this page", "⇧⌘J"], ["New AI chat", "⌥⌘J"], ["Command palette", "⌘K"],
+  ["New tab", "⌘T"], ["Close tab", "⌘W"], ["Reopen closed tab", "⇧⌘T"], ["Next / previous tab", "⌃Tab / ⌃⇧Tab"], ["Move through tabs", "⌘↑ ⌘↓ (sidebar) · ⌘← ⌘→ (tabs on top)"],
+  ["Focus address bar", "⌘L"], ["Reload page", "⌘R"], ["Reload Comet UI", "⇧⌘R"], ["Back / Forward", "⌘[  /  ⌘]"],
   ["Find in page", "⌘F"], ["Bookmark page", "⌘D"], ["History", "⌘Y"], ["Bookmarks", "⌥⌘B"], ["Downloads", "⌥⌘L"],
   ["Tab overview", "⇧⌘\\"], ["Split view", "⌘\\"], ["Reader mode", "⌥⌘R"], ["Picture in picture", "⌥⌘P"],
   ["Mute tab", "⌃M"], ["Save screenshot", "⇧⌘S"], ["Zoom in / out / reset", "⌘+  /  ⌘-  /  ⌘0"], ["Focus mode", "⇧⌘F"],
-  ["Toggle sidebar", "⌘B"], ["Home", "⇧⌘H"], ["Settings", "⌘,"], ["Vision capture (global)", "⇧⌘Space"],
+  ["Toggle sidebar", "⌘B"], ["Home", "⇧⌘H"], ["Settings", "⌘,"],
   ["Inspect page", "⌥⌘I"], ["Omnibox: ask AI", "⌘⏎ or Tab"], ["Omnibox: open in new tab", "⌥⏎"]
 ]
 function catShortcuts () {
@@ -312,7 +341,7 @@ function catAbout () {
   window.flux.info().then((i) => {
     clear(info)
     info.append(
-      h("div.rdesc", { text: `Flux · source: ${i.root}` }),
+      h("div.rdesc", { text: `Comet · source: ${i.root}` }),
       h("div.rdesc", { text: `Config file: ${i.config}` })
     )
   })
@@ -461,11 +490,10 @@ const CATS = [
   { id: "home", label: "Home Screen", icon: "home", render: catHome },
   { id: "modpacks", label: "Modpacks", icon: "layers", render: catModpacks },
   { id: "audio", label: "Sound", icon: "volume", render: catAudio },
-  { id: "ai", label: "Flux AI", icon: "spark", render: catAI },
+  { id: "ai", label: "Comet AI", icon: "spark", render: catAI },
   { id: "motion", label: "Motion", icon: "bolt", render: catMotion },
   { id: "layout", label: "Layout", icon: "sidebar", render: catLayout },
-  { id: "vision", label: "API Keys & Vision", icon: "eye", render: catVision },
-  { id: "companion", label: "Companion", icon: "spark", render: catCompanion },
+  { id: "vision", label: "API Keys", icon: "key", render: catKeys },
   { id: "perf", label: "Performance", icon: "gauge", render: catPerformance },
   { id: "extensions", label: "Extensions", icon: "puzzle", render: catExtensions },
   { id: "shortcuts", label: "Shortcuts", icon: "bolt", render: catShortcuts },

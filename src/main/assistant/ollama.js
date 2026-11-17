@@ -181,7 +181,7 @@ async function chatStep ({ model, system, messages, tools, effort, showThinking,
   if (cap.thinking) body.think = /gpt-oss/.test(model) ? (effort === "low" ? "low" : effort === "high" || effort === "xhigh" ? "high" : "medium") : effort !== "low"
 
   let res = await fetch(base() + "/api/chat", { method: "POST", body: JSON.stringify(body), signal })
-  if (res.status === 404) throw new Error(`The model "${model}" isn't downloaded yet. Get it in Settings → Flux AI.`)
+  if (res.status === 404) throw new Error(`The model "${model}" isn't downloaded yet. Get it in Settings → Comet AI.`)
   if (!res.ok) {
     const txt = await res.text().catch(() => "")
     // older builds / odd templates: retry once without thinking

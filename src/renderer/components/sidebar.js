@@ -17,7 +17,7 @@ const ADD_MENU = [
   { type: "button", label: "Text button", make: () => ({ type: "button", label: "bruh", onClick: { kind: "toast", value: "bruh" } }) },
   { type: "macro", label: "Macro (many URLs)", make: () => ({ type: "macro", label: "Open group", urls: ["https://example.com"] }) },
   { type: "links", label: "Quick links", make: () => ({ type: "links", label: "Links", links: [{ label: "Example", url: "https://example.com" }] }) },
-  { type: "nav", label: "Nav item", make: () => ({ type: "nav", label: "Vision AI", target: "vision", icon: "eye" }) },
+  { type: "nav", label: "Nav item", make: () => ({ type: "nav", label: "Library", target: "library", icon: "clock" }) },
   { type: "clock", label: "Clock", make: () => ({ type: "clock" }) },
   { type: "notes", label: "Notes", make: () => ({ type: "notes", label: "Notes", value: "" }) },
   { type: "label", label: "Section label", make: () => ({ type: "label", label: "SECTION" }) },
@@ -43,7 +43,7 @@ export function initSidebar () {
   function render () {
     ctx.activeView = activeView
     ctx.editing = editing
-    const widgets = state.get("sidebar.widgets") ?? []
+    const widgets = (state.get("sidebar.widgets") ?? []).filter((w) => !(w.type === "nav" && (w.target === "vision" || w.target === "companion")))
     const list = h("div", { style: { display: "flex", flexDirection: "column", gap: "2px", flex: "1", overflowY: "auto" } },
       widgets.map((w, i) => {
         const node = renderWidget(w, ctx)
@@ -67,7 +67,7 @@ export function initSidebar () {
     ])
 
     mount(el, h("div", { style: { display: "flex", flexDirection: "column", height: "100%", gap: "4px" } }, [
-      h("div.side-label", { text: state.get("home.greeting") ?? "Flux" }),
+      h("div.side-label", { text: state.get("home.greeting") ?? "Comet" }),
       list, editRow
     ]))
   }

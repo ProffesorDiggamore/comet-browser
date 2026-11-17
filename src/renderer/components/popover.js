@@ -6,8 +6,13 @@
 import { h } from "../core/dom.js"
 import { ico } from "../core/icons.js"
 import { leave } from "../core/motion.js"
+import { bus } from "../core/bus.js"
 
 let open = null
+
+// a click inside a web page never reaches this document, so the page
+// reports it (webview-preload → "page-down") and that counts as outside
+bus.on("page-down", () => closePopover())
 
 export function closePopover () {
   if (!open) return
@@ -22,6 +27,8 @@ export function isPopoverOpen () { return !!open }
 
 // anchor: an element, or { x, y } for a pointer position
 export function popover (anchor, content, { align = "start", width = null, className = "", onClose = null, offset = 8 } = {}) {
+  // clicking the button that opened it closes it (a toggle), instead of reopening
+  if (open && anchor instanceof Element && open.anchor === anchor) { closePopover(); return null }
   closePopover()
   const el = h(`div.pop.glass${className ? "." + className.split(" ").join(".") : ""}`, { role: "dialog" }, [content])
   if (width) el.style.width = `${width}px`
@@ -46,7 +53,7 @@ export function popover (anchor, content, { align = "start", width = null, class
   setTimeout(() => document.addEventListener("pointerdown", down, true), 0)
   document.addEventListener("keydown", key, true)
   window.addEventListener("resize", closePopover, { once: true })
-  open = { el, onClose, cleanup: () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key, true) } }
+  open = { el, anchor, onClose, cleanup: () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key, true) } }
   return el
 }
 

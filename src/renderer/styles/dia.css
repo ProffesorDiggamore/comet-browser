@@ -12,6 +12,7 @@
 [data-layout="dia"] #sidebar,
 [data-layout="dia"] #sidebar-edge { display: none !important; }
 [data-layout="dia"] .dia-only { display: inline-flex !important; }
+[data-layout="dia"] .classic-only { display: none !important; }
 
 /* ── sidebar ───────────────────────────────────────────────────── */
 [data-layout="dia"] #vtabs {
@@ -55,15 +56,23 @@ body[data-mode="dark"] .vt-tile.is-active { background: rgb(var(--ink) / 0.18); 
 /* tab rows: favicon + title, the active one lifts out as a little card */
 .vt-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 2px; margin: 0 -4px; padding: 0 4px; scrollbar-width: none; }
 .vt-scroll::-webkit-scrollbar { width: 0; }
-.vt-list { display: flex; flex-direction: column; gap: 2px; }
+.vt-list { position: relative; display: flex; flex-direction: column; gap: 2px; }
+/* the active highlight is one element that glides between rows (vtabs.js) */
+.vt-ind {
+  position: absolute; left: 0; right: 0; top: 0; height: 36px; border-radius: 10px; pointer-events: none; opacity: 0;
+  background: var(--f-frame-bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgb(var(--ink) / 0.07);
+  transition: transform var(--f-med) var(--f-ease), height var(--f-med) var(--f-ease), opacity var(--f-fast) var(--f-ease-out);
+  will-change: transform;
+}
+.vt-ind.is-on { opacity: 1; }
+body[data-mode="dark"] .vt-ind { background: rgb(var(--ink) / 0.12); box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.08); }
 .vt-row {
   position: relative; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 10px; border-radius: 10px; flex: 0 0 auto;
   border: 0; background: transparent; color: var(--f-text); font-size: 13px; font-weight: 500; text-align: left; width: 100%;
   transition: background var(--f-fast) var(--f-ease-out), box-shadow var(--f-fast);
 }
 .vt-row:hover { background: rgb(var(--ink) / 0.06); }
-.vt-row.is-active { background: var(--f-frame-bg); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 0 0.5px rgb(var(--ink) / 0.07); }
-body[data-mode="dark"] .vt-row.is-active { background: rgb(var(--ink) / 0.12); box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.08); }
+.vt-row.is-active { background: transparent; }
 .vt-row.is-asleep { color: var(--f-text-dim); }
 .vt-row.is-dragging { opacity: 0.4; }
 .vt-row.drop-before { box-shadow: inset 0 2px 0 var(--f-accent); }
@@ -72,7 +81,8 @@ body[data-mode="dark"] .vt-row.is-active { background: rgb(var(--ink) / 0.12); b
 .vt-fav { width: 18px; height: 18px; display: inline-grid; place-items: center; flex: 0 0 auto; color: var(--f-text-dim); }
 .vt-fav img { width: 16px; height: 16px; border-radius: 4px; }
 .vt-row.is-loading .vt-fav { animation: tab-pulse 1.2s ease-in-out infinite; }
-.vt-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vt-title { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vt-gap { flex: 1 1 0; min-width: 0; }   /* keeps the mute button beside the title */
 .vt-thumb:empty { display: none; }
 .vt-thumb img { display: block; width: 40px; height: 26px; object-fit: cover; object-position: top; border-radius: 5px; border: 0.5px solid rgb(var(--ink) / 0.15); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); }
 .vt-row:hover .vt-thumb { display: none; }
@@ -80,25 +90,44 @@ body[data-mode="dark"] .vt-row.is-active { background: rgb(var(--ink) / 0.12); b
 .vt-audio:not([hidden]) { display: grid; color: var(--f-accent-text); }
 .vt-row:hover .vt-x { display: grid; }
 .vt-x:hover, .vt-audio:hover { background: rgb(var(--ink) / 0.1); color: var(--f-text); }
-.vt-new { color: var(--f-text-dim); font-weight: 400; }
+/* private tabs: a small mark on the row and a chip in the address pill */
+.vt-priv { display: none; flex: 0 0 auto; color: var(--sys-purple); }
+.vt-row.is-private .vt-priv { display: inline-grid; place-items: center; }
+.vt-row.is-private:hover .vt-priv { display: none; }
+.ob-private { display: none; cursor: default; color: var(--sys-purple); background: color-mix(in srgb, var(--sys-purple) 16%, transparent); font-weight: 600; padding: 0 8px 0 6px; height: 22px; }
+.ob-private:hover { color: var(--sys-purple); background: color-mix(in srgb, var(--sys-purple) 16%, transparent); }
+body.is-private-tab .ob-private { display: inline-flex; }
+.tab.is-private .tab-title { color: var(--sys-purple); }
+.vt-new { color: var(--f-text-dim); font-weight: 400; margin-top: 2px; }
 .vt-new:hover { color: var(--f-text); }
 .vt-row.is-entering { animation: m-rise var(--f-med) var(--f-ease) both; }
 
 .vt-bottom { display: flex; align-items: center; gap: 2px; padding-top: 8px; flex: 0 0 auto; }
 .vt-flex { flex: 1; }
-.vt-foot { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--f-text-dim); }
+.vt-foot { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: transparent; color: var(--f-text-dim); transition: background var(--f-fast) var(--f-ease-out), color var(--f-fast) var(--f-ease-out), transform var(--f-fast) var(--f-ease); }
 .vt-foot:hover { background: rgb(var(--ink) / 0.07); color: var(--f-text); }
 body.ai-open .vt-ai { color: var(--f-accent-text); background: var(--f-accent-soft); }
+.vt-audio { margin-left: -4px; }
 
 /* ── content: chrome toolbar + floating page card ──────────────── */
 [data-layout="dia"] #content { margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: transparent; overflow: visible; }
 [data-layout="dia"] #toolbar { -webkit-app-region: drag; }
-[data-layout="dia"] .tl-inner { grid-template-columns: auto minmax(200px, 1fr) auto; gap: 14px; padding: 0 14px 0 4px; }
+[data-layout="dia"] .tl-inner { grid-template-columns: minmax(max-content, 1fr) minmax(200px, 680px) minmax(max-content, 1fr); gap: 12px; padding: 0 12px 0 4px; }
 body.vt-collapsed[data-layout="dia"] .tl-inner { padding-left: 84px; }
+/* fullscreen: no traffic lights to make room for */
+body.vt-collapsed.is-fullscreen[data-layout="dia"] .tl-inner { padding-left: 10px; }
+body.is-fullscreen .vt-top { justify-content: flex-start; }
 [data-layout="dia"] .tl-nav { gap: 2px; }
 [data-layout="dia"] .tl-sep { display: none; }
-[data-layout="dia"] .tb-btn { color: var(--f-text-dim); width: 32px; height: 30px; border-radius: 9px; }
+[data-layout="dia"] .tb-btn {
+  color: var(--f-text-dim); width: 32px; height: 30px; border-radius: 9px;
+  transition: background var(--f-fast) var(--f-ease-out), color var(--f-fast) var(--f-ease-out), transform var(--f-fast) var(--f-ease), opacity var(--f-med) var(--f-ease-out), visibility var(--f-med);
+}
 [data-layout="dia"] .tb-btn:hover { color: var(--f-text); background: rgb(var(--ink) / 0.07); }
+[data-layout="dia"] .tb-btn:active { background: rgb(var(--ink) / 0.12); }
+/* page-only actions bow out on the New Tab page; the address pill and the rest stay */
+[data-layout="dia"].on-home #address-wrap, [data-layout="dia"].on-home .tl-actions { opacity: 1; visibility: visible; transform: none; }
+[data-layout="dia"].on-home .web-only { opacity: 0; visibility: hidden; transform: scale(0.7); }
 
 /* the card: every pane (web, Home, Settings…) floats with a hairline + soft shadow */
 [data-layout="dia"] #content { --card-r: 12px; --card-gap: 8px; }
@@ -117,20 +146,33 @@ body.vt-collapsed[data-layout="dia"] #stage::after { left: var(--card-gap); }
 [data-layout="dia"] #loadbar { left: 8px; right: calc(var(--card-gap) + 8px); }
 body:not(.vt-collapsed)[data-layout="dia"] #loadbar { left: 6px; }
 
-/* breadcrumb address: "site / Page title"; becomes a field on click */
+/* address pill: always there, always clickable.  It reads "site / Page
+   title"; click anywhere on it (or ⌘L) and it widens into the full,
+   editable URL.  .is-editing is set while the field has focus. */
 .crumb { display: none; }
-[data-layout="dia"] #address-wrap { background: transparent; border-color: transparent; box-shadow: none; justify-content: flex-start; position: relative; }
-[data-layout="dia"] #address-wrap:focus-within { background: var(--f-frame-bg); border-color: color-mix(in srgb, var(--f-accent) 70%, transparent); box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--f-accent) 28%, transparent); }
-[data-layout="dia"] #address-wrap:not(:focus-within) #address { position: absolute; width: 1px; opacity: 0; pointer-events: none; }
-[data-layout="dia"] #address-wrap:not(:focus-within) .crumb {
-  display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; height: 28px; padding: 0 8px; border: 0; border-radius: 8px;
-  background: transparent; font-size: 13px; white-space: nowrap; overflow: hidden;
+[data-layout="dia"] #address-wrap {
+  justify-self: center; width: min(100%, 520px); height: 32px; padding: 0 4px; gap: 2px; border-radius: 10px; position: relative; cursor: text;
+  background: rgb(var(--ink) / 0.055); border-color: rgb(var(--ink) / 0.07); box-shadow: none;
+  transition: width var(--f-slow) var(--f-ease-out), background var(--f-fast) var(--f-ease-out), border-color var(--f-fast), box-shadow var(--f-med) var(--f-ease-out);
 }
-[data-layout="dia"] .crumb:hover { background: rgb(var(--ink) / 0.06); }
+[data-layout="dia"] #address-wrap:hover { background: rgb(var(--ink) / 0.09); border-color: rgb(var(--ink) / 0.1); }
+[data-layout="dia"] #address-wrap.is-editing {
+  width: 100%; background: var(--f-frame-bg); border-color: color-mix(in srgb, var(--f-accent) 70%, transparent);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--f-accent) 26%, transparent), 0 10px 28px -14px rgba(0, 0, 0, 0.45);
+}
+[data-layout="dia"] #address-wrap:not(.is-editing) #address { position: absolute; width: 1px; opacity: 0; pointer-events: none; }
+[data-layout="dia"] #address-wrap.is-editing .crumb { display: none; }
+[data-layout="dia"] #address-wrap:not(.is-editing) .crumb {
+  display: flex; flex: 1; align-items: center; gap: 6px; min-width: 0; height: 100%; padding: 0 5px; border: 0; border-radius: 8px;
+  background: transparent; font-size: 13px; white-space: nowrap; overflow: hidden; cursor: text; text-align: left;
+}
 [data-layout="dia"] #address { text-align: left; }
-[data-layout="dia"] #address-wrap:not(:focus-within) .ob-chip:not(.ob-zoom):not(.ob-shield) { display: none; }
 [data-layout="dia"] .ob-ask { display: none !important; }
+/* copy-link sits in the pill and shows when you reach for it */
+.ob-copy { opacity: 0; transition: opacity var(--f-fast) var(--f-ease-out), background var(--f-fast), color var(--f-fast); }
+#address-wrap:hover .ob-copy, #address-wrap.is-editing .ob-copy, .ob-copy:focus-visible { opacity: 1; }
 .crumb-host { color: var(--f-text-dim); flex: 0 0 auto; }
+.crumb-host.is-empty { color: var(--f-text-3); }
 .crumb-sep { color: var(--f-text-3); flex: 0 0 auto; }
 .crumb-title { color: var(--f-text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 
@@ -146,4 +188,3 @@ body.focus-mode[data-layout="dia"] #stage::after, body.is-page-fullscreen[data-l
 /* press feedback lands on pointer-down, not on release */
 .vt-row:not(.is-active):active { background: rgb(var(--ink) / 0.1); }
 .vt-foot:active { background: rgb(var(--ink) / 0.12); transform: scale(var(--f-press)); }
-[data-layout="dia"] .crumb:active { background: rgb(var(--ink) / 0.1); }

@@ -1,8 +1,8 @@
 {
   "name": "flux-browser",
   "productName": "Flux",
-  "version": "0.7.0",
-  "description": "A fully custom, modular liquid-glass desktop browser for macOS.",
+  "version": "0.8.0",
+  "description": "Comet: a fully custom, modular liquid-glass desktop browser for macOS. (productName stays Flux: it names the keychain entry.)",
   "private": true,
   "type": "commonjs",
   "main": "src/main/main.js",

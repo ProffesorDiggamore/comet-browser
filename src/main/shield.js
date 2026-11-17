@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  shield.js — Flux Shield: built-in tracker/ad blocking, HTTPS-only
+//  shield.js — Comet Shield: built-in tracker/ad blocking, HTTPS-only
 //  upgrades and Global Privacy Control headers for the browsing session.
 //  Blocking is domain-based (fast Set lookup per hostname label), only
 //  ever applied to sub-resources — a page you navigate to always loads.

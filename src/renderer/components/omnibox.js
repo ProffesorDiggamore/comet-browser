@@ -1,8 +1,10 @@
 // ───────────────────────────────────────────────────────────────────
 //  omnibox.js — one smart box for the toolbar address bar and the Home
-//  search pill.  Suggests: Ask Flux AI, go-to URL, keyword searches
+//  search pill.  Suggests: Ask Comet AI, go-to URL, keyword searches
 //  ("yt cats"), inline math, open tabs, bookmarks and history (ranked).
 //  Enter picks the best guess; ⌘⏎ always asks the AI; ⌥⏎ new tab.
+//  Typing the start of a site you know ("you") completes it inline
+//  ("youtube.com", the rest selected), so Enter goes straight there.
 // ───────────────────────────────────────────────────────────────────
 import { h } from "../core/dom.js"
 import { ico } from "../core/icons.js"
@@ -10,6 +12,7 @@ import { state } from "../core/state.js"
 import { bus } from "../core/bus.js"
 import { engineById } from "../data/engines.js"
 import * as T from "../core/tabs.js"
+import { attachLensInput } from "./lens.js"
 
 // ── tiny safe calculator (+ - * / % ^ parentheses) ──────────────────
 function calc (src) {
@@ -57,12 +60,44 @@ const fav = (url) => {
   return f ? h("img.ob-fav", { src: f, onerror: (e) => e.target.replaceWith(ico("globe", 15)) }) : ico("globe", 15)
 }
 
+// "https://www.youtube.com/watch?v=1" → "youtube.com/watch?v=1" (what a person would type)
+const bare = (url) => { try { const u = new URL(url); return /^https?:$/.test(u.protocol) ? u.host.replace(/^www\./, "") + (u.pathname === "/" ? "" : u.pathname) : "" } catch { return "" } }
+
+// best inline completion for what was typed, from a list of urls (ordered best first).
+// Completes to the site ("youtube.com") unless a path is already being typed.
+function completion (raw, urls) {
+  const q = raw.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "")
+  if (!q || /\s/.test(raw)) return null
+  for (const url of urls) {
+    const full = bare(url)
+    const host = full.split("/")[0]
+    const cand = q.includes("/") ? full : host
+    if (cand.length > q.length && cand.toLowerCase().startsWith(q)) return { rest: cand.slice(q.length), text: cand, url: q.includes("/") ? url : `https://${new URL(url).host}/` }
+  }
+  return null
+}
+
 export function attachOmnibox (input, { anchor = input, place = "toolbar", onDone = null } = {}) {
+  attachLensInput(input, anchor)     // paste / drop an image → Google Lens
   let box = null
   let items = []
   let sel = 0
   let seqq = 0
   let timer = null
+  let typed = null        // what was actually typed while the tail of the field is an inline completion
+  let complete = false    // the last edit was typing at the end, so a completion may be offered
+  let moved = false       // the arrow keys / pointer picked a row since the last edit
+
+  // the query is what the user typed, not the completed text sitting selected after it
+  const inlineOn = () => typed != null && input.selectionStart === typed.length && input.selectionEnd === input.value.length && input.value.length > typed.length
+  const query = () => (inlineOn() ? typed : input.value).trim()
+  function applyInline (raw, c) {
+    if (!c || document.activeElement !== input || input.value !== raw) return false
+    typed = raw
+    input.value = raw + c.rest
+    input.setSelectionRange(raw.length, input.value.length)
+    return true
+  }
 
   const close = () => { box?.remove(); box = null; items = []; anchor.classList.remove("has-suggest") }
 
@@ -79,9 +114,12 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
   }
 
   async function build () {
-    const q = input.value.trim()
+    const q = query()
     const my = ++seqq
     if (!q) { close(); return }
+    const raw = inlineOn() ? typed : input.value
+    const wantInline = complete && !/\s/.test(raw)
+    const goItem = (c) => ({ icon: "arrowRight", label: c.text, sub: "Go to site", url: c.url, run: (nt) => go(c.url, nt), primary: true, inline: true })
     const kind = classify(q)
     const engine = engineById(state.get("general.searchEngineId"))
     const list = []
@@ -90,10 +128,12 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
     const kw = T.keywordFor(q)
     if (kw) list.push({ icon: "search", label: `Search ${kw.name} for “${kw.query}”`, run: (nt) => go(kw.url, nt), primary: true })
     if (kind === "url") list.push({ icon: "arrowRight", label: q, sub: "Go to site", run: (nt) => go(q, nt), primary: true })
-    const ai = { icon: "spark", label: q, sub: "Ask Flux AI", cls: "is-ai", run: () => bus.emit("ai:ask", { text: q }), primary: kind === "ai" }
+    const ai = { icon: "spark", label: q, sub: "Ask Comet AI", cls: "is-ai", run: () => bus.emit("ai:ask", { text: q }), primary: kind === "ai" }
     const search = { icon: "search", label: q, sub: `Search ${engine.name ?? "the web"}`, run: (nt) => go(T.engineSearch(q), nt), primary: kind === "search" }
     if (kind === "ai") list.push(ai, search)
-    else list.push(search, ai)
+    else list.push(search)
+    // Ask Comet AI stays reachable (Tab jumps to it) but sits below the real matches
+    const withAi = () => (kind === "ai" ? list : [...list, ai])
 
     const ql = q.toLowerCase()
     const seen = new Set()
@@ -108,21 +148,31 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
       seen.add(b.url)
       list.push({ icon: "bookmark", label: b.title || b.url, sub: b.url, url: b.url, run: (nt) => go(b.url, nt) })
     }
-    paint(list, kind)
+    // inline completion: open tabs and bookmarks first (no wait), history after it answers
+    let inl = null
+    if (wantInline) {
+      inl = completion(raw, [...T.getTabs().filter((t) => !t.isHome).map((t) => t.url), ...(state.get("bookmarks") ?? []).map((b) => b.url)])
+      if (inl && (inlineOn() || applyInline(raw, inl))) list.unshift(goItem(inl)); else inl = null
+    }
+    paint(withAi(), kind)
     const hist = await window.flux.history.search({ query: q, limit: 8, ranked: true })
     if (my !== seqq) return
+    if (wantInline && !inl) {
+      inl = completion(raw, hist.map((e) => e.url))
+      if (inl && applyInline(raw, inl)) list.unshift(goItem(inl))
+    }
     for (const e of hist) {
       if (seen.has(e.url) || list.length > 11) continue
       seen.add(e.url)
       list.push({ icon: "clock", label: e.title || e.url, sub: e.url, url: e.url, run: (nt) => go(e.url, nt) })
     }
-    paint(list, kind)
+    paint(withAi(), kind)
   }
 
   function paint (list, kind) {
     items = list
     const pi = list.findIndex((x) => x.primary)
-    if (!box || sel >= list.length) sel = Math.max(0, pi)
+    if (!box || !moved || sel >= list.length) sel = Math.max(0, pi)
     if (!box) {
       box = h(`div.ob-suggest.glass.ob-${place}`, { role: "listbox" })
       document.body.append(box)
@@ -132,7 +182,7 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
     Object.assign(box.style, { left: `${r.left}px`, top: `${r.bottom + 8}px`, width: `${r.width}px` })
     box.replaceChildren(...list.map((it, i) => h(`button.ob-item${i === sel ? ".is-sel" : ""}${it.cls ? "." + it.cls : ""}`, {
       onmousedown: (e) => e.preventDefault(),
-      onmouseenter: () => { sel = i; mark() },
+      onmouseenter: () => { sel = i; moved = true; mark() },
       onclick: (e) => run(it, e.altKey || e.metaKey)
     }, [
       h("span.ob-ico", {}, [it.url ? fav(it.url) : ico(it.icon, 16)]),
@@ -150,13 +200,18 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
     onDone?.()
   }
 
-  input.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(build, 50) })
+  input.addEventListener("input", (e) => {
+    // only plain typing at the end of the field earns a completion: not deleting, pasting or composing
+    complete = e.inputType === "insertText" && !e.isComposing && input.selectionEnd === input.value.length
+    typed = null; moved = false
+    clearTimeout(timer); timer = setTimeout(build, 50)
+  })
   input.addEventListener("blur", () => setTimeout(close, 120))
   input.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowDown" && box) { e.preventDefault(); sel = Math.min(items.length - 1, sel + 1); mark() }
-    else if (e.key === "ArrowUp" && box) { e.preventDefault(); sel = Math.max(0, sel - 1); mark() }
+    if (e.key === "ArrowDown" && box) { e.preventDefault(); moved = true; sel = Math.min(items.length - 1, sel + 1); mark() }
+    else if (e.key === "ArrowUp" && box) { e.preventDefault(); moved = true; sel = Math.max(0, sel - 1); mark() }
     else if (e.key === "Tab" && !e.shiftKey && input.value.trim()) {
-      // Tab jumps straight to "Ask Flux AI"
+      // Tab jumps straight to "Ask Comet AI"
       e.preventDefault()
       const i = items.findIndex((x) => x.cls === "is-ai")
       if (i >= 0) { sel = i; mark() }
@@ -164,7 +219,7 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
       e.preventDefault()
       const q = input.value.trim()
       if (!q) return
-      if (e.metaKey || e.ctrlKey) { close(); input.blur(); bus.emit("ai:ask", { text: q }); onDone?.(); return }
+      if (e.metaKey || e.ctrlKey) { close(); input.blur(); bus.emit("ai:ask", { text: query() }); onDone?.(); return }
       const it = items[sel]
       if (it) run(it, e.altKey)
       else { close(); input.blur(); primaryAction(q)(e.altKey); onDone?.() }

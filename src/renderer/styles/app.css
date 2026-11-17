@@ -2,6 +2,14 @@
    APP LAYOUT — titlebar / sidebar / content stack, plus the shared
    component styling (hot tabs, widgets, panels, toasts).
    ═══════════════════════════════════════════════════════════════════ */
+/* A drag region swallows every click inside it, and -webkit-app-region
+   inherits — so anything interactive opts out, wherever it lives.  (The
+   toolbar is a drag strip in the Dia layout; without this its buttons and
+   the address field never received a click.) */
+.no-drag, button, input, textarea, select, a, label, [role="button"], [contenteditable], webview { -webkit-app-region: no-drag; }
+/* fullscreen has no window to drag: no drag strips at all */
+body.is-fullscreen #titlebar, body.is-fullscreen #toolbar, body.is-fullscreen .vt-top { -webkit-app-region: no-drag; }
+
 #app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
 #body { position: relative; flex: 1; display: flex; min-height: 0; }
 #content { position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -70,19 +78,6 @@
 .row + .row { margin-top: 12px; }
 label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--f-text-dim); }
 label.field input, label.field textarea, label.field select { width: 100%; }
-
-/* ---- vision + companion panels ------------------------- */
-.chat-log { display: flex; flex-direction: column; gap: 12px; margin: 18px 0; }
-.msg { padding: 12px 14px; border-radius: 12px; max-width: 760px; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
-.msg.user { align-self: flex-end; background: color-mix(in srgb, var(--f-accent) 24%, var(--f-surface)); }
-.msg.ai { align-self: flex-start; background: var(--f-fill); }
-.msg.tool { align-self: flex-start; background: var(--f-fill); font-family: "SF Mono", ui-monospace, monospace; font-size: 12px; color: var(--f-text-dim); }
-.shot-preview { max-width: 340px; border-radius: 12px; border: 1px solid var(--f-line); margin: 8px 0; }
-.composer { position: sticky; bottom: 0; display: flex; gap: 10px; padding-top: 12px; }
-.composer textarea { flex: 1; min-height: 46px; max-height: 180px; }
-
-.approve-bar { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 12px; background: var(--f-fill); border: 1px solid var(--f-accent); margin: 10px 0; }
-.approve-bar pre { flex: 1; max-height: 220px; overflow: auto; margin: 0; font-size: 11.5px; -webkit-user-select: text; user-select: text; }
 
 /* ---- toasts ------------------------------------------- */
 #toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 9999; }

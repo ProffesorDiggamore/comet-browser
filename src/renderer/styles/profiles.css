@@ -15,6 +15,7 @@
   text-shadow: 0 0.5px 1px rgb(0 0 0 / 0.18);
   user-select: none;
 }
+.pf-av.is-pic { background: center / cover no-repeat rgb(var(--ink) / 0.08); text-shadow: none; }
 .pf-av.is-emoji { font-size: calc(var(--pf-s) * 0.56); text-shadow: none; background: color-mix(in srgb, var(--pf) 26%, rgb(var(--ink) / 0.06)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pf) 45%, transparent); }
 
 /* ── switcher button ───────────────────────────────────────────── */
@@ -50,9 +51,9 @@
 .pf-scrim {
   position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center;
   background: rgb(0 0 0 / 0.32);
-  animation: pf-fade var(--f-med, 220ms) var(--f-ease-out, ease-out) both;
+  animation: m-scrim var(--f-med, 220ms) var(--f-ease-out, ease-out) backwards;   /* color, not opacity: see motion.css */
 }
-.pf-scrim.is-leaving { animation: pf-fade 160ms ease-in reverse both; }
+.pf-scrim.is-leaving { animation: m-scrim 160ms ease-in reverse both; }
 .pf-scrim.is-leaving .pf-sheet { animation: pf-rise 160ms ease-in reverse both; }
 .pf-sheet {
   width: min(400px, calc(100vw - 32px)); padding: 26px 24px 20px; border-radius: 22px;
@@ -61,7 +62,11 @@
   box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.55), 0 0 0 0.5px rgb(var(--ink) / 0.12);
   animation: pf-rise 320ms cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
 }
-.pf-preview { display: flex; justify-content: center; margin-bottom: 6px; }
+.pf-preview { display: flex; justify-content: center; margin: 0 auto 6px; padding: 4px; border-radius: 50%; transition: background var(--f-fast), box-shadow var(--f-fast); }
+.pf-preview.is-drop { background: color-mix(in srgb, var(--pf) 22%, transparent); box-shadow: 0 0 0 2px var(--pf); }
+.pf-pic-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pf-pic-row .btn { display: inline-flex; align-items: center; gap: 6px; }
+.pf-pic-hint { font-size: 11.5px; color: var(--f-text-3); margin-left: 2px; }
 .pf-preview .pf-av { box-shadow: 0 10px 28px -10px var(--pf), inset 0 0.5px 0 rgb(255 255 255 / 0.35); transition: background var(--f-fast); }
 .pf-title { margin: 4px 0 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .pf-sub { margin: 0 8px 10px; font-size: 12.5px; line-height: 1.4; color: var(--f-text-dim); }
@@ -97,8 +102,83 @@
 /* the whole UI eases out while a profile switch reloads it */
 body.is-switching-profile #app { opacity: 0; transform: scale(0.992); transition: opacity 160ms ease-in, transform 160ms ease-in; }
 
-@keyframes pf-fade { from { opacity: 0; } }
 @keyframes pf-rise { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
 @media (prefers-reduced-motion: reduce) {
   .pf-scrim, .pf-sheet, .pf-scrim.is-leaving, .pf-scrim.is-leaving .pf-sheet { animation-duration: 1ms; }
 }
+
+/* ═══ AUTOFILL — saved-login list under a page's login field, and the
+   save-after-sign-in card.  Each row leads with its profile's avatar so
+   Personal and Business logins for the same site tell apart at a glance. */
+.af-menu {
+  position: fixed; z-index: 900; padding: 5px; border-radius: 14px;
+  display: flex; flex-direction: column; gap: 1px;
+  transform-origin: top left;
+  animation: af-in 220ms var(--f-ease-out) both;
+}
+.af-menu.is-leaving, .af-save.is-leaving { animation: af-out 140ms var(--f-ease-out) both; pointer-events: none; }
+@keyframes af-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
+@keyframes af-out { to { opacity: 0; transform: translateY(-3px) scale(0.98); } }
+.af-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px 4px; font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--f-text-3); }
+.af-list { display: flex; flex-direction: column; gap: 1px; max-height: 268px; overflow-y: auto; }
+.af-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--f-text); text-align: left;
+  transition: background var(--f-fast) var(--f-ease-out);
+}
+.af-row.is-sel { background: rgb(var(--ink) / 0.09); }
+.af-row:active { background: rgb(var(--ink) / 0.14); }
+.af-av { position: relative; display: inline-grid; }
+.af-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.af-user { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-sub { font-size: 11.5px; color: var(--f-text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-go { color: var(--f-text-3); opacity: 0; transform: translateX(-4px); transition: opacity var(--f-fast), transform var(--f-fast) var(--f-ease); }
+.af-row.is-sel .af-go { opacity: 1; transform: none; color: var(--f-accent-text); }
+.af-foot {
+  display: flex; align-items: center; gap: 6px; margin-top: 3px; padding: 7px 8px 5px; border: 0;
+  border-top: 0.5px solid rgb(var(--ink) / 0.08); border-radius: 0 0 9px 9px;
+  background: transparent; color: var(--f-text-dim); font-size: 11.5px; text-align: left;
+}
+.af-foot:hover { color: var(--f-text); }
+
+.af-save {
+  position: fixed; z-index: 900; top: calc(var(--f-titlebar-h) + 52px); right: 16px; width: 300px;
+  padding: 14px; border-radius: 16px; display: flex; flex-direction: column; gap: 12px;
+  transform-origin: top right;
+  animation: af-in 260ms var(--f-ease) both;
+}
+.af-save-top { display: flex; align-items: center; gap: 10px; }
+.af-save-ico {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 auto;
+  background: var(--f-accent-soft); color: var(--f-accent-text);
+}
+.af-save-login { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgb(var(--ink) / 0.06); }
+.af-save-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ── Move & Scale (covers the sheet while open) ─────────────────── */
+.pf-sheet { position: relative; }
+.pf-preview.has-pic { cursor: pointer; }
+.pf-pic-hint { margin: 5px 2px 0; text-align: left; }
+.pf-crop {
+  position: absolute; inset: 0; z-index: 5; border-radius: inherit; padding: 26px 24px 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: var(--f-pop-bg); animation: pf-crop-in 200ms ease-out both;
+}
+@keyframes pf-crop-in { from { opacity: 0; transform: scale(0.98); } }
+.pf-crop .pf-actions { align-self: stretch; }
+.pf-crop-stage {
+  position: relative; width: 240px; height: 240px; margin: 8px 0 4px; border-radius: 16px; overflow: hidden; outline: 0;
+  background: repeating-conic-gradient(rgb(var(--ink) / 0.07) 0 25%, transparent 0 50%) 0 0 / 16px 16px;
+  cursor: grab; touch-action: none; user-select: none;
+}
+.pf-crop-stage.is-dragging { cursor: grabbing; }
+.pf-crop-stage:focus-visible { box-shadow: 0 0 0 2px var(--f-accent); }
+.pf-crop-stage img { position: absolute; left: 0; top: 0; max-width: none; height: auto; transform-origin: 0 0; pointer-events: none; will-change: transform; }
+/* everything outside the circle is dimmed: that's what gets cut off */
+.pf-crop-ring { position: absolute; inset: 0; pointer-events: none; border-radius: 50%; box-shadow: 0 0 0 200px rgb(0 0 0 / 0.55), inset 0 0 0 1.5px rgb(255 255 255 / 0.85); }
+.pf-crop-zoomrow { display: flex; align-items: center; gap: 10px; width: 240px; color: var(--f-text-3); }
+.pf-crop-zoom { flex: 1; }
+.pf-crop-ico { display: grid; place-items: center; }
+.pf-sheet.is-cropping > :not(.pf-crop) { visibility: hidden; }
+.pf-pic-row { flex-wrap: nowrap; }
+.pf-pic-row .btn { white-space: nowrap; }

@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  assistant/tools.js — the browser-control tools Flux AI can call.
+//  assistant/tools.js — the browser-control tools Comet AI can call.
 //  Definitions live here (main); execution happens in the renderer,
 //  which owns the tab model.  Inputs stream eagerly, so every input is
 //  validated against its schema here before it is ever executed.
@@ -98,7 +98,7 @@ const DEFS = [
   },
   {
     name: "customize_browser",
-    description: "Change how Flux looks and behaves. Only pass the fields to change. themes: nebula (violet), ember (warm orange), midnight (blue), aurora (teal/mint), carbon (forged carbon), blackline (light paper + black ink schematic, red accent, zero blur — the fast one), blackline-noir (blackline inverted: near-black plate + bone-white ink, same red accent, zero blur). accent is a hex color. glass 0.3-1 (translucency), blur 0-60 (px). animation_speed 0.25-3 (lower = faster). easing: smooth, spring, snappy, gentle, bouncy, physics, linear.",
+    description: "Change how Comet looks and behaves. Only pass the fields to change. themes: nebula (violet), ember (warm orange), midnight (blue), aurora (teal/mint), carbon (forged carbon), blackline (light paper + black ink schematic, red accent, zero blur — the fast one), blackline-noir (blackline inverted: near-black plate + bone-white ink, same red accent, zero blur). accent is a hex color. glass 0.3-1 (translucency), blur 0-60 (px). animation_speed 0.25-3 (lower = faster). easing: smooth, spring, snappy, gentle, bouncy, physics, linear.",
     input_schema: obj({
       theme: { type: "string", enum: ["nebula", "ember", "midnight", "aurora", "carbon", "blackline", "blackline-noir"] },
       accent: { type: "string" },
@@ -116,7 +116,7 @@ const DEFS = [
   },
   {
     name: "show_ui",
-    description: "Open a part of the Flux interface for the user: home, settings, history, bookmarks, downloads, tab overview, command palette.",
+    description: "Open a part of the Comet interface for the user: home, settings, history, bookmarks, downloads, tab overview, command palette.",
     input_schema: obj({
       view: { type: "string", enum: ["home", "settings", "history", "bookmarks", "downloads", "overview", "palette"] },
       settings_section: { type: "string", description: "Optional settings category id: search, appearance, motion, ai, layout, privacy, passwords, home, perf, shortcuts." }

@@ -12,8 +12,10 @@ import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { attachOmnibox } from "./omnibox.js"
 import { popover, closePopover } from "./popover.js"
-import { KINDS, SIZES, renderWidget } from "./widgets.js"
+import { KINDS, SIZES, renderWidget, armFocusAlarm } from "./widgets.js"
 import { seg, rng } from "./settings/kit.js"
+import { currentProfile, avatar } from "./profiles.js"
+import { openLens } from "./lens.js"
 
 export const WALL_PRESETS = [
   { id: "tide", name: "Tide" }, { id: "bloom", name: "Bloom" }, { id: "dusk", name: "Dusk" },
@@ -121,11 +123,30 @@ function tile (w, idx) {
   return el
 }
 
+// "Good morning, Personal" — the active profile's name, by time of day
+export function greetingFor (d = new Date()) {
+  const hr = d.getHours()
+  return hr < 5 ? "Good night" : hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : hr < 21 ? "Good evening" : "Good night"
+}
+function greeting () {
+  const line = h("h1.home-hello-line")
+  const sub = h("div.home-hello-sub")
+  const paint = () => {
+    const d = new Date()
+    line.textContent = `${greetingFor(d)}, ${currentProfile().name}`
+    sub.textContent = d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
+  }
+  paint()
+  const t = setInterval(paint, 30_000)
+  cleanups.push(() => clearInterval(t))
+  return h("div.home-hello", {}, [avatar(currentProfile(), 44), h("div.home-hello-text", {}, [line, sub])])
+}
+
 function gallery (anchor) {
   const list = h("div.hw-gallery", {}, Object.entries(KINDS).map(([k, kind]) => h("button.hw-gal-item", {
     onclick: () => { closePopover(); saveWidgets([...widgets(), { id: uid(), kind: k, size: kind.sizes.includes("medium") ? "medium" : kind.sizes[0], config: {} }]) }
-  }, [h("span.hw-gal-ico", {}, [ico(kind.icon, 18)]), h("span", { text: kind.name })])))
-  popover(anchor, h("div", {}, [h("div.micro.wp-label", { text: "Add a widget" }), list]), { width: 300, align: "end" })
+  }, [h("span.hw-gal-ico", {}, [ico(kind.icon, 18)]), h("span.hw-gal-text", {}, [h("span.hw-gal-name", { text: kind.name }), kind.desc ? h("span.hw-gal-desc", { text: kind.desc }) : null])])))
+  popover(anchor, h("div", {}, [h("div.micro.wp-label", { text: "Add a widget" }), list]), { width: 420, align: "end" })
 }
 
 export function initHome () {
@@ -140,7 +161,8 @@ export function initHome () {
 
     const pill = h("div.home-search")
     input = h("input.home-input", { type: "text", spellcheck: false, autocomplete: "off", placeholder: "Search or enter address" })
-    pill.append(ico("search", 17), input)
+    const lensBtn = h("button.home-lens", { title: "Search with an image (Google Lens) — or paste / drop one here", "aria-label": "Search with an image", onclick: () => openLens(lensBtn) }, [ico("lens", 18)])
+    pill.append(ico("search", 17), input, lensBtn)
 
     const grid = h(`div.hw-grid${editing ? ".is-editing" : ""}`, { dataset: { style: state.get("home.widgetStyle") ?? "glass" } },
       widgets().map((w, i) => tile(w, i)))
@@ -158,6 +180,7 @@ export function initHome () {
       wallLayer(),
       dim,
       h("div.home-scroll", { onclick: (e) => { if (editing && e.target.classList.contains("home-scroll")) { editing = false; render() } } }, [
+        state.get("home.showGreeting") !== false && greeting(),
         state.get("home.showSearch") !== false && pill,
         grid
       ]),
@@ -170,7 +193,7 @@ export function initHome () {
   // re-render on layout changes only — typing in a Notes widget must not rebuild the grid
   const sig = () => JSON.stringify([
     (state.get("home.widgets") ?? []).map((w) => [w.id, w.kind, w.size, w.config?.city]),
-    state.get("home.wallpaper"), state.get("home.widgetStyle"), state.get("home.showSearch"),
+    state.get("home.wallpaper"), state.get("home.widgetStyle"), state.get("home.showSearch"), state.get("home.showGreeting"),
     state.get("home.clock24"), state.get("home.tempUnit"), state.get("hotTabs")
   ])
   let lastSig = sig()
@@ -184,5 +207,13 @@ export function initHome () {
     if (v === "home") { render(); setTimeout(() => input?.focus(), 60) } else if (cleanups.length) { for (const c of cleanups) { try { c() } catch {} } cleanups = []; editing = false }
   })
   bus.on("home:focus", () => input?.focus())
+  bus.on("profiles", () => rerenderHome())
+  let alarmSig = ""
+  const rearm = () => {
+    const sig = JSON.stringify((state.get("home.widgets") ?? []).filter((w) => w.kind === "focus").map((w) => w.config?.endsAt ?? 0))
+    if (sig !== alarmSig) { alarmSig = sig; armFocusAlarm() }
+  }
+  bus.on("config", rearm)
+  rearm()
   render()
 }

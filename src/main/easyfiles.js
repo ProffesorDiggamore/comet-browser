@@ -1,6 +1,6 @@
 // ───────────────────────────────────────────────────────────────────
 //  easyfiles.js — Opera GX-style "Easy Files".  When a page opens a
-//  file picker, Flux offers what you just copied (an image, Finder
+//  file picker, Comet offers what you just copied (an image, Finder
 //  files, text) and your newest downloads, so a screenshot on the
 //  clipboard becomes an upload even on sites that block paste.
 //  Only paths from the latest listing (or a native dialog the user

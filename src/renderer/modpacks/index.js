@@ -101,7 +101,7 @@ export function exportCurrent () {
   const t = state.get("theme") ?? {}
   return {
     id: `custom-${Date.now().toString(36)}`,
-    name: "My Flux Pack",
+    name: "My Comet Pack",
     theme: { active: t.active, accent: t.accent, glass: t.glass, blur: t.blur, customCss: t.customCss ?? "" },
     audio: { pack: state.get("audio.pack"), events: state.get("audio.events") },
     background: state.get("home.background")

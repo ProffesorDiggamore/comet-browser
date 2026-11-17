@@ -3,11 +3,11 @@
 //  and WebKit ship them.  Kept to the narrowest URL that needs it.
 //
 //  Google sign-in: "Couldn't sign you in — This browser or app may not
-//  be secure."  Flux drops its Flux/Electron tokens from the user agent
+//  be secure."  Comet drops its Flux/Electron tokens from the user agent
 //  (main.js) because many sites wall off browsers they don't know.  That
 //  leaves a user agent claiming to be plain Chrome, and Google's sign-in
 //  turns away a browser that claims to be Chrome (or Firefox) but isn't.
-//  Shown Flux's real user agent, the same page lets it in.
+//  Shown Comet's real user agent, the same page lets it in.
 //
 //  Measured 2026-11-13, Electron 44.9.3, email step, fresh sessions:
 //    real user agent on accounts.google.com   9/9 accepted
@@ -21,7 +21,7 @@
 const { app } = require("electron")
 const { store } = require("./store")
 
-// Electron's untouched default: "… Flux/0.7.0 Chrome/152.x Electron/44.x Safari/537.36"
+// Electron's untouched default (the token is app.name, which stays "Flux": see main.js): "… Flux/0.7.0 Chrome/152.x Electron/44.x Safari/537.36"
 const realUA = () => app.userAgentFallback
 
 function isGoogleSignIn (url) {

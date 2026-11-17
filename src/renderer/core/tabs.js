@@ -11,6 +11,7 @@ import { queryTemplate } from "../data/engines.js"
 import { DARK_CSS } from "./pagescripts.js"
 
 const host = () => document.getElementById("tabs-host")
+const PRIVATE_PARTITION = "comet-private"   // no "persist:" prefix = memory only (main.js prepares it)
 const tabs = []
 const closedStack = []
 const byWc = new Map()           // webContentsId -> tab
@@ -55,7 +56,8 @@ export function hostOf (url) { try { return new URL(url).host } catch { return "
 // ── reads ─────────────────────────────────────────────────────────
 const pub = (t) => ({
   id: t.id, title: t.title, url: t.url, favicon: t.favicon, loading: t.loading, asleep: t.asleep, isHome: t.isHome,
-  pinned: t.pinned, muted: t.muted, audible: t.audible, blocked: t.blocked, thumb: t.thumb, inSplit: isInSplit(t.id)
+  pinned: t.pinned, muted: t.muted, audible: t.audible, blocked: t.blocked, thumb: t.thumb, inSplit: isInSplit(t.id),
+  private: t.private
 })
 export function getTabs () { return tabs.map(pub) }
 export function getTab (id) { const t = tabs.find((x) => x.id === id); return t ? pub(t) : null }
@@ -103,10 +105,11 @@ async function applySite (tab) {
 export function refreshSite (id) { const t = rawTab(id); if (t) applySite(t) }
 
 // ── lifecycle ─────────────────────────────────────────────────────
-export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null } = {}) {
+export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null, private: priv = false } = {}) {
   const id = `tab_${++seq}`
   const wv = document.createElement("webview")
-  wv.setAttribute("partition", window.flux.paths.partition ?? "persist:flux")
+  // a private tab lives in an in-memory partition: its cookies and logins never touch disk
+  wv.setAttribute("partition", priv ? PRIVATE_PARTITION : window.flux.paths.partition ?? "persist:comet")
   wv.setAttribute("allowpopups", "")
   wv.setAttribute("preload", `file://${window.flux.paths.webviewPreload}`)
   applyPerfFlags(wv)
@@ -116,7 +119,8 @@ export function newTab (url = null, { activate = true, background = false, pinne
 
   const tab = {
     id, wv, title: title ?? (isHome ? "New Tab" : target), url: isHome ? "" : target, favicon: favicon ?? faviconFor(target),
-    loading: false, asleep: false, isHome, pinned, muted: false, audible: false, blocked: 0, thumb: null, lastActive: Date.now()
+    loading: false, asleep: false, isHome, pinned, muted: false, audible: false, blocked: 0, thumb: null, lastActive: Date.now(),
+    private: !!priv
   }
   if (asleep && !isHome) { tab.asleep = true; tab.sleptUrl = target; wv.src = "about:blank" } else wv.src = target
 
@@ -143,12 +147,13 @@ function wire (tab) {
     const cap = Number(state.get("perf.fpsCap") ?? 0)
     if (cap) try { wv.setFrameRate(cap) } catch {}
     if (tab.muted) try { wv.setAudioMuted(true) } catch {}
+    try { wv.send("flux:tab-axis", tabAxis()) } catch {}
     tab.darkKey = null
     applySite(tab)
   })
   wv.addEventListener("page-title-updated", (e) => {
     tab.title = e.title || tab.title
-    if (!tab.asleep && /^https?:/.test(tab.url)) window.flux.history.title({ url: tab.url, title: tab.title })
+    if (!tab.asleep && !tab.private && /^https?:/.test(tab.url)) window.flux.history.title({ url: tab.url, title: tab.title })
     emit()
   })
   wv.addEventListener("did-start-loading", () => { if (tab.asleep) return; tab.loading = true; emit(); bus.emit("loading", { id: tab.id, on: true }) })
@@ -166,14 +171,14 @@ function wire (tab) {
     if (tab.asleep || e.url === "about:blank") return
     tab.url = e.url
     tab.isHome = false
-    window.flux.history.record({ url: e.url, title: tab.title })
+    if (!tab.private) window.flux.history.record({ url: e.url, title: tab.title })
     applySite(tab)
     emit()
   })
   wv.addEventListener("did-navigate-in-page", (e) => {
     if (!e.isMainFrame || tab.asleep) return
     tab.url = e.url
-    window.flux.history.record({ url: e.url, title: tab.title })
+    if (!tab.private) window.flux.history.record({ url: e.url, title: tab.title })
     emit()
   })
   wv.addEventListener("page-favicon-updated", (e) => {
@@ -189,8 +194,14 @@ function wire (tab) {
   wv.addEventListener("leave-html-full-screen", () => document.body.classList.remove("is-page-fullscreen"))
   wv.addEventListener("ipc-message", (e) => {
     if (e.channel === "flux-key") bus.emit("page-key", e.args[0])
+    else if (e.channel === "flux-page-down") bus.emit("page-down", tab.id)
     else if (e.channel === "flux-webauthn") bus.emit("webauthn", e.args[0])
     else if (e.channel === "flux-file-pick") bus.emit("file-pick", { wv, ...e.args[0] })
+    else if (e.channel === "flux-swipe") bus.emit("swipe", { id: tab.id, ...e.args[0] })
+    else if (e.channel === "flux-login-field") bus.emit("login-field", { id: tab.id, wv, ...e.args[0] })
+    else if (e.channel === "flux-login-blur") bus.emit("login-blur", { id: tab.id })
+    else if (e.channel === "flux-login-key") bus.emit("login-key", e.args[0])
+    else if (e.channel === "flux-login-submit") bus.emit("login-submit", { id: tab.id, ...e.args[0] })
   })
   wv.addEventListener("focus", () => { if (isInSplit(tab.id) && activeId !== tab.id) setActive(tab.id) })
 }
@@ -213,11 +224,13 @@ export function closeTab (id) {
   const idx = tabs.findIndex((t) => t.id === id)
   if (idx === -1) return
   const [tab] = tabs.splice(idx, 1)
-  if (tab.url && tab.url !== "about:blank") closedStack.push({ url: tab.url, title: tab.title, pinned: tab.pinned, index: idx })
+  if (tab.url && tab.url !== "about:blank" && !tab.private) closedStack.push({ url: tab.url, title: tab.title, pinned: tab.pinned, index: idx })
   if (closedStack.length > 50) closedStack.shift()
   if (tab.wcId) byWc.delete(tab.wcId)
   if (isInSplit(id)) clearSplit()
   tab.wv.remove()
+  // the last private tab closing ends the private session: its cookies and cache go with it
+  if (tab.private && !tabs.some((t) => t.private)) window.flux.privateSession.clear()
   sfx.play("tabClose")
   if (activeId === id) {
     const next = tabs[idx] ?? tabs[idx - 1] ?? null
@@ -233,6 +246,13 @@ export function closeRight (id) {
   for (const t of tabs.slice(i + 1)) if (!t.pinned) closeTab(t.id)
 }
 
+// newest first, for the Recently Closed widget
+export function getClosed () { return closedStack.slice().reverse().map((c) => ({ url: c.url, title: c.title })) }
+export function reopenClosedAt (i) {
+  const at = closedStack.length - 1 - i
+  const [c] = at >= 0 ? closedStack.splice(at, 1) : []
+  if (c) newTab(c.url, { pinned: c.pinned })
+}
 export function reopenClosed () {
   const last = closedStack.pop()
   if (last) newTab(last.url, { pinned: last.pinned, index: Math.min(last.index ?? tabs.length, tabs.length) })
@@ -261,6 +281,14 @@ export function move (fromId, toIndex) {
   emit()
 }
 
+// ⌘ + arrow tab switching follows the tab strip: ↑ ↓ in the sidebar, ← → on top
+export const tabAxis = () => (document.body.dataset.layout === "dia" ? "v" : "h")
+export function sendTabAxis () { const a = tabAxis(); for (const t of tabs) try { t.wv.send("flux:tab-axis", a) } catch {} }
+// "ArrowDown" etc. → -1 / 1 when it's this layout's tab-switching arrow, else 0
+export function arrowStep (key) {
+  const keys = tabAxis() === "v" ? ["ArrowUp", "ArrowDown"] : ["ArrowLeft", "ArrowRight"]
+  return key === keys[0] ? -1 : key === keys[1] ? 1 : 0
+}
 export function cycle (dir = 1) {
   if (!tabs.length) return
   const i = tabs.findIndex((t) => t.id === activeId)
@@ -284,7 +312,7 @@ export function setMuted (id, muted) {
 
 export function duplicate (id) {
   const t = rawTab(id); if (!t || t.isHome) return null
-  return newTab(t.url, { index: tabs.indexOf(t) + 1 })
+  return newTab(t.url, { index: tabs.indexOf(t) + 1, private: t.private })
 }
 
 // ── sleeping ──────────────────────────────────────────────────────
@@ -307,9 +335,11 @@ export function wakeTab (id) {
   emit()
 }
 
-export function sweepIdle () {
-  if (!state.get("perf.sleepEnabled")) return
-  const limit = Math.max(1, Number(state.get("perf.sleepAfterMin") ?? 15)) * 60_000
+// saverMin: Battery Saver's tighter limit (minutes); it applies even with sleeping off
+export function sweepIdle (saverMin = null) {
+  if (!state.get("perf.sleepEnabled") && !saverMin) return
+  const userMin = state.get("perf.sleepEnabled") ? Math.max(1, Number(state.get("perf.sleepAfterMin") ?? 15)) : Infinity
+  const limit = Math.min(userMin, saverMin ?? Infinity) * 60_000
   const now = Date.now()
   for (const t of tabs) {
     if (t.id === activeId || t.asleep || t.loading || t.pinned || isInSplit(t.id)) continue
@@ -386,6 +416,9 @@ export function toggleSplit () {
 }
 
 // ── nav / zoom ────────────────────────────────────────────────────
+export const canGo = (dir, id) => { const t = rawTab(id); try { return !!t && !t.isHome && (dir === "back" ? t.wv.canGoBack() : t.wv.canGoForward()) } catch { return false } }
+// a link opened from a private page stays private
+export const isPrivateWc = (wcId) => !!byWc.get(wcId)?.private
 export const back = (id) => { const t = rawTab(id); if (t?.wv.canGoBack()) t.wv.goBack() }
 export const forward = (id) => { const t = rawTab(id); if (t?.wv.canGoForward()) t.wv.goForward() }
 export const reload = (id) => { const t = rawTab(id); if (t?.asleep) wakeTab(t.id); else t?.wv.reload() }
@@ -464,9 +497,9 @@ let saveT = null
 let restoring = false
 let frozen = false
 function writeSession () {
-  const list = tabs.filter((t) => !t.isHome || t.pinned).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null }))
+  const list = tabs.filter((t) => (!t.isHome || t.pinned) && !t.private).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null }))
     .filter((t) => t.url && t.url !== "about:blank")
-  const active = Math.max(0, tabs.filter((t) => !t.isHome).findIndex((t) => t.id === activeId))
+  const active = Math.max(0, tabs.filter((t) => !t.isHome && !t.private).findIndex((t) => t.id === activeId))
   return state.set("session", { tabs: list.slice(0, 200), active })
 }
 function saveSession () {

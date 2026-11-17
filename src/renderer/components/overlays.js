@@ -71,7 +71,7 @@ function loadErrors () {
       h("div.loaderr-sub", { text: `${host || url} · ${String(desc || "").replace(/^ERR_/, "").replace(/_/g, " ").toLowerCase()}` }),
       h("div.row", {}, [
         h("button.btn.btn--accent", { onclick: () => { card.remove(); T.reload() } }, "Try again"),
-        h("button.btn.btn--ghost", { onclick: () => { card.remove(); bus.emit("ai:ask", { text: `Why might ${url} fail to load with "${desc}", and what are alternatives?` }) } }, "Ask Flux AI"),
+        h("button.btn.btn--ghost", { onclick: () => { card.remove(); bus.emit("ai:ask", { text: `Why might ${url} fail to load with "${desc}", and what are alternatives?` }) } }, "Ask Comet AI"),
         h("button.btn.btn--ghost", { onclick: () => card.remove() }, "Dismiss")
       ])
     ])
@@ -127,8 +127,39 @@ function frame () {
   apply()
 }
 
+// two-finger swipe on a page (webview-preload.js reports it): an arrow follows
+// the gesture in from the edge, fills in when far enough, then the tab goes
+// back or forward.  Nothing shows when there is nowhere to go.
+function swipeNav () {
+  const ind = h("div#swipe-ind", { "aria-hidden": "true" })
+  document.getElementById("stage").append(ind)
+  let hideT = null
+  let quietUntil = 0
+  let dir = ""
+  const reset = () => { ind.classList.remove("is-on", "is-armed"); ind.style.setProperty("--p", "0") }
+  bus.on("swipe", ({ id, p = 0, go }) => {
+    if (id !== T.getActiveId() || performance.now() < quietUntil) return
+    clearTimeout(hideT)
+    if (go) {
+      reset()
+      if (!T.canGo(go)) return
+      quietUntil = performance.now() + 900   // the trackpad's momentum keeps arriving on the next page
+      if (go === "back") T.back(); else T.forward()
+      return
+    }
+    const d = p < 0 ? "back" : "forward"
+    if (Math.abs(p) < 0.06 || !T.canGo(d)) { reset(); return }
+    if (d !== dir) { dir = d; ind.dataset.dir = d; ind.replaceChildren(ico(d, 18)) }
+    ind.style.setProperty("--p", String(Math.abs(p)))
+    ind.classList.add("is-on")
+    ind.classList.toggle("is-armed", Math.abs(p) >= 1)
+    hideT = setTimeout(reset, 320)       // fingers lifted before the line: the page stops reporting
+  })
+}
+
 export function initOverlays () {
   loadBar()
+  swipeNav()
   hoverPill()
   permissions()
   loadErrors()

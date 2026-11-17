@@ -10,13 +10,12 @@ import { sfx } from "./audio/sfx.js"
 import * as T from "./core/tabs.js"
 import { startPerfLoop } from "./core/perf.js"
 import { initMotion } from "./core/motion.js"
+import { initBackdrop } from "./core/backdrop.js"
 import { pipScript } from "./core/pagescripts.js"
 import { initTitlebar, openDownloadsPopover } from "./components/titlebar.js"
 import { initSidebar } from "./components/sidebar.js"
 import { initVTabs } from "./components/vtabs.js"
 import { initHome } from "./components/home.js"
-import { initVision } from "./components/visionpanel.js"
-import { initCompanion } from "./components/companionpanel.js"
 import { initSettings } from "./components/settings.js"
 import { initLibrary, toggleBookmark } from "./components/library.js"
 import { initAIPanel } from "./components/aipanel.js"
@@ -31,8 +30,10 @@ import { closePopover, isPopoverOpen } from "./components/popover.js"
 import { initSchematic } from "./components/schematic.js"
 import { initEasyFiles } from "./components/easyfiles.js"
 import { initProfiles, switchProfile, openProfileSheet } from "./components/profiles.js"
+import { initTooltips } from "./components/tooltip.js"
+import { initAutofill } from "./components/passwords.js"
 
-const PANES = ["home", "library", "vision", "companion", "settings"]
+const PANES = ["home", "library", "settings"]
 
 function showView (v) {
   const prev = window.__fluxView
@@ -69,6 +70,8 @@ function runAction (action, extra = {}) {
   const web = a && !a.isHome
   switch (action) {
     case "new-tab": return T.newTab()
+    case "new-private-tab": return T.newTab(null, { private: true })
+    case "copy-url": if (web) { navigator.clipboard.writeText(a.url); toast("Link copied") } return
     case "reopen": return T.reopenClosed()
     case "close-tab": return a && T.closeTab(a.id)
     case "focus-address": return bus.emit("focus-address")
@@ -122,16 +125,16 @@ function escape () {
 async function main () {
   await state.load()
   initMotion()
+  initBackdrop()
   sfx.bindGlobal()
   startPerfLoop()
   await initProfiles()
+  initTooltips()
 
   initTitlebar()
   initSidebar()
   initVTabs()
   initHome()
-  initVision()
-  initCompanion()
   initSettings()
   initLibrary()
   initAIPanel()
@@ -139,6 +142,7 @@ async function main () {
   initOverlays()
   initSchematic()
   initEasyFiles()
+  initAutofill()
 
   // "home" is the New Tab page — asking for it with no home tab active opens one
   bus.on("view", (v) => {
@@ -150,24 +154,42 @@ async function main () {
   bus.on("menu", ({ action, ...extra }) => runAction(action, extra))
   bus.on("split:pick", () => toast("Open another page first, then split"))
   window.flux.onMenu(({ action, ...extra }) => runAction(action, extra))
-  window.flux.onOpenTab(({ url, background, search }) => T.newTab(url, { background: !!background, search: !!search }))
+  const setFullscreen = (on) => document.body.classList.toggle("is-fullscreen", !!on)
+  window.flux.win.onFullscreen(setFullscreen)
+  window.flux.win.isFullscreen().then(setFullscreen)
+  window.flux.onOpenTab(({ url, background, search, from, private: priv }) => T.newTab(url, { background: !!background, search: !!search, private: !!priv || T.isPrivateWc(from) }))
+  // links clicked in other apps while Comet was still starting (default browser)
+  window.flux.takeOpenUrls().then((urls) => { for (const url of urls) T.newTab(url) })
 
   // passkey / WebAuthn attempt inside a webview never resolves — offer the OS browser
   let lastWa = 0
   bus.on("webauthn", (url) => {
     if (Date.now() - lastWa < 10_000) return
     lastWa = Date.now()
-    actionToast("Passkeys don't work inside Flux yet.", "Finish in Safari", () => window.flux.openExternal(url || T.getActive()?.url))
+    actionToast("Passkeys don't work inside Comet yet.", "Finish in Safari", () => window.flux.openExternal(url || T.getActive()?.url))
   })
 
   // keys from inside a page: Escape + user Hot Tab hotkeys
+  // ⌘ + arrow along the tab strip (sidebar ↑ ↓, top ← →) moves between tabs
+  const editableEl = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
+  const tabArrow = (k, editable) => {
+    if (!k.meta || k.ctrl || k.alt || k.shift || editable) return false
+    const step = T.arrowStep(k.key)
+    if (step) T.cycle(step)
+    return !!step
+  }
+  let lastAxis = T.tabAxis()
+  bus.on("config", () => { const a = T.tabAxis(); if (a !== lastAxis) { lastAxis = a; T.sendTabAxis() } })
+
   bus.on("page-key", (k) => {
     if (k.key === "Escape") { escape(); return }
-    matchHotkey({ key: k.key, metaKey: true, ctrlKey: false, shiftKey: !!k.shift, altKey: !!k.alt })
+    if (tabArrow(k, k.editable)) return
+    matchHotkey({ key: k.key, metaKey: k.meta ?? true, ctrlKey: !!k.ctrl, shiftKey: !!k.shift, altKey: !!k.alt })
   })
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { escape(); return }
-    if ((e.metaKey || e.ctrlKey) && matchHotkey(e)) e.preventDefault()
+    if (tabArrow({ key: e.key, meta: e.metaKey, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey }, editableEl(e.target))) { e.preventDefault(); return }
+    if (e.metaKey && matchHotkey(e)) e.preventDefault()
   })
 
   if (!T.restoreSession()) T.newTab()

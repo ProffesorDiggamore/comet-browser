@@ -1,8 +1,10 @@
 // ───────────────────────────────────────────────────────────────────
-//  aipanel.js — Flux AI, docked beside your tabs (⌘J).  Streams the
-//  answer as it's written, shows every browser action as a live step,
-//  asks before clicking/typing on pages, keeps chat history, and can
-//  attach the current page, a screenshot, or your voice.
+//  aipanel.js — Comet AI, docked beside your tabs (⌘J).  Streams the
+//  answer as it's written, shows every browser action as a step on a
+//  timeline, asks before clicking/typing on pages, keeps chat history,
+//  and can attach the current page, a screenshot, or your voice.
+//  The empty state knows what you're looking at: it offers the page
+//  you're on and quick actions for your tabs.
 // ───────────────────────────────────────────────────────────────────
 import { h, clear } from "../core/dom.js"
 import { state } from "../core/state.js"
@@ -10,7 +12,6 @@ import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { renderMarkdown } from "../core/markdown.js"
 import { readScript, selectionScript } from "../core/pagescripts.js"
-import { makeOrb } from "./orb.js"
 import { menu } from "./popover.js"
 import { toggleVoice } from "./voice.js"
 import { runTool, toolLabel, toolIcon } from "./aitools.js"
@@ -24,9 +25,14 @@ const MODELS = [
   { id: "claude-fable-5-1", name: "Fable 5.1", note: "Maximum (premium)" }
 ]
 const EFFORTS = [["low", "Quick"], ["medium", "Balanced"], ["high", "Deep"], ["xhigh", "Deepest"]]
-const SUGGEST = ["Summarize this page", "Compare my open tabs", "Find me 3 good laptops under $1,000 and open them", "Close duplicate tabs"]
+const QUICK = [
+  { icon: "book", label: "Summarize", sub: "this page", page: true, text: "Summarize this page: key points, then anything I should act on." },
+  { icon: "chat", label: "Ask about", sub: "this page", page: true, focus: true },
+  { icon: "layers", label: "Compare", sub: "my open tabs", text: "Compare my open tabs and tell me which is best and why." },
+  { icon: "copy", label: "Tidy up", sub: "duplicate tabs", text: "Close exact duplicate tabs, then tell me how you'd group the rest." }
+]
 
-let panel, log, input, sendBtn, modelChip, pageChip, attachRow, titleEl, keyCard, localCard
+let panel, log, input, sendBtn, modelChip, pageChip, attachRow, titleEl, subEl, keyCard, localCard, jumpBtn
 let chatId = null
 let busy = false
 let attachPage = false
@@ -50,10 +56,19 @@ function userBubble (text, atts = []) {
 
 function assistantShell () {
   const el = h("div.ai-msg.ai-bot")
-  const copy = h("button.ai-copy.tb-btn", { title: "Copy answer", onclick: () => { navigator.clipboard.writeText(el._raw ?? ""); toast("Copied") } }, [ico("copy", 13)])
-  el.append(copy)
   log.append(el)
   return el
+}
+
+// under a finished answer: copy (and a quiet "done" mark)
+function actionBar (el) {
+  if (!el._raw) return
+  const copy = h("button.ai-act", { title: "Copy answer", onclick: () => {
+    navigator.clipboard.writeText(el._raw ?? "")
+    copy.replaceChildren(ico("check", 13), h("span", { text: "Copied" }))
+    setTimeout(() => copy.replaceChildren(ico("copy", 13), h("span", { text: "Copy" })), 1400)
+  } }, [ico("copy", 13), h("span", { text: "Copy" })])
+  el.append(h("div.ai-actions", {}, [copy]))
 }
 
 function sourceChips (sources) {
@@ -101,6 +116,7 @@ function renderStored (item) {
     else if (p.kind === "note") el.append(h("div.ai-note", { text: p.text }))
   }
   el._raw = raw.trim()
+  actionBar(el)
 }
 
 // ── live stream ───────────────────────────────────────────────────
@@ -121,12 +137,16 @@ function paintText () {
 function scrollDown (force = false) {
   const near = log.scrollHeight - log.scrollTop - log.clientHeight < 160
   if (near || force) log.scrollTop = log.scrollHeight
+  paintJump()
+}
+function paintJump () {
+  jumpBtn.classList.toggle("is-on", log.scrollHeight - log.scrollTop - log.clientHeight > 240)
 }
 
 function onEvent (ev) {
   if (ev.chatId !== chatId && chatId) return
   if (!chatId) chatId = ev.chatId
-  if (ev.type === "start") { titleEl.textContent = ev.title || "Flux AI"; return }
+  if (ev.type === "start") { titleEl.textContent = ev.title || "New chat"; return }
   if (!cur) { cur = { el: assistantShell(), raw: "", all: "", tools: new Map(), textEl: null }; cur.el.classList.add("is-live") }
   if (ev.type === "thinking") {
     if (state.get("ai.showThinking") === false) return
@@ -168,6 +188,7 @@ function onEvent (ev) {
     cur.el.classList.remove("is-live")
     cur.el._raw = cur.all.trim()
     cur.el.querySelectorAll(".is-streaming").forEach((x) => x.classList.remove("is-streaming"))
+    actionBar(cur.el)
     cur = null
     setBusy(false)
   }
@@ -232,27 +253,84 @@ export async function send (text, { withPage = false, imgs = [] } = {}) {
 }
 
 // ── chrome ────────────────────────────────────────────────────────
+function pageFav (a, size = 14) {
+  return a.favicon ? h("img.ai-fav", { src: a.favicon, width: size, height: size, onerror: (e) => e.target.replaceWith(ico("globe", size)) }) : ico("globe", size)
+}
+
 function paintAttachments () {
-  pageChip.classList.toggle("is-on", attachPage)
-  attachRow.replaceChildren(...images.map((d, i) => h("div.ai-thumb", {}, [
+  const a = T.getActive()
+  const web = a && !a.isHome
+  if (!web) attachPage = false
+  pageChip.hidden = !attachPage
+  if (attachPage) {
+    pageChip.replaceChildren(pageFav(a, 13), h("span", { text: a.title || T.hostOf(a.url) }), h("button.ai-chip-x", { title: "Don't send this page", onclick: () => { attachPage = false; paintAttachments() } }, [ico("close", 10)]))
+  }
+  attachRow.replaceChildren(pageChip, ...images.map((d, i) => h("div.ai-thumb", {}, [
     h("img", { src: d }),
     h("button", { title: "Remove", onclick: () => { images.splice(i, 1); paintAttachments() } }, [ico("close", 10)])
   ])))
-  attachRow.hidden = !images.length
+  attachRow.hidden = !attachPage && !images.length
+}
+
+async function attachMenu (anchor) {
+  const a = T.getActive()
+  const web = a && !a.isHome
+  menu(anchor, [
+    { label: attachPage ? "Remove this page" : "Add this page", icon: "book", disabled: !web, run: () => { attachPage = !attachPage; paintAttachments(); input.focus() } },
+    { label: "Add a screenshot of this tab", icon: "scan", disabled: !web, run: async () => {
+      const d = await T.capturePage()
+      if (!d) return toast("Open a web page to capture it.")
+      images.push(d); paintAttachments(); input.focus()
+    } },
+    "-",
+    { label: "Paste an image with ⌘V", icon: "image", disabled: true }
+  ])
 }
 
 function autosize () { input.style.height = "auto"; input.style.height = `${Math.min(200, input.scrollHeight)}px` }
 
+function mark (size) {
+  const m = h("span.ai-mark", {}, [ico("flux", Math.round(size * 0.58))])
+  m.style.setProperty("--s", `${size}px`)
+  return m
+}
+
+function greeting () {
+  const hr = new Date().getHours()
+  return hr < 5 ? "Up late?" : hr < 12 ? "Good morning." : hr < 18 ? "Good afternoon." : "Good evening."
+}
+
+let emptyKey = ""
 function emptyState () {
+  const a = T.getActive()
+  const web = a && !a.isHome && /^https?:/.test(a.url)
+  emptyKey = web ? a.url : ""
+  const quick = QUICK.filter((q) => !q.page || web).map((q) => h("button.ai-quick", {
+    onclick: () => {
+      if (q.focus) { attachPage = true; paintAttachments(); input.focus(); return }
+      send(q.text, { withPage: !!q.page })
+    }
+  }, [h("span.ai-quick-ico", {}, [ico(q.icon, 15)]), h("span.ai-quick-label", { text: q.label }), h("span.ai-quick-sub", { text: q.sub })]))
   return h("div.ai-empty", {}, [
-    makeOrb(76),
-    h("div.ai-empty-title", { text: "Ask anything." }),
-    h("div.ai-empty-sub", { text: "I can search the web, read and compare pages, and drive your tabs for you." }),
-    h("div.ai-empty-list", {}, SUGGEST.map((s) => h("button.chip.glass.lit", { onclick: () => send(s, { withPage: /page/.test(s) }) }, [ico("spark", 13), h("span", { text: s })])))
+    mark(44),
+    h("div.ai-empty-title", { text: greeting() }),
+    h("div.ai-empty-sub", { text: "Ask about this page, your tabs, or anything on the web." }),
+    web && h("div.ai-pagecard", {}, [
+      h("span.ai-pagecard-fav", {}, [pageFav(a, 16)]),
+      h("span.ai-pagecard-text", {}, [h("span.ai-pagecard-title", { text: a.title || T.hostOf(a.url) }), h("span.ai-pagecard-host", { text: T.hostOf(a.url).replace(/^www\./, "") })]),
+      h("span.ai-pagecard-tag", { text: "Viewing" })
+    ]),
+    h("div.ai-quick-grid", {}, quick)
   ])
 }
 function hideEmpty () { log.querySelector(".ai-empty")?.remove() }
-
+// keep the empty state about the page you're actually on
+function refreshEmpty () {
+  if (panel.hidden || !log.querySelector(".ai-empty")) return
+  const a = T.getActive()
+  const key = a && !a.isHome && /^https?:/.test(a.url) ? a.url : ""
+  if (key !== emptyKey) log.replaceChildren(emptyState())
+}
 function showKeyCard () {
   keyCard.hidden = false
   keyCard.querySelector("input")?.focus()
@@ -267,8 +345,8 @@ async function checkLocal () {
   const have = st.models.some((m) => m.name === want || m.name === `${want}:latest`)
   if (st.running && have) return
   const title = !st.installed ? "Install Ollama to run AI on your Mac" : !st.running ? "Ollama isn't running" : `Download ${shortName(want)} to start`
-  const sub = !st.installed ? "Free, private, no API key. One download, then Flux handles the rest."
-    : !st.running ? "Flux can start it for you."
+  const sub = !st.installed ? "Free, private, no API key. One download, then Comet handles the rest."
+    : !st.running ? "Comet can start it for you."
       : st.models.length ? `Or pick one of your ${st.models.length} installed model${st.models.length > 1 ? "s" : ""} from the model menu above.` : "About 5 GB, one time. Runs fully on this Mac."
   const action = !st.installed
     ? h("button.btn.btn--accent", { onclick: () => window.flux.openExternal("https://ollama.com/download") }, "Get Ollama")
@@ -289,7 +367,8 @@ async function newChat () {
   cur = null
   clear(log)
   log.append(emptyState())
-  titleEl.textContent = "Flux AI"
+  titleEl.textContent = "Comet AI"
+  paintJump()
   input.focus()
 }
 
@@ -340,10 +419,13 @@ async function modelMenu (anchor) {
     "-",
     { label: "Web search", checked: ai.webSearch !== false, run: () => state.set("ai.webSearch", ai.webSearch === false) },
     { label: "Ask before acting on pages", checked: ai.confirmPageActions !== false, run: () => state.set("ai.confirmPageActions", ai.confirmPageActions === false) },
-    { label: "Flux AI Settings…", icon: "gear", run: () => bus.emit("settings:goto", "ai") }
+    { label: "Comet AI Settings…", icon: "gear", run: () => bus.emit("settings:goto", "ai") }
   ], { align: "end" })
 }
-function paintModel () { modelChip.querySelector("span").textContent = shortModel() }
+function paintModel () {
+  modelChip.querySelector("span").textContent = shortModel()
+  subEl.textContent = isLocal() ? `${shortModel()} · on this Mac` : `${shortModel()} · Claude`
+}
 
 export function setPanel (open) {
   const was = !panel.hidden
@@ -352,6 +434,8 @@ export function setPanel (open) {
   document.body.classList.toggle("ai-open", open)
   if (open) {
     checkLocal()
+    refreshEmpty()
+    paintAttachments()
     panel.classList.remove("is-entering"); void panel.offsetWidth; panel.classList.add("is-entering")
     setTimeout(() => input.focus(), 60)
   }
@@ -361,9 +445,10 @@ export function initAIPanel () {
   panel = document.getElementById("aipanel")
   panel.style.width = `${state.get("layout.aiPanelWidth") ?? 400}px`
   log = h("div.ai-log")
-  titleEl = h("div.ai-title", { text: "Flux AI" })
-  modelChip = h("button.ai-model.no-drag", { onclick: () => modelMenu(modelChip), title: "Model & thinking depth" }, [h("span", { text: shortModel() }), ico("chevronDown", 12)])
-  input = h("textarea.ai-input", { rows: 1, placeholder: "Ask Flux AI…  (⏎ send · ⇧⏎ new line)", oninput: autosize })
+  titleEl = h("div.ai-title", { text: "Comet AI" })
+  subEl = h("div.ai-head-sub")
+  modelChip = h("button.ai-model.no-drag", { onclick: () => modelMenu(modelChip), title: "Model & thinking depth" }, [ico("spark", 12), h("span", { text: shortModel() }), ico("chevronDown", 11)])
+  input = h("textarea.ai-input", { rows: 1, placeholder: "Ask anything…", oninput: autosize })
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(input.value) }
     if (e.key === "Escape") input.blur()
@@ -377,14 +462,11 @@ export function initAIPanel () {
     rd.readAsDataURL(f)
   })
   sendBtn = h("button.ai-send", { title: "Send (⏎)", onclick: () => (busy ? window.flux.ai.stop(chatId) : send(input.value)) }, [ico("arrowUp", 16)])
-  pageChip = h("button.ai-tool-btn", { title: "Attach this page's text", onclick: () => { attachPage = !attachPage; paintAttachments() } }, [ico("book", 14), h("span", { text: "Page" })])
-  const shotBtn = h("button.ai-tool-btn", { title: "Attach a screenshot of this tab", onclick: async () => {
-    const d = await T.capturePage()
-    if (!d) return toast("Open a web page to capture it.")
-    images.push(d); paintAttachments()
-  } }, [ico("scan", 14)])
-  const micBtn = h("button.ai-tool-btn", { title: "Speak", onclick: () => toggleVoice((t) => { input.value = (input.value ? input.value + " " : "") + t; autosize(); input.focus() }) }, [ico("mic", 14)])
+  pageChip = h("div.ai-ctx-chip", { hidden: true })
+  const plusBtn = h("button.ai-tool-btn.ai-plus", { title: "Add the page or a screenshot", onclick: () => attachMenu(plusBtn) }, [ico("plus", 15)])
+  const micBtn = h("button.ai-tool-btn", { title: "Speak", onclick: () => toggleVoice((t) => { input.value = (input.value ? input.value + " " : "") + t; autosize(); input.focus() }) }, [ico("mic", 15)])
   attachRow = h("div.ai-attach-row", { hidden: true })
+  jumpBtn = h("button.ai-jump", { title: "Jump to latest", onclick: () => { log.scrollTo({ top: log.scrollHeight, behavior: "smooth" }) } }, [ico("chevronDown", 15)])
 
   const keyInput = h("input", { type: "password", placeholder: "sk-ant-…", spellcheck: false })
   keyCard = h("div.ai-keycard.glass", { hidden: true }, [
@@ -420,23 +502,25 @@ export function initAIPanel () {
   panel.append(
     resize,
     h("header.ai-head", {}, [
-      makeOrb(26),
-      titleEl,
-      modelChip,
+      mark(26),
+      h("div.ai-head-text", {}, [titleEl, subEl]),
       h("button.tb-btn", { title: "Chat history", onclick: (e) => historyMenu(e.currentTarget) }, [ico("clock", 15)]),
       h("button.tb-btn", { title: "New chat (⌥⌘J)", onclick: newChat }, [ico("edit", 15)]),
       h("button.tb-btn", { title: "Close (⌘J)", onclick: () => setPanel(false) }, [ico("close", 15)])
     ]),
-    log,
+    h("div.ai-body", {}, [log, jumpBtn]),
     localCard,
     keyCard,
     h("div.ai-composer.glass", {}, [
       attachRow,
       input,
-      h("div.ai-composer-row", {}, [pageChip, shotBtn, micBtn, h("span.ai-flex"), sendBtn])
+      h("div.ai-composer-row", {}, [plusBtn, modelChip, h("span.ai-flex"), micBtn, sendBtn])
     ])
   )
   log.append(emptyState())
+  log.addEventListener("scroll", paintJump, { passive: true })
+  paintModel()
+  bus.on("tabs", () => { if (!panel.hidden) { refreshEmpty(); if (attachPage || !attachRow.hidden) paintAttachments() } })
 
   // tool + confirmation bridge from the main-process agent
   window.flux.ai.onEvent(onEvent)

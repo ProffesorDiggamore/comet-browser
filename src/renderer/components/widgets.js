@@ -12,6 +12,8 @@ import { bus, toast } from "../core/bus.js"
 import { hotGrid } from "./hottabs.js"
 import { fmtSize } from "./easyfiles.js"
 import * as T from "../core/tabs.js"
+import { lensPanel, lensFile, imageIn } from "./lens.js"
+import { isWinActive } from "../core/perf.js"
 
 export const SIZES = {
   small: { label: "Small", cols: 1, rows: 1 },
@@ -20,7 +22,14 @@ export const SIZES = {
   wide: { label: "Wide", cols: 4, rows: 1 }
 }
 
-const every = (ms, fn) => { fn(); const t = setInterval(fn, ms); return () => clearInterval(t) }
+// a repeating tick that sleeps while Comet isn't the app in front, and catches up when it is
+const every = (ms, fn) => {
+  fn()
+  const t = setInterval(() => { if (isWinActive()) fn() }, ms)
+  const off = bus.on("win-active", (on) => { if (on) fn() })
+  return () => { clearInterval(t); off?.() }
+}
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v }   // unchanged text → no repaint
 const pad = (n) => String(n).padStart(2, "0")
 
 // ── clock ─────────────────────────────────────────────────────────
@@ -33,8 +42,8 @@ function clock (body, w) {
     const d = new Date()
     const h24 = state.get("home.clock24") === true
     const hr = h24 ? pad(d.getHours()) : ((d.getHours() + 11) % 12) + 1
-    big.textContent = `${hr}:${pad(d.getMinutes())}`
-    sub.textContent = d.toLocaleDateString(undefined, { weekday: "long", ...(w.size === "small" ? {} : { month: "long", day: "numeric" }) })
+    setText(big, `${hr}:${pad(d.getMinutes())}`)
+    setText(sub, d.toLocaleDateString(undefined, { weekday: "long", ...(w.size === "small" ? {} : { month: "long", day: "numeric" }) }))
     face?.set(d)
   })
 }
@@ -179,7 +188,7 @@ function clipboard (body, w) {
   }
   const onFocus = () => paint()
   window.addEventListener("focus", onFocus)
-  const stop = every(2500, () => { if (!document.hidden) paint() })
+  const stop = every(4000, paint)       // reading the clipboard image isn't free: only while Comet is in front
   return () => { stop(); window.removeEventListener("focus", onFocus) }
 }
 
@@ -232,6 +241,191 @@ function hottabs (body) {
   return null
 }
 
+// ── to-do: a checklist that lives on Home ────────────────────────
+function todo (body, w, ctx) {
+  const items = () => w.config?.items ?? []
+  const save = (list) => { w.config = { ...w.config, items: list }; ctx.update({ config: w.config }, { quiet: true }); paint() }
+  const list = h("div.hw-todo")
+  const input = h("input.hw-input.hw-todo-add", { placeholder: "Add a to-do", spellcheck: true, maxLength: 120 })
+  input.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || !input.value.trim()) return
+    save([...items(), { t: input.value.trim(), done: false }])
+    input.value = ""
+  })
+  const paint = () => {
+    const all = items()
+    const left = all.filter((x) => !x.done).length
+    head.lastChild.textContent = all.length ? `${left} to do` : "To-Do"
+    list.replaceChildren(...all.map((x, i) => h(`div.hw-todo-row${x.done ? ".is-done" : ""}`, {}, [
+      h("button.hw-todo-check", { title: x.done ? "Mark not done" : "Mark done", "aria-label": x.done ? "Mark not done" : "Mark done", onclick: () => save(all.map((y, j) => j === i ? { ...y, done: !y.done } : y)) }, [x.done ? ico("check", 11) : ""]),
+      h("span.hw-todo-t", { text: x.t }),
+      h("button.hw-todo-x", { title: "Remove", "aria-label": "Remove", onclick: () => save(all.filter((_, j) => j !== i)) }, [ico("x", 11)])
+    ])))
+    if (all.some((x) => x.done)) list.append(h("button.hw-link.hw-todo-clear", { text: "Clear done", onclick: () => save(all.filter((x) => !x.done)) }))
+  }
+  const head = h("div.hw-head", {}, [ico("list", 14), h("span")])
+  body.append(head, list, input)
+  paint()
+  return null
+}
+
+// ── focus timer: a Pomodoro ring that survives re-renders and reloads ──
+const FOCUS_PRESETS = [{ m: 25, label: "Focus" }, { m: 5, label: "Break" }, { m: 50, label: "Deep" }]
+function focus (body, w, ctx) {
+  const cfg = () => w.config ?? {}
+  const set = (patch) => { w.config = { ...cfg(), ...patch }; ctx.update({ config: w.config }, { quiet: true }); paint() }
+  const total = () => (cfg().mins ?? 25) * 60_000
+  const left = () => {
+    const c = cfg()
+    if (c.endsAt) return Math.max(0, c.endsAt - Date.now())
+    return c.left ?? total()
+  }
+  const ring = h("div.hw-ring.hw-focus-ring")
+  const time = h("div.hw-focus-time")
+  const label = h("div.hw-sub.hw-focus-label")
+  const play = h("button.hw-focus-btn", { onclick: () => {
+    const c = cfg()
+    if (c.endsAt && left() > 0) set({ endsAt: null, left: left() })
+    else set({ endsAt: Date.now() + (left() || total()), left: null })
+  } })
+  const reset = h("button.hw-focus-btn.is-quiet", { title: "Reset", "aria-label": "Reset", onclick: () => set({ endsAt: null, left: null }) }, [ico("reset", 13)])
+  const presets = w.size !== "small" ? h("div.hw-focus-presets", {}, FOCUS_PRESETS.map((p) => h("button.hw-chip", { text: `${p.m}m`, title: `${p.label} · ${p.m} minutes`, dataset: { m: p.m }, onclick: () => set({ mins: p.m, endsAt: null, left: null }) }))) : null
+  body.append(h(`div.hw-focus.is-${w.size}`, {}, [
+    h("div.hw-ring-wrap", {}, [ring, time]),
+    h("div.hw-focus-side", {}, [label, h("div.hw-focus-ctl", {}, [play, reset]), presets])
+  ]))
+  function paint () {
+    const ms = left()
+    const running = !!cfg().endsAt && ms > 0
+    const s = Math.ceil(ms / 1000)
+    time.textContent = `${Math.floor(s / 60)}:${pad(s % 60)}`
+    ring.style.setProperty("--p", Math.round((1 - ms / total()) * 100))
+    label.textContent = ms === 0 ? "Done — nice work" : running ? "Focusing…" : ms < total() ? "Paused" : `${cfg().mins ?? 25}-minute focus`
+    play.replaceChildren(ico(running ? "pause" : "play", 13), w.size === "small" ? "" : h("span", { text: running ? "Pause" : ms < total() && ms > 0 ? "Resume" : "Start" }))
+    play.title = running ? "Pause" : "Start"
+    presets?.querySelectorAll("button").forEach((b) => b.classList.toggle("is-on", Number(b.dataset.m) === (cfg().mins ?? 25)))
+  }
+  // ticks only while it's running (the alarm itself lives in armFocusAlarm, so it
+  // rings even when you've left Home or Comet is in the background)
+  const t = setInterval(() => { if (cfg().endsAt && isWinActive()) paint() }, 1000)
+  const off = bus.on("win-active", (on) => { if (on) paint() })
+  paint()
+  return () => { clearInterval(t); off?.() }
+}
+
+// ── countdown: days until something ──────────────────────────────
+function countdown (body, w, ctx) {
+  const c = w.config ?? {}
+  if (!c.date) {
+    const name = h("input.hw-input", { placeholder: "What's coming up?", maxLength: 40 })
+    const date = h("input.hw-input", { type: "date" })
+    const go = () => { if (date.value) ctx.update({ config: { ...c, label: name.value.trim() || "Countdown", date: date.value } }) }
+    date.addEventListener("change", go)
+    name.addEventListener("keydown", (e) => { if (e.key === "Enter") date.showPicker?.() })
+    body.append(h("div.hw-empty.hw-cd-setup", {}, [ico("hourglass", 20), name, date]))
+    return null
+  }
+  const num = h("div.hw-cd-num")
+  const unit = h("div.hw-sub")
+  body.append(h("div.hw-cd", {}, [
+    h("div.hw-cd-label", { text: c.label ?? "Countdown", title: "Click to change", onclick: () => ctx.update({ config: { ...c, date: "" } }) }),
+    num, unit,
+    w.size !== "small" ? h("div.hw-sub.hw-cd-date", { text: new Date(`${c.date}T00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" }) }) : null
+  ]))
+  return every(60_000, () => {
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const days = Math.round((new Date(`${c.date}T00:00`) - today) / 86_400_000)
+    num.textContent = String(Math.abs(days))
+    unit.textContent = days === 0 ? "It's today!" : days > 0 ? `day${days === 1 ? "" : "s"} to go` : `day${days === -1 ? "" : "s"} ago`
+  })
+}
+
+// ── world clock ──────────────────────────────────────────────────
+const DEFAULT_ZONES = ["America/Los_Angeles", "America/New_York", "Europe/London", "Asia/Tokyo"]
+const zoneCity = (z) => z.split("/").pop().replace(/_/g, " ")
+function worldclock (body, w, ctx) {
+  const zones = w.config?.zones?.length ? w.config.zones : DEFAULT_ZONES
+  const show = zones.slice(0, w.size === "small" ? 2 : w.size === "wide" ? 4 : 3)
+  const rows = show.map((z) => {
+    const t = h("span.hw-wc-time"), d = h("span.hw-wc-day")
+    const row = h("div.hw-wc-row", {}, [
+      h("span.hw-wc-city", { text: zoneCity(z), title: z }), d, t,
+      h("button.hw-wc-x", { title: `Remove ${zoneCity(z)}`, "aria-label": `Remove ${zoneCity(z)}`, onclick: () => ctx.update({ config: { ...w.config, zones: zones.filter((x) => x !== z) } }) }, [ico("x", 10)])
+    ])
+    return { z, t, d, row }
+  })
+  const list = h(`div.hw-wc.is-${w.size}`, {}, rows.map((r) => r.row))
+  const dl = h("datalist", { id: `${w.id}_zones` }, (Intl.supportedValuesOf?.("timeZone") ?? []).map((z) => h("option", { value: z })))
+  const add = h("input.hw-input.hw-wc-add", { placeholder: "Add city (e.g. Paris)", list: dl.id, spellcheck: false })
+  add.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return
+    const q = add.value.trim().toLowerCase().replace(/\s+/g, "_")
+    const all = Intl.supportedValuesOf?.("timeZone") ?? []
+    const z = all.find((x) => x.toLowerCase() === q) ?? all.find((x) => x.toLowerCase().endsWith(`/${q}`))
+    if (!z) return toast("No time zone for that city — try a nearby big city")
+    ctx.update({ config: { ...w.config, zones: [z, ...zones.filter((x) => x !== z)] } })
+  })
+  body.append(h("div.hw-head", {}, [ico("globe", 14), h("span", { text: "World Clock" })]), list, w.size !== "small" ? add : null, dl)
+  return every(15_000, () => {
+    const now = new Date()
+    const h24 = state.get("home.clock24") === true
+    const myDay = now.toLocaleDateString("en-CA")
+    for (const r of rows) {
+      r.t.textContent = now.toLocaleTimeString(undefined, { timeZone: r.z, hour: "numeric", minute: "2-digit", hour12: !h24 })
+      const theirs = now.toLocaleDateString("en-CA", { timeZone: r.z })
+      r.d.textContent = theirs === myDay ? "" : theirs > myDay ? "Tomorrow" : "Yesterday"
+    }
+  })
+}
+
+// ── recently closed tabs ─────────────────────────────────────────
+function closed (body, w) {
+  const paint = () => {
+    const list = T.getClosed().slice(0, w.size === "large" ? 7 : w.size === "small" ? 2 : 3)
+    body.replaceChildren(h("div.hw-head", {}, [ico("history", 14), h("span", { text: "Recently Closed" })]))
+    if (!list.length) { body.append(h("div.hw-sub.hw-grow", { text: "Tabs you close show up here — click one to bring it back." })); return }
+    body.append(h("div.hw-tabs", {}, list.map((c, i) => {
+      const f = T.faviconFor(c.url)
+      return h("button.hw-tab", { onclick: () => T.reopenClosedAt(i), title: c.url }, [
+        f ? h("img", { src: f, draggable: false }) : ico("globe", 14),
+        h("span", { text: c.title || T.hostOf(c.url) })
+      ])
+    })))
+  }
+  paint()
+  return bus.on("tabs", paint)
+}
+
+// ── image search (Google Lens) ───────────────────────────────────
+function imagesearch (body, w) {
+  if (w.size === "small") {
+    const zone = h("button.hw-lens-small", { title: "Drop or paste an image to search with Google Lens", onclick: () => zone.focus() }, [ico("lens", 26), h("span", { text: "Image Search" }), h("span.hw-sub", { text: "drop · ⌘V" })])
+    zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("is-drop") })
+    zone.addEventListener("dragleave", () => zone.classList.remove("is-drop"))
+    zone.addEventListener("drop", (e) => { e.preventDefault(); zone.classList.remove("is-drop"); lensFile(imageIn(e.dataTransfer)) })
+    zone.addEventListener("paste", (e) => { const f = imageIn(e.clipboardData); if (f) { e.preventDefault(); lensFile(f) } })
+    body.append(zone)
+    return null
+  }
+  body.append(lensPanel({ compact: true }))
+  return null
+}
+
+// one timeout for the soonest running Focus Timer, wherever you are in Comet
+let alarmT = 0
+export function armFocusAlarm () {
+  clearTimeout(alarmT)
+  const ends = (state.get("home.widgets") ?? []).filter((w) => w.kind === "focus" && w.config?.endsAt).map((w) => w.config.endsAt)
+  if (!ends.length) return
+  alarmT = setTimeout(() => {
+    const now = Date.now() + 500
+    state.set("home.widgets", (state.get("home.widgets") ?? []).map((w) => w.kind === "focus" && w.config?.endsAt && w.config.endsAt <= now ? { ...w, config: { ...w.config, endsAt: null, left: 0 } } : w))
+    toast("Focus timer done")
+    try { new Notification("Comet", { body: "Focus timer done — take a break." }) } catch {}
+    armFocusAlarm()
+  }, Math.max(0, Math.min(...ends) - Date.now()))
+}
+
 export const KINDS = {
   clock: { name: "Clock", icon: "clock", sizes: ["small", "medium"], render: clock },
   calendar: { name: "Calendar", icon: "calendar", sizes: ["small", "medium", "large"], render: calendar },
@@ -241,8 +435,16 @@ export const KINDS = {
   notes: { name: "Notes", icon: "note", sizes: ["small", "medium", "large"], render: notes },
   battery: { name: "Battery", icon: "battery", sizes: ["small"], render: battery },
   tabs: { name: "Open Tabs", icon: "layers", sizes: ["small", "medium", "large"], render: tabs },
-  hottabs: { name: "Hot Tabs", icon: "bolt", sizes: ["medium", "large", "wide"], render: hottabs }
+  hottabs: { name: "Hot Tabs", icon: "bolt", sizes: ["medium", "large", "wide"], render: hottabs },
+  todo: { name: "To-Do", icon: "list", desc: "A checklist that stays on Home", sizes: ["small", "medium", "large"], render: todo },
+  focus: { name: "Focus Timer", icon: "timer", desc: "25-minute Pomodoro with breaks", sizes: ["small", "medium"], render: focus },
+  countdown: { name: "Countdown", icon: "hourglass", desc: "Days until a trip, birthday, deadline", sizes: ["small", "medium"], render: countdown },
+  worldclock: { name: "World Clock", icon: "globe", desc: "Times in other cities", sizes: ["small", "medium", "wide"], render: worldclock },
+  closed: { name: "Recently Closed", icon: "history", desc: "Bring back tabs you closed", sizes: ["small", "medium", "large"], render: closed },
+  imagesearch: { name: "Image Search", icon: "lens", desc: "Drop or paste an image → Google Lens", sizes: ["small", "medium"], render: imagesearch }
 }
+const DESC = { clock: "Time and date, analog when bigger", calendar: "Today and this month", weather: "Now and the next days", sites: "Your most-visited sites", clipboard: "What you copied, ready to upload", notes: "Quick scratch notes", battery: "Charge level", tabs: "Jump to an open tab", hottabs: "Your launchers and hotkeys" }
+for (const [k, d] of Object.entries(DESC)) KINDS[k].desc ??= d
 
 export function renderWidget (body, w, ctx) {
   const kind = KINDS[w.kind]

@@ -76,12 +76,12 @@ export function applyMotion () {
   b.animPopover = pick("popover", "scale")
   b.animToast = pick("toast", "rise")
   b.animHome = pick("home", "rise")
-  b.ambient = mode === "full" ? (cur.ambient ?? "slow") : "off"
-  b.orb = mode === "off" ? "off" : mode === "reduced" ? "still" : (cur.orb ?? "float")
+  const saver = b.saver === "on"   // battery saver (core/perf.js): nothing animates unless you touch it
+  b.ambient = mode === "full" && !saver ? (cur.ambient ?? "slow") : "off"
   b.loadbar = cur.loadBar ?? "glow"
-  b.shimmer = String(mode === "full" && cur.shimmer !== false)
-  b.spotlight = String(mode !== "off" && cur.spotlight !== false)
-  b.lens = String(cur.lens !== false && CSS.supports("backdrop-filter", "url(#flux-lens)"))
+  b.shimmer = String(mode === "full" && !saver && cur.shimmer !== false)
+  b.spotlight = String(mode !== "off" && !saver && cur.spotlight !== false)
+  b.lens = String(!saver && cur.lens !== false && CSS.supports("backdrop-filter", "url(#flux-lens)"))
   ripples = mode !== "off" && cur.ripple !== false
 }
 

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════
    HOME — wallpaper, one search field, and the widget grid (layout in
-   widgets.css).  The orb styles below are used by the AI panel.
+   widgets.css).
    ═══════════════════════════════════════════════════════════════════ */
 #home { padding: 0; overflow: hidden; background: none; scrollbar-gutter: auto; inset: 0; }
 .home-wrap { position: absolute; inset: 0; overflow: hidden; background: var(--f-bg); }
@@ -41,47 +41,44 @@
 .home-tool:hover { background: rgba(0, 0, 0, 0.34); }
 .home-tool.is-on { background: var(--f-accent); border-color: transparent; color: #fff; }
 
-/* ── the orb ───────────────────────────────────────────────────── */
-.orb { --size: 96px; position: relative; width: var(--size); height: var(--size); flex: 0 0 auto; }
-.orb-glow {
-  position: absolute; inset: -40%; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(closest-side, color-mix(in srgb, var(--f-accent) 55%, transparent), transparent);
-  opacity: 0.45; filter: blur(calc(var(--size) * 0.12));
+
+/* greeting — "Good evening, Personal" with the profile's picture */
+.home-hello { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; color: #fff; margin-bottom: -8px; animation: home-hello-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.home-hello .pf-av { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.55), 0 10px 26px -10px rgba(0, 0, 0, 0.6); }
+.home-hello-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.home-hello-line { margin: 0; font-size: clamp(24px, 3.4vw, 34px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.35); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-hello-sub { font-size: 13.5px; font-weight: 500; color: rgba(255, 255, 255, 0.78); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35); }
+@keyframes home-hello-in { from { opacity: 0; transform: translateY(6px); } }
+[data-motion="off"] .home-hello, [data-motion="reduced"] .home-hello { animation: none; }
+
+/* Google Lens button in the search pill, and the drop highlight */
+.home-lens {
+  flex: 0 0 auto; width: 32px; height: 32px; margin-right: -8px; padding: 0; border: 0; border-radius: 50%;
+  display: grid; place-items: center; background: transparent; color: rgba(255, 255, 255, 0.8);
+  transition: background var(--f-fast), color var(--f-fast);
 }
-.orb-body {
-  position: absolute; inset: 0; border-radius: 34% 34% 36% 36% / 36% 36% 34% 34%; overflow: hidden;
-  transform: rotate(var(--tilt, 0deg));
-  background:
-    radial-gradient(120% 90% at 30% 18%, rgb(var(--ink) / 0.95), rgb(var(--ink) / 0) 42%),
-    radial-gradient(90% 90% at 80% 90%, color-mix(in srgb, var(--f-accent) 80%, #2a1f6b), transparent 70%),
-    linear-gradient(150deg, #bfe8ff 0%, #7fb8ff 30%, color-mix(in srgb, var(--f-accent) 85%, #5a3cff) 72%, #2c2178 100%);
-  box-shadow:
-    inset 0 calc(var(--size) * -0.08) calc(var(--size) * 0.18) rgba(20, 10, 70, 0.55),
-    inset 0 calc(var(--size) * 0.04) calc(var(--size) * 0.06) rgb(var(--ink) / 0.7),
-    0 calc(var(--size) * 0.18) calc(var(--size) * 0.4) calc(var(--size) * -0.12) rgba(40, 20, 120, 0.8);
+.home-lens:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.is-lens-drop { box-shadow: 0 0 0 2px var(--f-accent), 0 0 0 6px color-mix(in srgb, var(--f-accent) 30%, transparent) !important; }
+
+/* the Lens panel (popover + Image Search widget) */
+.lens-panel { display: flex; flex-direction: column; gap: 8px; }
+.lens-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 110px; padding: 14px;
+  border-radius: 14px; border: 1.5px dashed rgb(var(--ink) / 0.22); color: var(--f-text-dim); text-align: center; cursor: default; outline: 0;
+  transition: background var(--f-fast), border-color var(--f-fast), color var(--f-fast);
 }
-.orb-rim {
-  position: absolute; inset: 0; border-radius: inherit; padding: calc(var(--size) * 0.035);
-  background: conic-gradient(from 0deg, #ff8be4, #8be7ff, #b6ff9c, #ffd36b, #ff8be4);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
-  mask-composite: exclude; opacity: 0.55; mix-blend-mode: screen;
-}
-.orb-face {
-  position: absolute; left: 22%; right: 22%; top: 30%; bottom: 26%; border-radius: 40%;
-  background: linear-gradient(160deg, #3c56c9, #23308a);
-  box-shadow: inset 0 calc(var(--size) * 0.03) calc(var(--size) * 0.05) rgba(0,0,0,0.45), 0 1px 0 rgb(var(--ink) / 0.45);
-  display: flex; align-items: center; justify-content: center; gap: 14%;
-  transform: translate(var(--ex, 0), var(--ey, 0)); transition: transform 0.25s ease-out;
-}
-.orb-eye {
-  width: 13%; aspect-ratio: 1 / 1.25; border-radius: 50%; background: #e8f2ff;
-  box-shadow: 0 0 calc(var(--size) * 0.05) rgba(200, 225, 255, 0.9);
-  transition: transform 0.12s ease;
-}
-.orb.is-blink .orb-eye { transform: scaleY(0.12); }
-.orb.is-thinking .orb-eye { transform: scaleY(0.55) translateY(-20%); }
-.orb-shine {
-  position: absolute; left: 14%; top: 8%; width: 46%; height: 26%; border-radius: 50%;
-  background: linear-gradient(180deg, rgb(var(--ink) / 0.85), rgb(var(--ink) / 0)); opacity: 0.7; transform: rotate(-16deg);
-}
-.orb.is-thinking .orb-glow { opacity: 0.85; }
+.lens-zone:focus-visible, .lens-zone:hover { border-color: color-mix(in srgb, var(--f-accent) 60%, transparent); color: var(--f-text); }
+.lens-zone.is-drop { background: color-mix(in srgb, var(--f-accent) 14%, transparent); border-color: var(--f-accent); color: var(--f-text); }
+.lens-zone-t { font-size: 13px; font-weight: 600; }
+.lens-zone-s { font-size: 11.5px; color: var(--f-text-3); }
+.lens-actions { display: flex; gap: 6px; }
+.lens-actions .btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.lens-link { height: 30px; font-size: 12.5px; }
+.lens-panel.is-compact { height: 100%; gap: 6px; }
+.lens-panel.is-compact .lens-zone { flex: 1; min-height: 0; padding: 8px; }
+/* light mode: Home's pill and widgets go light, so the greeting and Lens button go dark */
+body[data-mode="light"] .home-hello { color: var(--f-text); }
+body[data-mode="light"] .home-hello-line { text-shadow: 0 1px 12px rgba(255, 255, 255, 0.7); }
+body[data-mode="light"] .home-hello-sub { color: var(--f-text-dim); text-shadow: 0 1px 8px rgba(255, 255, 255, 0.7); }
+body[data-mode="light"] .home-lens { color: var(--f-text-dim); }
+body[data-mode="light"] .home-lens:hover { background: rgb(var(--ink) / 0.08); color: var(--f-text); }

@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  assistant/chats.js — Flux AI conversations, persisted locally.
+//  assistant/chats.js — Comet AI conversations, persisted locally.
 //  Each chat keeps the exact API history (append-only, so thinking
 //  blocks stay valid when a chat is resumed) plus a light "display"
 //  log the panel re-renders from.  Oldest chats roll off past the cap.

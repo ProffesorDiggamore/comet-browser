@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  settings/extra.js — v0.4 categories: Flux AI, Motion (every
+//  settings/extra.js — v0.4 categories: Comet AI, Motion (every
 //  animation is tunable, with live previews), Layout, Privacy & Shield,
 //  and search keywords.
 // ───────────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ function restore (branch, label = branch) {
   }, "btn btn--ghost"))
 }
 
-// ── Flux AI ───────────────────────────────────────────────────────
+// ── Comet AI ───────────────────────────────────────────────────────
 const MODELS = [
   { id: "claude-opus-5-5", name: "Opus 5.5", note: "Smartest all-rounder." },
   { id: "claude-sonnet-5-5", name: "Sonnet 5.5", note: "Faster, still very capable." },
@@ -115,7 +115,7 @@ export function catAI () {
     group(null, [
       row("Runs on", seg([{ v: "local", label: "This Mac · Free" }, { v: "claude", label: "Claude · Cloud" }], local ? "local" : "claude", (v) => { state.set("ai.provider", v); rerender() }),
         local ? "Private and free. Nothing you ask leaves your Mac (web searches excepted)." : "Smarter on hard problems. Needs an Anthropic API key, billed per use."),
-      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "So Flux AI knows you" }))
+      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "So Comet AI knows you" }))
     ]),
     ...(local ? localGroups() : claudeGroups()),
     group("Behavior", [
@@ -124,12 +124,12 @@ export function catAI () {
       row("Ask before clicking or typing on pages", sw(ai.confirmPageActions !== false, (v) => state.set("ai.confirmPageActions", v)), "Tab actions never ask. Password and payment fields are always off-limits."),
       row("Share the active tab with each message", sw(ai.autoContext !== false, (v) => state.set("ai.autoContext", v)), "Title and URL only, so “this page” just works."),
       row("Show thinking", sw(ai.showThinking !== false, (v) => state.set("ai.showThinking", v))),
-      row("Return key in the address bar", sel([{ v: "smart", label: "Smart" }, { v: "search", label: "Always search" }, { v: "ai", label: "Always ask AI" }], ai.enterAction ?? "smart", (v) => state.set("ai.enterAction", v)), "Smart sends questions to Flux AI. ⌘↩ always does.")
+      row("Return key in the address bar", sel([{ v: "smart", label: "Smart" }, { v: "search", label: "Always search" }, { v: "ai", label: "Always ask AI" }], ai.enterAction ?? "smart", (v) => state.set("ai.enterAction", v)), "Smart sends questions to Comet AI. ⌘↩ always does.")
     ]),
     group("Custom instructions", [block([instr], "custom instructions")], "Added to every conversation."),
     group("Data", [
-      row("Chat history", btn("Delete All Chats…", async () => { if (!confirm("Delete every Flux AI chat?")) return; await window.flux.ai.clear(); toast("Chats deleted"); bus.emit("ai:new") }, "btn btn--danger"), "Stored locally in Flux's data folder."),
-      restore("ai", "Flux AI")
+      row("Chat history", btn("Delete All Chats…", async () => { if (!confirm("Delete every Comet AI chat?")) return; await window.flux.ai.clear(); toast("Chats deleted"); bus.emit("ai:new") }, "btn btn--danger"), "Stored locally in Comet's data folder."),
+      restore("ai", "Comet AI")
     ])
   ]
 }
@@ -215,9 +215,8 @@ export function catMotion () {
       row("Click ripples", sw(m.ripple !== false, (v) => set("ripple", v))),
       row("Glass spotlight", sw(m.spotlight !== false, (v) => set("spotlight", v)), "Light follows your cursor across glass."),
       row("Glass shimmer", sw(m.shimmer !== false, (v) => set("shimmer", v)), "A specular sweep when you hover glass."),
-      row("Liquid lens refraction", sw(m.lens !== false, (v) => set("lens", v)), "Real refraction on the Home search pill and orb."),
+      row("Liquid lens refraction", sw(m.lens !== false, (v) => set("lens", v)), "Real refraction on the Home search pill."),
       row("Ambient background", seg([{ v: "off", label: "Off" }, { v: "slow", label: "Slow" }, { v: "medium", label: "Medium" }, { v: "fast", label: "Fast" }], m.ambient ?? "slow", (v) => set("ambient", v)), "The drifting nebula behind Home and panels."),
-      row("Orb", seg([{ v: "float", label: "Float" }, { v: "pulse", label: "Pulse" }, { v: "morph", label: "Morph" }, { v: "off", label: "Still" }], m.orb ?? "float", (v) => set("orb", v))),
       row("Page load indicator", seg([{ v: "glow", label: "Glow" }, { v: "bar", label: "Bar" }, { v: "off", label: "Off" }], m.loadBar ?? "glow", (v) => set("loadBar", v)))
     ]),
     group(null, [restore("motion", "motion")])
@@ -257,12 +256,12 @@ export function catPrivacy () {
       ]))
       : [h("div.rdesc", { text: "No site has asked for permissions yet." })])
   return [
-    group("Flux Shield", [
+    group("Comet Shield", [
       row("Block trackers & ads", sw(p.blockTrackers !== false, (v) => state.set("privacy.blockTrackers", v)), "Blocks known ad networks and tracking beacons on every site. Pages you open always load."),
       row("Shield stats", stats),
       row("HTTPS-only", sw(!!p.httpsOnly, (v) => state.set("privacy.httpsOnly", v)), "Upgrades http:// pages to https:// (local addresses excluded)."),
       row("Send Global Privacy Control", sw(p.sendGpc !== false, (v) => state.set("privacy.sendGpc", v)), "Tells sites not to sell or share your data (GPC + DNT headers)."),
-      row("Google sign-in fix", sw(p.googleSignInFix !== false, (v) => state.set("privacy.googleSignInFix", v)), "Google turns away browsers built like Flux (“This browser or app may not be secure”). Flux hides its name from most sites so they don't block it, and that disguise is what Google rejects. With this on, accounts.google.com sees Flux's real browser ID, which Google accepts. Every other site is unchanged.")
+      row("Google sign-in fix", sw(p.googleSignInFix !== false, (v) => state.set("privacy.googleSignInFix", v)), "Google turns away browsers built like Comet (“This browser or app may not be secure”). Comet hides its name from most sites so they don't block it, and that disguise is what Google rejects. With this on, accounts.google.com sees Comet's real browser ID, which Google accepts. Every other site is unchanged.")
     ]),
     group("History", [
       row("Remember browsing history", sw(p.recordHistory !== false, (v) => state.set("privacy.recordHistory", v)), "Powers address-bar suggestions and the Library. Stored only on this Mac."),

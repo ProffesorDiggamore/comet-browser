@@ -34,11 +34,15 @@ const DEFAULTS = {
     custom: { hue: "#8e6cff", hue2: "#5ad1ff", accent: "#7a5cff" },   // the Custom theme: tint, second tint, accent
     density: "comfortable",    // comfortable | compact
     vibrancy: true,            // real macOS window glass behind the chrome
+    style: "none",             // live backdrop on any theme: none | topo | dots | waves | constellation | stars
+    styleStrength: 1,          // line / dot opacity multiplier
+    styleLive: true,           // false = one still frame
     customCss: ""
   },
   perf: {
     sleepEnabled: true,         // discard idle background tabs
     sleepAfterMin: 15,
+    batterySaver: "auto",       // auto (on battery) | always | off
     fpsCap: 0,                  // 0 = uncapped; else 30 / 60
     blockAutoplay: true,
     backgroundThrottle: true,
@@ -46,12 +50,13 @@ const DEFAULTS = {
   },
   home: {
     background: { kind: "css", value: "var(--f-ambient)" },
-    greeting: "Flux",
+    greeting: "Comet",
     headline: "How can I help you?",
     wallpaper: { kind: "preset", value: "tide" },   // preset | image (userData/wallpaper.*) | color
     dim: 0.15,                  // darkens the wallpaper so widgets stay readable
     widgetStyle: "glass",       // glass | liquid | solid | tinted | clear  (Home Widgets' styles)
     showSearch: true,
+    showGreeting: true,         // "Good morning, <profile>" above the search field
     widgets: [                  // grid order; size = small 1×1 | medium 2×1 | large 2×2 | wide 4×1
       { id: "hw_clock", kind: "clock", size: "small" },
       { id: "hw_date", kind: "calendar", size: "small" },
@@ -77,10 +82,8 @@ const DEFAULTS = {
     width: 264,
     widgets: [
       { id: "w_home", type: "nav", label: "Home", target: "home", icon: "home" },
-      { id: "w_ai", type: "nav", label: "Flux AI", target: "ai", icon: "spark" },
+      { id: "w_ai", type: "nav", label: "Comet AI", target: "ai", icon: "spark" },
       { id: "w_library", type: "nav", label: "Library", target: "library", icon: "clock" },
-      { id: "w_vision", type: "nav", label: "Vision AI", target: "vision", icon: "eye" },
-      { id: "w_companion", type: "nav", label: "Companion", target: "companion", icon: "spark" },
       { id: "w_div1", type: "divider" },
       { id: "w_bruh", type: "button", label: "bruh", onClick: { kind: "toast", value: "bruh" } },
       { id: "w_clock", type: "clock" },
@@ -105,19 +108,6 @@ const DEFAULTS = {
   modpacks: {
     installed: [],             // [{ id, name, theme, audio, background }]
     active: null
-  },
-  vision: {
-    provider: "anthropic",     // anthropic | openai | gemini
-    models: { anthropic: "claude-opus-5-5", openai: "gpt-4o", gemini: "gemini-1.5-flash" },
-    captureScope: "page",      // page | screen
-    hotkey: "CmdOrCtrl+Shift+Space",
-    lastPrompt: "What's on this screen? Give me the key points and any next action."
-  },
-  companion: {
-    projectPath: "",           // defaults to Flux's own folder at runtime
-    provider: "anthropic",
-    model: "claude-sonnet-5",
-    autonomous: false          // false = every write asks for approval
   },
   extensions: { paths: [] },
   window: { width: 1360, height: 900, x: null, y: null },
@@ -176,7 +166,7 @@ const DEFAULTS = {
     blockTrackers: true,
     httpsOnly: false,
     sendGpc: true,              // Global Privacy Control + DNT headers
-    googleSignInFix: true,      // Flux's real user agent for accounts.google.com only (main/quirks.js)
+    googleSignInFix: true,      // Comet's real user agent for accounts.google.com only (main/quirks.js)
     recordHistory: true
   },
   bookmarks: [],                // [{ id, url, title, ts }]
@@ -194,7 +184,7 @@ const DEFAULTS = {
     { key: "img", name: "Image search", url: "https://www.google.com/search?tbm=isch&q=%s" }
   ],
   session: { tabs: [], active: 0 },
-  meta: { schema: 5 }
+  meta: { schema: 6 }
 }
 
 // the look from the reference: violet nebula + clear liquid glass
@@ -266,7 +256,7 @@ function loadConfig () {
     const w = cache.sidebar?.widgets ?? []
     if (!w.some((x) => x.target === "ai")) {
       w.splice(1, 0,
-        { id: "w_ai", type: "nav", label: "Flux AI", target: "ai", icon: "spark" },
+        { id: "w_ai", type: "nav", label: "Comet AI", target: "ai", icon: "spark" },
         { id: "w_library", type: "nav", label: "Library", target: "library", icon: "clock" })
     }
     cache.meta = { schema: 4 }
@@ -287,6 +277,16 @@ function loadConfig () {
     cache.modpacks.active = null
     cache.theme = { ...t, active: "glass", mode: "auto", accent: "#0a84ff", accentCustom: false, glass: 0.6, blur: 28 }
     cache.meta = { schema: 5 }
+    writeJson(CONFIG_PATH, cache)
+  }
+  // one-time v0.8 migration: Flux became Comet.  Labels saved under the old
+  // name (the default greeting, the sidebar's AI shortcut) follow it; anything
+  // the user worded themselves is left alone.
+  if (RAW && (RAW.meta?.schema ?? 0) < 6) {
+    if (cache.home?.greeting === "Flux") cache.home.greeting = "Comet"
+    const relabel = (list) => { for (const w of Array.isArray(list) ? list : []) if (w?.label === "Flux AI") w.label = "Comet AI" }
+    relabel(cache.sidebar?.widgets); relabel(cache.sidebar?.items)
+    cache.meta = { schema: 6 }
     writeJson(CONFIG_PATH, cache)
   }
 }

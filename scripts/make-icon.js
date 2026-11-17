@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  make-icon.js — renders build/icon.svg into build/flux.icns.
+//  make-icon.js — renders build/icon.svg into build/comet.icns.
 //  Run with Electron (it is the renderer):  Electron scripts/make-icon.js
 //  Uses only macOS's own sips + iconutil afterwards.
 // ───────────────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ app.whenReady().then(async () => {
   let img = await win.webContents.capturePage()
   if (img.getSize().width !== 1024) img = img.resize({ width: 1024, height: 1024, quality: "best" })
 
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "flux-icon-"))
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "comet-icon-"))
   const master = path.join(tmp, "icon-1024.png")
   fs.writeFileSync(master, img.toPNG())
   const set = path.join(tmp, "flux.iconset")
@@ -31,8 +31,8 @@ app.whenReady().then(async () => {
     execFileSync("sips", ["-z", String(s), String(s), master, "--out", path.join(set, `icon_${s}x${s}.png`)], { stdio: "ignore" })
     execFileSync("sips", ["-z", String(s * 2), String(s * 2), master, "--out", path.join(set, `icon_${s}x${s}@2x.png`)], { stdio: "ignore" })
   }
-  execFileSync("iconutil", ["-c", "icns", set, "-o", path.join(BUILD, "flux.icns")])
+  execFileSync("iconutil", ["-c", "icns", set, "-o", path.join(BUILD, "comet.icns")])
   fs.copyFileSync(master, path.join(BUILD, "icon-1024.png"))
-  console.log("wrote build/flux.icns")
+  console.log("wrote build/comet.icns")
   app.quit()
 }).catch((e) => { console.error("[make-icon]", e.message); app.exit(1) })

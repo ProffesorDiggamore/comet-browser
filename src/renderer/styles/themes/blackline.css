@@ -275,6 +275,7 @@ body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-list .vt-ro
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row { position: relative; z-index: 1; color: rgba(var(--bl-ink), 0.82); border-radius: 3px; }
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row:hover { background: rgba(var(--bl-ink), 0.06); }
 /* active tab = ink stamp with a red register tick */
+body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-ind { display: none; }   /* Blackline stamps the row itself */
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .vt-row.is-active {
   background: var(--bl-stamp); color: var(--bl-stamp-fg);
   box-shadow: inset 2.5px 0 0 var(--f-accent);
@@ -338,8 +339,6 @@ body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .side-item.is-a
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .side-notes { background: var(--bl-card); border: 1px solid rgba(var(--bl-ink), 0.2); }
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .mini-btn { border: 1px solid rgba(var(--bl-ink), 0.2); box-shadow: none; }
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .msg { border-radius: 5px; }
-body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .msg.tool { background: rgba(var(--bl-ink), 0.06); border: 1px solid rgba(var(--bl-ink), 0.12); }
-body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .approve-bar { background: rgba(var(--bl-ink), 0.05); border: 1px solid var(--f-accent); border-radius: 5px; }
 body:is([data-theme="blackline"], [data-theme="blackline-noir"]) .toast {
   background: var(--bl-stamp); color: var(--bl-stamp-fg); border: 1px solid var(--bl-stamp); border-radius: 4px;
   -webkit-backdrop-filter: none; backdrop-filter: none;

@@ -38,12 +38,13 @@ export function hotGrid () {
         : glyphFace(ht.action === "macro")
 
     grid.append(h("button.hot", {
+      title: hotTabSummary(ht),
       oncontextmenu: (e) => { e.preventDefault(); openEditor(ht) },
       onclick: () => launch(ht)
     }, [
       h("div.squircle", {}, [face]),
       h("div.cap", { text: ht.label ?? "Untitled" }),
-      ht.hotkey && h("div.kbd", { text: ht.hotkey.replace("CmdOrCtrl", "⌘") })
+      ht.hotkey && h("div.kbd", { text: prettyKey(ht.hotkey) })
     ]))
   }
 
@@ -139,15 +140,29 @@ async function removeHot (id) {
   toast("Hot Tab removed")
 }
 
-// keyboard: match a hot tab's hotkey (CmdOrCtrl+<key>)
+// keyboard: match a hot tab's hotkey ("CmdOrCtrl+1", "CmdOrCtrl+Shift+G"…).
+// Modifiers must match exactly: ⌃⌘1 is the profile switcher, not Hot Tab ⌘1.
 export function matchHotkey (e) {
-  const meta = e.metaKey || e.ctrlKey
-  if (!meta) return false
+  if (!e.metaKey || e.ctrlKey) return false
   const list = state.get("hotTabs") ?? []
   for (const ht of list) {
     if (!ht.hotkey) continue
-    const key = ht.hotkey.split("+").pop().toLowerCase()
-    if (e.key.toLowerCase() === key) { launch(ht); return true }
+    const parts = ht.hotkey.split("+")
+    const key = parts.pop().toLowerCase()
+    const shift = parts.includes("Shift"), alt = parts.includes("Alt") || parts.includes("Option")
+    if (e.key.toLowerCase() === key && !!e.shiftKey === shift && !!e.altKey === alt) { launch(ht); return true }
   }
   return false
 }
+
+// what a Hot Tab does, in words: "Opens duckduckgo.com" / "Opens 6 tabs: …"
+const host = (u) => { try { return new URL(u).host.replace(/^www\./, "") } catch { return u } }
+export function hotTabSummary (ht) {
+  const keys = ht.hotkey ? `  ·  ${prettyKey(ht.hotkey)}` : ""
+  if (ht.action === "macro") {
+    const urls = ht.urls ?? []
+    return `Opens ${urls.length} tab${urls.length === 1 ? "" : "s"} at once: ${urls.map(host).join(", ")}${keys}  ·  right-click to edit`
+  }
+  return `Opens ${host(ht.url ?? "")}${keys}  ·  right-click to edit`
+}
+export const prettyKey = (k) => k.replace("CmdOrCtrl", "⌘").replace("Shift", "⇧").replace(/Alt|Option/, "⌥").replaceAll("+", "")

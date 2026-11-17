@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  vault.js — Flux's local password vault.  Whole file encrypted at
+//  vault.js — Comet's local password vault.  Whole file encrypted at
 //  rest with Electron safeStorage (OS keychain); 0600 on disk.  The
 //  renderer only ever gets metadata unless it explicitly reveals one.
 // ───────────────────────────────────────────────────────────────────
@@ -8,12 +8,13 @@ const fs = require("node:fs")
 const path = require("node:path")
 const { profiles } = require("./profiles")
 
-// each profile keeps its own logins
-const FILE = () => path.join(profiles.dir(), "vault.bin")
+// each profile keeps its own logins; autofill reads every profile's vault
+// so a Personal tab can still offer the Business login (and says which is which)
+const FILE = (id) => path.join(profiles.dir(id), "vault.bin")
 
-function load () {
+function load (profileId) {
   try {
-    const raw = fs.readFileSync(FILE())
+    const raw = fs.readFileSync(FILE(profileId))
     const json = safeStorage.isEncryptionAvailable()
       ? safeStorage.decryptString(raw)
       : raw.toString("utf8")
@@ -30,6 +31,8 @@ function save (data) {
     : Buffer.from(json, "utf8")
   fs.writeFileSync(FILE(), buf, { mode: 0o600 })
 }
+
+function sameSite (a, b) { return !!a && !!b && (a === b || a.endsWith("." + b) || b.endsWith("." + a)) }
 
 function hostOf (url) {
   try { return new URL(url).host.replace(/^www\./, "") } catch { return (url || "").slice(0, 60) }
@@ -76,8 +79,33 @@ const vault = {
   match (url) {
     const host = hostOf(url)
     return load().entries
-      .filter((e) => e.host && (e.host === host || host.endsWith("." + e.host) || e.host.endsWith("." + host)))
+      .filter((e) => sameSite(e.host, host))
       .map((e) => ({ id: e.id, host: e.host, username: e.username, password: e.password }))
+  },
+  // autofill: logins for this site from EVERY profile, active profile first.
+  // Metadata only; the password is fetched by fill() once the user picks one.
+  matchAll (url) {
+    const host = hostOf(url)
+    if (!host) return []
+    const active = profiles.activeId()
+    const out = []
+    for (const p of profiles.list().sort((a, b) => (a.id === active ? -1 : b.id === active ? 1 : 0))) {
+      for (const e of load(p.id).entries) {
+        if (!sameSite(e.host, host)) continue
+        out.push({ id: e.id, host: e.host, username: e.username, profile: { id: p.id, name: p.name, color: p.color, emoji: p.emoji } })
+      }
+    }
+    return out
+  },
+  fill (profileId, entryId) {
+    if (!profiles.get(profileId)) return null
+    const e = load(profileId).entries.find((x) => x.id === entryId)
+    return e ? { username: e.username, password: e.password } : null
+  },
+  // has the active profile (or any profile) already got exactly this login?
+  known (url, username, password) {
+    const host = hostOf(url)
+    return profiles.list().some((p) => load(p.id).entries.some((e) => sameSite(e.host, host) && e.username === (username || "") && e.password === password))
   }
 }
 

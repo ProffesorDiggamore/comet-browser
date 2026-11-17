@@ -1,7 +1,7 @@
 // ───────────────────────────────────────────────────────────────────
 //  menu.js — the macOS menu bar is the single source of truth for
 //  browser shortcuts.  Menu accelerators fire no matter which surface
-//  has focus (the Flux UI or a web page), so ⌘T / ⌘L / ⌘F / ⌘J … always
+//  has focus (the Comet UI or a web page), so ⌘T / ⌘L / ⌘F / ⌘J … always
 //  work.  Each item forwards an action to the renderer bus.
 // ───────────────────────────────────────────────────────────────────
 const { app, Menu } = require("electron")
@@ -29,27 +29,29 @@ function buildMenu (getWin) {
 
   const template = [
     {
-      label: app.name,
+      label: "Comet",
       submenu: [
-        { role: "about" },
+        { role: "about", label: "About Comet" },
         { type: "separator" },
         item("Settings…", "CmdOrCtrl+,", "settings"),
         { type: "separator" },
         { role: "services" },
         { type: "separator" },
-        { role: "hide" }, { role: "hideOthers" }, { role: "unhide" },
+        { role: "hide", label: "Hide Comet" }, { role: "hideOthers" }, { role: "unhide" },
         { type: "separator" },
-        { role: "quit" }
+        { role: "quit", label: "Quit Comet" }
       ]
     },
     {
       label: "File",
       submenu: [
         item("New Tab", "CmdOrCtrl+T", "new-tab"),
+        item("New Private Tab", "Shift+CmdOrCtrl+N", "new-private-tab"),
         item("Reopen Closed Tab", "Shift+CmdOrCtrl+T", "reopen"),
         item("Close Tab", "CmdOrCtrl+W", "close-tab"),
         { type: "separator" },
         item("Open Location…", "CmdOrCtrl+L", "focus-address"),
+        item("Copy Link to This Page", "Shift+CmdOrCtrl+C", "copy-url"),
         item("Command Palette…", "CmdOrCtrl+K", "palette"),
         { type: "separator" },
         item("Save Page Screenshot", "Shift+CmdOrCtrl+S", "screenshot"),
@@ -72,7 +74,7 @@ function buildMenu (getWin) {
       label: "View",
       submenu: [
         item("Reload Page", "CmdOrCtrl+R", "reload"),
-        item("Reload Flux UI", "Shift+CmdOrCtrl+R", "reload-ui"),
+        item("Reload Comet UI", "Shift+CmdOrCtrl+R", "reload-ui"),
         { type: "separator" },
         item("Zoom In", "CmdOrCtrl+=", "zoom-in"),
         item("Zoom In (+)", "CmdOrCtrl+Plus", "zoom-in"),
@@ -87,7 +89,7 @@ function buildMenu (getWin) {
         { type: "separator" },
         { role: "togglefullscreen" },
         item("Developer Tools (Page)", "Alt+CmdOrCtrl+I", "devtools"),
-        { role: "toggleDevTools", label: "Developer Tools (Flux UI)", accelerator: "Alt+Shift+CmdOrCtrl+I" }
+        { role: "toggleDevTools", label: "Developer Tools (Comet UI)", accelerator: "Alt+Shift+CmdOrCtrl+I" }
       ]
     },
     {
@@ -127,7 +129,7 @@ function buildMenu (getWin) {
     {
       label: "AI",
       submenu: [
-        item("Ask Flux AI", "CmdOrCtrl+J", "ai"),
+        item("Ask Comet AI", "CmdOrCtrl+J", "ai"),
         item("Ask About This Page", "Shift+CmdOrCtrl+J", "ai-page"),
         item("New AI Chat", "Alt+CmdOrCtrl+J", "ai-new"),
         { type: "separator" },

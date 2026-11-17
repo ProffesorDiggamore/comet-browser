@@ -5,7 +5,7 @@
 //  100% local.  Passwords are decrypted with the browser's own key
 //  from the macOS Keychain — reading it prompts the user to Allow,
 //  so the user consciously authorises every run.  Nothing is sent
-//  anywhere; results go straight into Flux's encrypted vault.
+//  anywhere; results go straight into Comet's encrypted vault.
 // ───────────────────────────────────────────────────────────────────
 const { execFileSync } = require("node:child_process")
 const crypto = require("node:crypto")
@@ -87,7 +87,7 @@ function decryptBlob (buf, key) {
 
 // ---- sqlite via the system binary (zero-dep) -------------------
 function sqliteRows (dbPath, sql) {
-  const tmp = path.join(os.tmpdir(), `flux-imp-${Date.now()}-${Math.random().toString(36).slice(2)}.db`)
+  const tmp = path.join(os.tmpdir(), `comet-imp-${Date.now()}-${Math.random().toString(36).slice(2)}.db`)
   fs.copyFileSync(dbPath, tmp)
   try {
     const out = execFileSync("/usr/bin/sqlite3", ["-json", tmp, sql], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 })

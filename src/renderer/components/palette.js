@@ -1,7 +1,7 @@
 // ───────────────────────────────────────────────────────────────────
 //  palette.js — command palette (⌘K / ⇧⌘A).  One box for open tabs,
 //  every browser command, bookmarks and history — and if nothing fits,
-//  hand the text to Flux AI.  Keyboard-first.
+//  hand the text to Comet AI.  Keyboard-first.
 // ───────────────────────────────────────────────────────────────────
 import { h } from "../core/dom.js"
 import { bus, toast } from "../core/bus.js"
@@ -18,9 +18,9 @@ function commands () {
   const web = T.getActive() && !T.getActive().isHome
   const cmd = (label, icon, run, kbd, when = true) => when && { kind: "cmd", icon, label, run, kbd }
   return [
-    cmd("Ask Flux AI", "spark", () => bus.emit("ai:toggle"), "⌘J"),
-    cmd("Summarize this page", "spark", () => bus.emit("ai:ask", { text: "Summarize this page: key points, then anything to act on.", withPage: true }), "", web),
     cmd("New tab", "plus", () => T.newTab(), "⌘T"),
+    cmd("New private tab", "eyeoff", () => T.newTab(null, { private: true }), "⇧⌘N"),
+    cmd("Copy link to this page", "link", () => { navigator.clipboard.writeText(T.getActive().url); bus.emit("toast", "Link copied") }, "⇧⌘C", web),
     cmd("Reopen closed tab", "reload", () => T.reopenClosed(), "⇧⌘T"),
     cmd("Tab overview", "overview", () => bus.emit("overview:open"), "⇧⌘\\"),
     cmd("Split view", "split", () => T.toggleSplit(), "⌘\\", web),
@@ -43,7 +43,10 @@ function commands () {
     cmd("Settings", "gear", () => bus.emit("view", "settings"), "⌘,"),
     cmd("Motion & animation settings", "bolt", () => bus.emit("settings:goto", "motion")),
     cmd("Appearance settings", "palette", () => bus.emit("settings:goto", "appearance")),
-    cmd("Open page in system browser", "external", () => window.flux.openExternal(T.getActive().url), "", web)
+    cmd("Open page in system browser", "external", () => window.flux.openExternal(T.getActive().url), "", web),
+    // Comet AI stays reachable, below the browser commands
+    cmd("Ask Comet AI", "spark", () => bus.emit("ai:toggle"), "⌘J"),
+    cmd("Summarize this page", "spark", () => bus.emit("ai:ask", { text: "Summarize this page: key points, then anything to act on.", withPage: true }), "", web)
   ].filter(Boolean)
 }
 
@@ -60,7 +63,7 @@ export function openPalette () {
   let visible = []
   let seqq = 0
   const rows = h("div.pal-rows")
-  const input = h("input.pal-input", { type: "text", placeholder: "Search tabs, commands, history — or ask Flux AI", spellcheck: false })
+  const input = h("input.pal-input", { type: "text", placeholder: "Search tabs, commands and history", spellcheck: false })
 
   const tabItems = () => T.getTabs().map((t) => ({ kind: "tab", icon: t.asleep ? "sleep" : "layers", fav: t.favicon, label: t.isHome ? "New Tab" : t.title || t.url, sub: t.isHome ? "" : T.hostOf(t.url), run: () => T.setActive(t.id) }))
 
@@ -79,7 +82,7 @@ export function openPalette () {
     for (const b of (state.get("bookmarks") ?? []).filter((b) => `${b.title} ${b.url}`.toLowerCase().includes(q)).slice(0, 4)) {
       visible.push({ kind: "bookmark", icon: "bookmark", label: b.title || b.url, sub: T.hostOf(b.url), run: () => T.newTab(b.url) })
     }
-    visible.push({ kind: "ai", icon: "spark", label: `Ask Flux AI: “${input.value.trim()}”`, run: () => bus.emit("ai:ask", { text: input.value.trim() }) })
+    visible.push({ kind: "ai", icon: "spark", label: `Ask Comet AI: “${input.value.trim()}”`, run: () => bus.emit("ai:ask", { text: input.value.trim() }) })
     sel = 0; paint()
     const hist = await window.flux.history.search({ query: q, limit: 6, ranked: true })
     if (my !== seqq || !overlay) return
@@ -90,7 +93,7 @@ export function openPalette () {
 
   function paint () {
     let lastKind = null
-    const label = { tab: "Tabs", cmd: "Commands", bookmark: "Bookmarks", history: "History", ai: "Flux AI" }
+    const label = { tab: "Tabs", cmd: "Commands", bookmark: "Bookmarks", history: "History", ai: "Comet AI" }
     const out = []
     visible.forEach((i, idx) => {
       if (i.kind !== lastKind) { out.push(h("div.pal-group", { text: label[i.kind] })); lastKind = i.kind }

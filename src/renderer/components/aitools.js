@@ -1,5 +1,5 @@
 // ───────────────────────────────────────────────────────────────────
-//  aitools.js — executes Flux AI's tool calls against the real browser
+//  aitools.js — executes Comet AI's tool calls against the real browser
 //  (tabs, pages, settings) and describes each step for the chat UI.
 //  Inputs were already schema-validated in the main process.
 // ───────────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ export function toolLabel (name, input = {}, status = "running") {
     case "split_view": return input.off ? "Closed split view" : "Split view"
     case "search_history": return `Searched history${input.query ? ` for “${input.query}”` : ""}`
     case "bookmarks": return `Bookmarks: ${input.action}`
-    case "customize_browser": return ing ? "Restyling Flux" : "Restyled Flux"
+    case "customize_browser": return ing ? "Restyling Comet" : "Restyled Comet"
     case "show_ui": return `Opened ${input.view}`
     case "web_search": return `${ing ? "Searching" : "Searched"} “${String(input.query ?? "").slice(0, 50)}”`
     case "fetch_url": return `${ing ? "Reading" : "Read"} ${host(input.url ?? "")}`

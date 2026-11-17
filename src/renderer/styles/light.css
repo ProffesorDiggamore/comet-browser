@@ -12,5 +12,4 @@ body[data-mode="light"] .pop,
 body[data-mode="light"] .ob-suggest,
 body[data-mode="light"] .pal { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 20px 50px -18px rgba(0, 0, 0, 0.3); }
 body[data-mode="light"] #tabs-host { background: #fff; }
-body[data-mode="light"] .msg.tool { color: var(--f-text-dim); }
 body[data-mode="light"][data-vibrancy="true"]::before { background: var(--f-vibrancy-tint); }

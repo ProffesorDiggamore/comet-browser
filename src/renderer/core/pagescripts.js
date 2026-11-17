@@ -2,7 +2,7 @@
 //  pagescripts.js — code that runs INSIDE a web page (via the tab's
 //  executeJavaScript).  Each is a real function serialized with its
 //  options, so it must be self-contained.  Results come back as plain
-//  JSON — page markup never enters the Flux UI.
+//  JSON — page markup never enters the Comet UI.
 // ───────────────────────────────────────────────────────────────────
 
 const call = (fn, arg) => `(${fn.toString()})(${JSON.stringify(arg ?? {})})`
@@ -88,7 +88,7 @@ function act (o) {
     const e = find(FIELD)
     if (!e) return { ok: false, text: "No matching field. Fields on the page: " + candidates(FIELD).join("; ") }
     if (e.type === "password" || /card|cc-|cvc|cvv|ssn|iban/i.test((e.autocomplete || "") + " " + (e.name || "") + " " + (e.id || ""))) {
-      return { ok: false, text: "Refused: Flux AI does not fill password, payment or identity fields. Ask the user to do that part." }
+      return { ok: false, text: "Refused: Comet AI does not fill password, payment or identity fields. Ask the user to do that part." }
     }
     e.scrollIntoView({ block: "center" }); e.focus(); flash(e)
     if (o.action === "focus") return { ok: true, text: "Focused " + clean(labelOf(e)).slice(0, 60) }
