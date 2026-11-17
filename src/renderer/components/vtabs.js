@@ -79,8 +79,9 @@ function dropOnRow (targetId, after) {
 
 function row (t) {
   const el = h("div.vt-row", {
-    draggable: true,
+    draggable: true, tabindex: 0, role: "tab", "aria-selected": "false",
     onclick: () => T.setActive(t.id),
+    onkeydown: (e) => { if (e.target === el && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); T.setActive(t.id) } },
     ondblclick: (e) => { if (e.target.closest(".vt-title")) renameTab(t.id) },
     onauxclick: (e) => { if (e.button === 1) { e.preventDefault(); T.closeTab(t.id) } },
     oncontextmenu: (e) => { e.preventDefault(); tabMenu(T.getTab(t.id), { x: e.clientX, y: e.clientY }) },
@@ -117,6 +118,7 @@ function row (t) {
 function update (el, t, activeId, g) {
   const on = t.id === activeId
   el.classList.toggle("is-active", on)
+  el.setAttribute("aria-selected", String(on))
   el.classList.toggle("is-asleep", !!t.asleep)
   el.classList.toggle("is-loading", !!t.loading)
   el.classList.toggle("is-split", !!t.inSplit)
@@ -276,7 +278,8 @@ function resizeHandle () {
   })
   grip.addEventListener("pointermove", (e) => {
     if (!dragging) return
-    w = Math.round(Math.min(VT_MAX, Math.max(VT_MIN, w0 + e.clientX - x0)))
+    const dx = document.body.dataset.vtSide === "right" ? x0 - e.clientX : e.clientX - x0   // sidebar on the right grows leftward
+    w = Math.round(Math.min(VT_MAX, Math.max(VT_MIN, w0 + dx)))
     apply(w)
   })
   // Chromium has already dropped the capture by pointerup, so track the drag ourselves

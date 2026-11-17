@@ -18,6 +18,7 @@ import { openDownloads, downloadsBadge } from "./downloads.js"
 import * as T from "../core/tabs.js"
 import { profileButton } from "./profiles.js"
 import * as G from "../core/groups.js"
+import { initToolbarItems } from "./toolbar-items.js"
 
 const els = new Map()       // tabId -> element
 let strip, pinnedBox, address, omni, btnStar, btnDl, btnBack, btnFwd, btnReload, chipZoom, chipShield, chipSite, chipCopy, addrWrap, crumb, btnStar2
@@ -317,6 +318,7 @@ export function initTitlebar () {
     addrWrap,
     h("div.tl-actions", {}, [btnReader, btnStar2, btnMore])
   ]))
+  initToolbarItems(toolbar.querySelector(".tl-actions"), { reader: btnReader, bookmark: btnStar2 }, btnMore)
 
   bus.on("tabs", renderTabs)
   bus.on("shield", () => renderTabs({ tabs: T.getTabs(), activeId: T.getActiveId() }))

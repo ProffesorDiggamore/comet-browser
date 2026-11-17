@@ -10,6 +10,7 @@ import { ico } from "../../core/icons.js"
 import { springEasing, replayPreview } from "../../core/motion.js"
 import { group, row, block, seg, sw, rng, sel, textField, btn } from "./kit.js"
 import { localStatus, pullModel, getButton, capsBadges, fmtSize, shortName } from "../localai.js"
+import { sideRow, toolbarGroup } from "./look.js"
 
 const rerender = () => bus.emit("settings:rerender")
 
@@ -33,7 +34,7 @@ const MODELS = [
 function localGroups () {
   const statusRow = row("Ollama", h("span.tag", { text: "Checking…" }), "The free engine that runs models on your Mac.")
   const modelsBox = group("Your models", [row("", h("span.tag", { text: "Loading…" }))], "Click a model to use it. Models marked Tools can control the browser.")
-  const getBox = group("Download a model", [], "Downloads come from ollama.com and stay on this Mac. 24 GB of memory runs up to ~14B models comfortably.")
+  const getBox = group("Download a model", [], "Downloads come from ollama.com and stay on this Mac. 8 GB of memory runs small models (about 3B), 16 GB about 8B, 32 GB or more about 14B.")
 
   localStatus(true).then((st) => {
     // status
@@ -242,7 +243,8 @@ export function catLayout () {
       row("Style", seg([{ v: "dia", label: "Vertical tabs" }, { v: "classic", label: "Top tabs" }], l.style ?? "dia", setStyle), "Vertical tabs is the clean Dia-style layout. Top tabs brings back the widget sidebar.")
     ]),
     dia && group("Sidebar", [
-      row("Width", rng(l.vtabsWidth ?? 240, 190, 420, 2, px, (v) => state.set("layout.vtabsWidth", v)), "Or drag the sidebar's right edge. Double-click the edge to reset."),
+      sideRow(l),
+      row("Width", rng(l.vtabsWidth ?? 240, 190, 420, 2, px, (v) => state.set("layout.vtabsWidth", v)), "Or drag the sidebar's inner edge. Double-click the edge to reset."),
       row("Tab rows", seg([{ v: "comfortable", label: "Comfortable" }, { v: "compact", label: "Compact" }], l.tabStyle ?? "comfortable", (v) => state.set("layout.tabStyle", v))),
       row("Preview on the active tab", sw(l.tabThumbs !== false, (v) => state.set("layout.tabThumbs", v)), "A small live picture of the page on the tab you're on."),
       row("Now Playing", sw(l.nowPlaying !== false, (v) => state.set("layout.nowPlaying", v)), "A player at the bottom of the sidebar for the tab playing sound: play / pause, mute, jump to it."),
@@ -261,6 +263,7 @@ export function catLayout () {
       ...common,
       aiWidth
     ]),
+    toolbarGroup(),
     group(null, [restore("layout", "layout")])
   ].filter(Boolean)
 }
@@ -291,7 +294,7 @@ export function catPrivacy () {
     ]),
     group("History", [
       row("Remember browsing history", sw(p.recordHistory !== false, (v) => state.set("privacy.recordHistory", v)), "Powers address-bar suggestions and the Library. Stored only on this Mac."),
-      row("Clear history", btn("Clear all history", async () => { await window.flux.history.clear({}); toast("History cleared") }, "btn btn--danger"))
+      row("Clear history", btn("Clear All History…", async () => { if (!confirm("Clear all browsing history? This can't be undone.")) return; await window.flux.history.clear({}); toast("History cleared") }, "btn btn--danger"))
     ]),
     group("Site permissions", [permList])
   ]

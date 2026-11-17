@@ -13,6 +13,7 @@ import { bus } from "../core/bus.js"
 import { engineById } from "../data/engines.js"
 import * as T from "../core/tabs.js"
 import { attachLensInput } from "./lens.js"
+import { leave } from "../core/motion.js"
 
 // ── tiny safe calculator (+ - * / % ^ parentheses) ──────────────────
 function calc (src) {
@@ -99,7 +100,13 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
     return true
   }
 
-  const close = () => { box?.remove(); box = null; items = []; anchor.classList.remove("has-suggest") }
+  // fades out like every other popover; the pill keeps its open shape until the panel is gone
+  const close = () => {
+    const b = box; box = null; items = []
+    if (!b) { anchor.classList.remove("has-suggest"); return }
+    b.style.pointerEvents = "none"
+    leave(b, document.body.dataset.animPopover === "none" ? "none" : "fade").then(() => { b.remove(); if (!box) anchor.classList.remove("has-suggest") })
+  }
 
   function go (url, newTab) {
     if (newTab || place === "home" && !T.getActive()?.isHome) T.newTab(url)

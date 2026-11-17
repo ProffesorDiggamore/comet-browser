@@ -13,3 +13,10 @@ body[data-mode="light"] .ob-suggest,
 body[data-mode="light"] .pal { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 20px 50px -18px rgba(0, 0, 0, 0.3); }
 body[data-mode="light"] #tabs-host { background: #fff; }
 body[data-mode="light"][data-vibrancy="true"]::before { background: var(--f-vibrancy-tint); }
+/* the pop-up chevron is a data-URI, so it can't follow --ink: a dark copy for light mode */
+body[data-mode="light"] :where(select), body[data-mode="light"] select.popup {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14' viewBox='0 0 10 14' fill='none' stroke='%23000000' stroke-opacity='.5' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 5l3-3 3 3M2 9l3 3 3-3'/%3E%3C/svg%3E") no-repeat right 9px center,
+    var(--f-control);
+}
+body[data-mode="light"] :where(select):hover, body[data-mode="light"] select.popup:hover { background-color: var(--f-control-hi); }

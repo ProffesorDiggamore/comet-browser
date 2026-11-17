@@ -272,6 +272,8 @@ app.whenReady().then(async () => {
     if (win && !win.isDestroyed() && store.get("theme.vibrancy") === false) win.setBackgroundColor(solidBg())
     return nativeTheme.shouldUseDarkColors
   })
+  // productName stays "Flux" (keychain), so name the About panel ourselves
+  app.setAboutPanelOptions({ applicationName: "Comet", applicationVersion: app.getVersion(), version: "" })
   buildMenu(getWin)
 
   // battery saver follows the power source

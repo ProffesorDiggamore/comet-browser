@@ -44,6 +44,7 @@ function commands () {
     cmd("Motion & animation settings", "bolt", () => bus.emit("settings:goto", "motion")),
     cmd("Appearance settings", "palette", () => bus.emit("settings:goto", "appearance")),
     cmd("Open page in system browser", "external", () => window.flux.openExternal(T.getActive().url), "", web),
+    cmd("Welcome tour", "flux", () => bus.emit("menu", { action: "welcome" })),
     // Comet AI stays reachable, below the browser commands
     cmd("Ask Comet AI", "spark", () => bus.emit("ai:toggle"), "⌘J"),
     cmd("Summarize this page", "spark", () => bus.emit("ai:ask", { text: "Summarize this page: key points, then anything to act on.", withPage: true }), "", web)

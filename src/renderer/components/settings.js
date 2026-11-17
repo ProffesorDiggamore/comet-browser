@@ -11,7 +11,6 @@ import { sfx } from "../audio/sfx.js"
 import { ENGINES } from "../data/engines.js"
 import { THEMES, themeById } from "../data/themes.js"
 import { STYLES, STYLE_LIST, drawPreview } from "../core/backdrop.js"
-import { wallpaperPicker } from "./home.js"
 import { allPacks, applyPack, installPack, exportCurrent } from "../modpacks/index.js"
 import { watchMetrics } from "../core/perf.js"
 import * as T from "../core/tabs.js"
@@ -19,7 +18,10 @@ import * as T from "../core/tabs.js"
 import { group, row, seg, sw, rng, textField, btn } from "./settings/kit.js"
 import { initShell } from "./settings/shell.js"
 import { catAI, catMotion, catLayout, catKeywords, catPrivacy as catShield } from "./settings/extra.js"
+import { catHome, catBackup, textGroup, glassGroup } from "./settings/look.js"
 import { catProfiles } from "./profiles.js"
+import { catTour } from "./settings/tour.js"
+import { catShortcuts, catAbout } from "./settings/system.js"
 
 // ── categories ────────────────────────────────────────────────────
 // "Make default" → macOS asks to confirm, so the answer is re-read when the window regains focus
@@ -27,9 +29,9 @@ function defaultBrowserRow () {
   const slot = h("span")
   const paint = (st) => {
     clear(slot)
-    if (!st.can) slot.append(h("span.rdesc", { text: "Install Comet.app first (npm run install-app)" }))
+    if (!st.can) slot.append(h("span.rdesc", { text: "Move Comet to your Applications folder and reopen it to make it your default browser." }))
     else if (st.is) slot.append(h("span.rdesc", { text: "Comet is your default browser" }))
-    else slot.append(btn("Make default", async () => {
+    else slot.append(btn("Make Default", async () => {
       paint(await window.flux.defaultBrowser.set())
       window.addEventListener("focus", () => window.flux.defaultBrowser.get().then(paint), { once: true })
     }))
@@ -155,34 +157,12 @@ function catAppearance () {
       t.active !== "custom" && row("Accent color", [accent, t.accentCustom && btn("Use theme color", () => { state.set("theme.accentCustom", false); bus.emit("settings:rerender") }, "btn btn--plain")])
     ]),
     styleGroup(t),
-    group("Liquid glass", [
-      row("macOS window glass", sw(t.vibrancy !== false, (v) => { state.set("theme.vibrancy", v); window.flux.win.vibrancy(v) }), "Your real desktop shows through the sidebar, blurred — like Apple's own apps."),
-      row("Translucency", rng(t.glass, 0.3, 1, 0.02, (v) => `${Math.round(v * 100)}%`, (v) => state.set("theme.glass", v))),
-      row("Backdrop blur", rng(t.blur, 0, 60, 1, (v) => `${v}px`, (v) => state.set("theme.blur", v)))
-    ]),
+    textGroup(t),
+    glassGroup(t),
     group("Advanced", [
       row("Custom CSS", css, "Injected globally. Great for one-off tweaks and shared themes.")
     ]),
     group(null, [restoreRow("theme")])
-  ]
-}
-
-function catHome () {
-  return [
-    group("Wallpaper & widgets", [
-      h("div.set-row", { dataset: { search: "wallpaper background photo desktop picture home widgets dim style frosted liquid solid tinted clear" } }, [wallpaperPicker()])
-    ]),
-    group("Home screen", [
-      row("Greeting", sw(state.get("home.showGreeting") !== false, (v) => state.set("home.showGreeting", v)), "“Good morning, …” with your name and this profile's picture."),
-      row("Search field", sw(state.get("home.showSearch") !== false, (v) => state.set("home.showSearch", v))),
-      row("24-hour clock", sw(state.get("home.clock24") === true, (v) => state.set("home.clock24", v))),
-      row("Temperature", seg([{ v: "f", label: "°F" }, { v: "c", label: "°C" }], state.get("home.tempUnit") ?? "f", (v) => state.set("home.tempUnit", v))),
-      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "First name" }), "Shown in the Home greeting (and used by Comet AI)."),
-      row("Widgets", btn("Reset to default widgets", async () => {
-        const d = await window.flux.config.defaults()
-        state.set("home.widgets", d.home.widgets); toast("Widgets reset")
-      }, "btn btn--ghost"), "Add, remove, resize and reorder from Home → Edit Widgets.")
-    ])
   ]
 }
 
@@ -196,7 +176,7 @@ function catModpacks () {
       ]),
       row("Import / export", [
         btn("Import…", async () => { const r = await window.flux.pick.jsonOpen("Import modpack"); if (r.ok) { await installPack(r.data); bus.emit("settings:rerender") } }, "btn btn--ghost"),
-        btn("Export current look", async () => { const r = await window.flux.pick.jsonSave("flux-modpack.json", exportCurrent()); if (r.ok) toast("Exported") }, "btn btn--ghost")
+        btn("Export current look", async () => { const r = await window.flux.pick.jsonSave("Comet Look.json", exportCurrent()); if (r.ok) toast("Exported") }, "btn btn--ghost")
       ], "A modpack bundles theme + audio + background as one portable JSON file.")
     ])
   ]
@@ -216,25 +196,32 @@ function catAudio () {
   ]
 }
 
-let visionStatus = {}
-
+const KEY_NAME = { anthropic: "Anthropic", openai: "OpenAI", gemini: "Google Gemini" }
 function catKeys () {
-  const keyRows = ["anthropic", "openai", "gemini"].map((p) => {
-    const input = h("input", { type: "password", placeholder: `Paste ${p} key`, style: { minWidth: "260px" } })
-    input.addEventListener("change", async () => { if (input.value) { await window.flux.secrets.set(p, input.value); input.value = ""; toast(`${p} key saved`); bus.emit("settings:rerender") } })
-    return h("div.set-row", { dataset: { search: `api key ${p}` } }, [
-      h("div.rlabel", { text: p }),
+  const marks = {}
+  const keyRows = Object.keys(KEY_NAME).map((p) => {
+    const name = KEY_NAME[p]
+    const tag = h("span.tag", { text: "Not set" })
+    const remove = btn("Remove", async () => { await window.flux.secrets.set(p, ""); toast(`${name} key removed`); bus.emit("settings:rerender") }, "btn btn--ghost")
+    remove.hidden = true
+    marks[p] = { tag, remove }
+    const input = h("input", { type: "password", placeholder: `Paste your ${name} key`, style: { minWidth: "240px" } })
+    input.addEventListener("change", async () => { if (input.value) { await window.flux.secrets.set(p, input.value); input.value = ""; toast(`${name} key saved`); bus.emit("settings:rerender") } })
+    return h("div.set-row", { dataset: { search: `api key ${p} ${name.toLowerCase()}` } }, [
+      h("div.rlabel", { text: name }),
       h("div.control", {}, [
-        h("span.tag", { class: visionStatus[p] ? "tag ok" : "tag", text: visionStatus[p] ? "set" : "none" }),
-        input,
-        btn("Clear", async () => { await window.flux.secrets.set(p, ""); toast(`${p} cleared`); bus.emit("settings:rerender") }, "btn btn--ghost")
+        tag, input, remove
       ])
     ])
   })
-  return [
-    group("API keys", keyRows),
-    h("div.rdesc", { text: "Keys are encrypted at rest (OS keychain) and never exposed to web pages. Comet AI uses the Anthropic key for Claude." })
-  ]
+  window.flux.secrets.status().then((st) => {
+    for (const [p, m] of Object.entries(marks)) {
+      m.tag.className = st?.[p] ? "tag ok" : "tag"
+      m.tag.textContent = st?.[p] ? "Saved" : "Not set"
+      m.remove.hidden = !st?.[p]
+    }
+  })
+  return [group("API keys", keyRows, "Keys are encrypted with your macOS keychain and never shared with web pages. Comet AI uses the Anthropic key for Claude.")]
 }
 
 function catPerformance () {
@@ -287,48 +274,36 @@ function catExtensions () {
     clear(wrap)
     wrap.append(...(exts.length
       ? exts.map((x) => h("div.set-row", {}, [h("div.rlabel", { text: `${x.name} · ${x.version}` }), h("div.control", {}, [btn("Remove", async () => { await window.flux.extensions.remove(x.id); bus.emit("settings:rerender") }, "btn btn--ghost")])]))
-      : [h("div.rdesc", { text: "No extensions loaded." })]))
-    wrap.append(h("div.set-row", {}, [h("div.rlabel", { text: "Add" }), h("div.control", {}, [btn("Load unpacked folder…", async () => { const r = await window.flux.extensions.add(); if (r.ok) { toast(`Loaded ${r.ext.name}`); bus.emit("settings:rerender") } else if (r.text) toast(r.text) })])]))
+      : [h("div.rdesc", { text: "No extensions yet." })]))
+    wrap.append(h("div.set-row", {}, [h("div.rlabel", { text: "Add" }), h("div.control", {}, [btn("Add Extension Folder…", async () => { const r = await window.flux.extensions.add(); if (r.ok) { toast(`Loaded ${r.ext.name}`); bus.emit("settings:rerender") } else if (r.text) toast(r.text) })])]))
   })
-  return [group("Extensions", [wrap, h("div.rdesc", { text: "Electron supports a useful subset of Chrome MV2/MV3. Loaded folders are remembered across launches." })])]
+  return [group("Extensions", [wrap], "Many Chrome extensions work. Choose an extension's folder and Comet remembers it.")]
 }
 
-const SHORTCUTS = [
-  ["Ask Comet AI", "⌘J"], ["Ask about this page", "⇧⌘J"], ["New AI chat", "⌥⌘J"], ["Command palette", "⌘K"],
-  ["New tab", "⌘T"], ["Close tab", "⌘W"], ["Reopen closed tab", "⇧⌘T"], ["Next / previous tab", "⌃Tab / ⌃⇧Tab"], ["Move through tabs", "⌘↑ ⌘↓ (sidebar) · ⌘← ⌘→ (tabs on top)"], ["Bookmarks bar", "⇧⌘B"],
-  ["Focus address bar", "⌘L"], ["Reload page", "⌘R"], ["Reload Comet UI", "⇧⌘R"], ["Back / Forward", "⌘[  /  ⌘]"],
-  ["Find in page", "⌘F"], ["Bookmark page", "⌘D"], ["History", "⌘Y"], ["Bookmarks", "⌥⌘B"], ["Downloads", "⌥⌘L"],
-  ["Tab overview", "⇧⌘\\"], ["Split view", "⌘\\"], ["Reader mode", "⌥⌘R"], ["Picture in picture", "⌥⌘P"],
-  ["Mute tab", "⌃M"], ["Save screenshot", "⇧⌘S"], ["Zoom in / out / reset", "⌘+  /  ⌘-  /  ⌘0"], ["Focus mode", "⇧⌘F"],
-  ["Toggle sidebar", "⌘B"], ["Home", "⇧⌘H"], ["Settings", "⌘,"],
-  ["Inspect page", "⌥⌘I"], ["Omnibox: ask AI", "⌘⏎ or Tab"], ["Omnibox: open in new tab", "⌥⏎"]
-]
-function catShortcuts () {
-  return [group("Keyboard shortcuts", [
-    h("div.kbd-list", { dataset: { search: "shortcuts keyboard hotkeys" } },
-      SHORTCUTS.map(([k, v]) => h("div", {}, [h("span", { text: k }), h("kbd", { text: v })])))
-  ])]
-}
-
+const CLEAR_LABEL = { cache: "Cached images and files", cookies: "Cookies", storage: "Site data", history: "Browsing history" }
 function catPrivacy () {
   const kinds = { cache: true, cookies: false, storage: false, history: false }
   const boxes = Object.keys(kinds).map((k) =>
     h("label", { style: { display: "flex", gap: "6px", alignItems: "center" } }, [
       h("input", { type: "checkbox", checked: kinds[k], onchange: (e) => { kinds[k] = e.target.checked } }),
-      h("span", { text: k === "storage" ? "site data (localStorage, IndexedDB)" : k })
+      h("span", { text: CLEAR_LABEL[k] })
     ]))
   return [
     group("Clear browsing data", [
       h("div.set-row", { dataset: { search: "clear cache cookies history site data privacy" } }, [
         h("div.control", { style: { flexWrap: "wrap", justifySelf: "start", gridColumn: "1 / -1", gap: "16px" } }, boxes)
       ]),
-      row("", btn("Clear now", async () => {
+      row("Clear selected data", btn("Clear Now…", async () => {
+        const picked = Object.keys(kinds).filter((k) => kinds[k])
+        if (!picked.length) return toast("Choose something to clear")
+        if (!confirm(`Clear ${picked.map((k) => CLEAR_LABEL[k].toLowerCase()).join(", ")}? This can't be undone.`)) return
         const r = await window.flux.web.clearData(kinds)
-        toast(r.ok ? "Cleared" : `Failed: ${r.text}`)
+        toast(r.ok ? "Browsing data cleared" : `Couldn't clear: ${r.text}`)
       }, "btn btn--danger"))
     ]),
     group("Reset", [
-      row("Restore every setting to defaults", btn("Reset all settings", async () => {
+      row("Restore every setting to its default", btn("Reset All Settings…", async () => {
+        if (!confirm("Reset every setting to its default?")) return
         const d = await window.flux.config.defaults()
         await state.merge(d)
         bus.emit("settings:rerender")
@@ -338,24 +313,14 @@ function catPrivacy () {
   ]
 }
 
-function catAbout () {
-  const info = h("div", { dataset: { search: "about version paths" } })
-  window.flux.info().then((i) => {
-    clear(info)
-    info.append(
-      h("div.rdesc", { text: `Comet · source: ${i.root}` }),
-      h("div.rdesc", { text: `Config file: ${i.config}` })
-    )
-  })
-  return [group("About", [info, row("Reload the UI", btn("Reload (⇧⌘R)", () => window.flux.reloadUi(), "btn btn--ghost"))])]
-}
-
 // ── passwords vault ──────────────────────────────────────────────
 function catPasswords () {
   const list = h("div", { dataset: { search: "passwords vault login credentials" }, style: { gridColumn: "1 / -1" } }, [h("div.rdesc", { text: "Loading vault…" })])
   const addForm = h("div", { style: { gridColumn: "1 / -1", display: "none", gap: "8px", flexWrap: "wrap", marginTop: "8px" } })
 
+  let saved = 0
   window.flux.vault.list().then((entries) => {
+    saved = entries.length
     clear(list)
     if (!entries.length) list.append(h("div.rdesc", { text: "No saved passwords yet. Import them from another browser below, or add one manually." }))
     entries.sort((a, b) => (a.host || "").localeCompare(b.host || "")).forEach((e) => {
@@ -373,7 +338,7 @@ function catPasswords () {
           revealBtn,
           h("button.tb-btn", { title: "Copy username", onclick: () => { navigator.clipboard.writeText(e.username || ""); toast("Username copied") } }, [ico("copy", 15)]),
           h("button.tb-btn", { title: "Copy password", onclick: async () => { navigator.clipboard.writeText(await window.flux.vault.reveal(e.id)); toast("Password copied") } }, [ico("key", 15)]),
-          h("button.tb-btn", { title: "Delete", onclick: async () => { await window.flux.vault.remove(e.id); bus.emit("settings:rerender") } }, [ico("trash", 15)])
+          h("button.tb-btn", { title: "Delete", onclick: async () => { if (!confirm(`Delete the login for ${e.host || e.url}?`)) return; await window.flux.vault.remove(e.id); bus.emit("settings:rerender") } }, [ico("trash", 15)])
         ])
       ]))
     })
@@ -400,7 +365,11 @@ function catPasswords () {
       list
     ]),
     group("Danger zone", [
-      row("Delete every saved password", btn("Clear vault", async () => { await window.flux.vault.clear(); bus.emit("settings:rerender"); toast("Vault cleared") }, "btn btn--danger"))
+      row("Delete every saved password", btn("Delete All Passwords…", async () => {
+        if (!saved) return toast("No saved passwords")
+        if (!confirm(`Delete all ${saved} saved password${saved === 1 ? "" : "s"}? This can't be undone.`)) return
+        await window.flux.vault.clear(); bus.emit("settings:rerender"); toast("Passwords deleted")
+      }, "btn btn--danger"))
     ])
   ]
 }
@@ -478,6 +447,7 @@ function restoreRow (branch) {
   return row(`Restore ${branch} defaults`, btn("Restore", async () => {
     const d = await window.flux.config.defaults()
     await state.set(branch, d[branch])
+    if (branch === "theme") window.flux.win.vibrancy(d.theme?.vibrancy !== false)
     bus.emit("settings:rerender")
     toast(`${branch} reset`)
   }, "btn btn--ghost"))
@@ -499,8 +469,9 @@ const CATS = [
   { id: "perf", label: "Performance", icon: "gauge", render: catPerformance },
   { id: "extensions", label: "Extensions", icon: "puzzle", render: catExtensions },
   { id: "shortcuts", label: "Shortcuts", icon: "bolt", render: catShortcuts },
+  { id: "backup", label: "Backup & Restore", icon: "upload", render: catBackup },
   { id: "privacy", label: "Privacy & Shield", icon: "shield", render: () => [...catShield(), ...catPrivacy()] },
-  { id: "about", label: "About", icon: "info", render: catAbout }
+  { id: "about", label: "About", icon: "info", render: () => [...catAbout(), ...catTour()] }
 ]
 
 // ── shell (System Settings layout lives in settings/shell.js) ──────

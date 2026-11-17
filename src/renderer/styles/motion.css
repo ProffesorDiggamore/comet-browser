@@ -158,8 +158,10 @@
 .ripple { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, rgb(var(--ink) / 0.5), rgb(var(--ink) / 0) 70%); z-index: 3; }
 .tab, .side-item, .chip, .pill-btn, .mi, .engine, .seg button, .btn { overflow: hidden; }
 
-/* reduced: keep things still */
+/* reduced (also the macOS setting): things fade, nothing travels, nothing loops */
 [data-motion="reduced"] #ambient i { animation: none !important; }
+[data-motion="reduced"] :is(.vt-row.is-entering, .vt-group-h.is-entering, .vt-np.is-on, .ov-card, .ai-msg, .ai-step, .rd, .perm, .loaderr, .findbar, .pane-enter .set-group, #app[data-ready] #stage) { animation-name: m-fade !important; }
+[data-motion="reduced"] :is(.i-min, .i-hour, .i-arrow, .i-slash, .i-pupil, .vt-mode.is-turn svg, .tb-btn.is-spin svg, .tb-btn.is-pop svg, .vt-row.is-loading .vt-fav, .tab.is-loading .tab-fav) { animation: none !important; }
 
 /* energy: nothing loops while Comet isn't the app in front, and the ambient
    ribbons only drift on Home (elsewhere they're mostly covered by the page) */

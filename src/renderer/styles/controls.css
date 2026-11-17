@@ -16,6 +16,7 @@
 .btn:hover { background: var(--f-control-hi); }
 .btn:active { transform: scale(var(--f-press)); background: rgb(var(--ink) / 0.22); }
 .btn[disabled] { opacity: 0.4; pointer-events: none; }
+.btn[hidden] { display: none; }
 .btn--accent {
   background: linear-gradient(180deg, color-mix(in srgb, var(--f-accent) 88%, #fff), var(--f-accent));
   color: #fff; border-color: transparent;
@@ -24,8 +25,8 @@
 .btn--accent:hover { background: linear-gradient(180deg, color-mix(in srgb, var(--f-accent) 80%, #fff), color-mix(in srgb, var(--f-accent) 92%, #fff)); }
 .btn--ghost, .btn--plain { background: transparent; border-color: transparent; box-shadow: none; color: var(--f-accent-text); }
 .btn--ghost:hover, .btn--plain:hover { background: var(--f-accent-soft); }
-.btn--danger { background: rgba(255, 69, 58, 0.14); color: #ff6961; border-color: rgba(255, 69, 58, 0.18); box-shadow: none; }
-.btn--danger:hover { background: rgba(255, 69, 58, 0.22); }
+.btn--danger { background: color-mix(in srgb, var(--sys-red) 14%, transparent); color: var(--sys-red); border-color: color-mix(in srgb, var(--sys-red) 20%, transparent); box-shadow: none; }
+.btn--danger:hover { background: color-mix(in srgb, var(--sys-red) 22%, transparent); }
 /* App Store "GET" capsule */
 .btn--pill { height: 26px; padding: 0 15px; border-radius: 999px; border: 0; background: var(--f-control-hi); color: var(--f-accent-text); font-weight: 650; letter-spacing: 0.01em; box-shadow: none; }
 .btn--pill:hover { background: var(--f-accent-soft); }
@@ -119,13 +120,13 @@ input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 5px; }
 
 /* ── tags + capability badges ──────────────────────────────────── */
 .tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 500; background: rgba(120, 120, 128, 0.24); color: var(--f-text-dim); white-space: nowrap; }
-.tag.ok { background: rgba(48, 209, 88, 0.16); color: #4be07a; }
-.tag.warn { background: rgba(255, 159, 10, 0.16); color: #ffb340; }
+.tag.ok { background: color-mix(in srgb, var(--sys-green) 16%, transparent); color: color-mix(in srgb, var(--sys-green) 75%, var(--f-text)); }
+.tag.warn { background: color-mix(in srgb, var(--sys-orange) 16%, transparent); color: color-mix(in srgb, var(--sys-orange) 75%, var(--f-text)); }
 .caps { display: inline-flex; gap: 4px; vertical-align: 1px; margin-left: 4px; }
 .cap { font-size: 9.5px; font-weight: 650; letter-spacing: 0.03em; padding: 1px 6px; border-radius: 999px; }
-.cap--tools { background: rgba(10, 132, 255, 0.18); color: #64b5ff; }
-.cap--vision { background: rgba(48, 209, 88, 0.16); color: #4be07a; }
-.cap--think { background: rgba(191, 90, 242, 0.18); color: #d68cff; }
+.cap--tools { background: color-mix(in srgb, var(--sys-blue) 18%, transparent); color: color-mix(in srgb, var(--sys-blue) 75%, var(--f-text)); }
+.cap--vision { background: color-mix(in srgb, var(--sys-green) 16%, transparent); color: color-mix(in srgb, var(--sys-green) 75%, var(--f-text)); }
+.cap--think { background: color-mix(in srgb, var(--sys-purple) 18%, transparent); color: color-mix(in srgb, var(--sys-purple) 75%, var(--f-text)); }
 
 /* ── download capsule (GET → progress) ─────────────────────────── */
 .get-wrap { display: inline-flex; }

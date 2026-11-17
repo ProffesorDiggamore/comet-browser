@@ -13,11 +13,18 @@ function buildMenu (getWin) {
     if (w && !w.isDestroyed()) w.webContents.send("flux:menu", { action })
   }
   const item = (label, accelerator, action) => ({ label, accelerator, click: go(action) })
+  // shortcut-only items: the accelerator works, the menu doesn't show a duplicate row
+  const hidden = (label, accelerator, action) => ({ ...item(label, accelerator, action), visible: false, acceleratorWorksWhenHidden: true })
   // the renderer saves its tabs before switching, so profile picks go through it
   const send = (payload) => () => {
     const w = getWin()
     if (w && !w.isDestroyed()) w.webContents.send("flux:menu", payload)
   }
+  // ⌘1–⌘8 pick that tab, ⌘9 the last one (every browser does this)
+  const selectTab = Array.from({ length: 9 }, (_, i) => ({
+    ...hidden(i === 8 ? "Select Last Tab" : `Select Tab ${i + 1}`, `CmdOrCtrl+${i + 1}`, "select-tab"),
+    click: send({ action: "select-tab", index: i === 8 ? -1 : i })
+  }))
   const active = profiles.activeId()
   const profileItems = profiles.list().map((p, i) => ({
     label: p.emoji ? `${p.emoji}  ${p.name}` : p.name,
@@ -74,7 +81,7 @@ function buildMenu (getWin) {
       label: "View",
       submenu: [
         item("Reload Page", "CmdOrCtrl+R", "reload"),
-        item("Reload Comet UI", "Shift+CmdOrCtrl+R", "reload-ui"),
+        item("Reload Page Ignoring Cache", "Shift+CmdOrCtrl+R", "hard-reload"),
         { type: "separator" },
         item("Zoom In", "CmdOrCtrl+=", "zoom-in"),
         item("Zoom In (+)", "CmdOrCtrl+Plus", "zoom-in"),
@@ -90,7 +97,8 @@ function buildMenu (getWin) {
         { type: "separator" },
         { role: "togglefullscreen" },
         item("Developer Tools (Page)", "Alt+CmdOrCtrl+I", "devtools"),
-        { role: "toggleDevTools", label: "Developer Tools (Comet UI)", accelerator: "Alt+Shift+CmdOrCtrl+I" }
+        { role: "toggleDevTools", label: "Developer Tools (Comet UI)", accelerator: "Alt+Shift+CmdOrCtrl+I" },
+        item("Reload Comet UI", "Alt+Shift+CmdOrCtrl+R", "reload-ui")
       ]
     },
     {
@@ -115,8 +123,9 @@ function buildMenu (getWin) {
       submenu: [
         item("Next Tab", "Ctrl+Tab", "next-tab"),
         item("Previous Tab", "Ctrl+Shift+Tab", "prev-tab"),
-        item("Next Tab ", "Alt+CmdOrCtrl+Right", "next-tab"),
-        item("Previous Tab ", "Alt+CmdOrCtrl+Left", "prev-tab"),
+        hidden("Next Tab", "Alt+CmdOrCtrl+Right", "next-tab"),
+        hidden("Previous Tab", "Alt+CmdOrCtrl+Left", "prev-tab"),
+        ...selectTab,
         { type: "separator" },
         item("Pin / Unpin Tab", "", "pin"),
         item("Duplicate Tab", "", "duplicate"),
@@ -149,7 +158,14 @@ function buildMenu (getWin) {
         item("Manage Profiles…", "", "profile-manage")
       ]
     },
-    { role: "windowMenu" }
+    { role: "windowMenu" },
+    {
+      role: "help",
+      submenu: [
+        item("Welcome Tour…", "", "welcome"),
+        item("Keyboard Shortcuts", "", "shortcuts")
+      ]
+    }
   ]
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }

@@ -62,22 +62,34 @@ function permissions () {
   })
 }
 
+// Chromium's net error codes → plain words
+const LOAD_ERR = {
+  NAME_NOT_RESOLVED: "Can't find this server", INTERNET_DISCONNECTED: "You're offline",
+  CONNECTION_REFUSED: "The site refused to connect", CONNECTION_TIMED_OUT: "The site took too long to respond",
+  TIMED_OUT: "The site took too long to respond", CONNECTION_RESET: "The connection was reset",
+  ADDRESS_UNREACHABLE: "Can't reach this address", SSL_PROTOCOL_ERROR: "This site can't make a secure connection"
+}
+const errText = (desc) => {
+  const code = String(desc || "").replace(/^ERR_/, "")
+  return LOAD_ERR[code] ?? (/^CERT_/.test(code) ? "This site's certificate isn't valid" : "Something went wrong loading this page")
+}
+
 function loadErrors () {
   bus.on("load-error", ({ id, desc, url }) => {
     if (id !== T.getActiveId()) return
     const host = T.hostOf(url)
-    const card = h("div.loaderr.glass", {}, [
-      h("div.loaderr-title", { text: "This page didn't load" }),
-      h("div.loaderr-sub", { text: `${host || url} · ${String(desc || "").replace(/^ERR_/, "").replace(/_/g, " ").toLowerCase()}` }),
+    const card = h("div.loaderr.glass", { role: "alert" }, [
+      h("div.loaderr-title", { text: errText(desc) }),
+      h("div.loaderr-sub", { text: host || url }),
       h("div.row", {}, [
-        h("button.btn.btn--accent", { onclick: () => { card.remove(); T.reload() } }, "Try again"),
-        h("button.btn.btn--ghost", { onclick: () => { card.remove(); bus.emit("ai:ask", { text: `Why might ${url} fail to load with "${desc}", and what are alternatives?` }) } }, "Ask Comet AI"),
-        h("button.btn.btn--ghost", { onclick: () => card.remove() }, "Dismiss")
+        h("button.btn.btn--ghost", { onclick: () => kill() }, "Dismiss"),
+        h("button.btn.btn--accent", { onclick: () => { kill(); T.reload() } }, "Try Again")
       ])
     ])
     document.querySelectorAll(".loaderr").forEach((x) => x.remove())
     document.getElementById("stage").append(card)
-    const kill = () => { card.remove(); off() }
+    let gone = false
+    const kill = () => { if (gone) return; gone = true; off(); leave(card, "drop").then(() => card.remove()) }
     const off = bus.on("loading", ({ on }) => { if (on) kill() })
   })
 }

@@ -175,7 +175,7 @@ body.on-home #address-wrap, body.on-home .tl-actions { opacity: 0; visibility: h
 #loadbar { height: 0; z-index: 7; }
 #loadbar::after {
   content: ""; position: absolute; left: 0; top: 0; height: 2px; width: 0; opacity: 0; border-radius: 2px;
-  background: linear-gradient(90deg, transparent, var(--f-accent) 30%, #c9b8ff 70%, var(--f-accent));
+  background: linear-gradient(90deg, transparent, var(--f-accent) 30%, color-mix(in srgb, var(--f-accent) 55%, #fff) 70%, var(--f-accent));
 }
 [data-loadbar="glow"] #loadbar::after { box-shadow: 0 0 12px 2px var(--f-glow), 0 0 2px var(--f-accent); }
 [data-loadbar="off"] #loadbar { display: none; }
@@ -243,10 +243,10 @@ body.is-resizing webview { pointer-events: none; }
   background: transparent; color: var(--f-text); text-align: left; font-size: 13px; position: relative; z-index: 2;
 }
 .mi:hover, .mi:focus-visible { background: var(--f-accent); color: #fff; outline: 0; box-shadow: none; }
-.mi:hover .mi-ico, .mi:hover .mi-kbd { color: rgb(255 255 255 / 0.9); }
+.mi:is(:hover, :focus-visible) .mi-ico, .mi:is(:hover, :focus-visible) .mi-kbd { color: rgb(255 255 255 / 0.9); }
 .mi[disabled] { opacity: 0.4; pointer-events: none; }
-.mi.is-danger { color: #ff6961; }
-.mi.is-danger:hover { background: var(--sys-red); color: #fff; }
+.mi.is-danger { color: var(--sys-red); }
+.mi.is-danger:is(:hover, :focus-visible) { background: var(--sys-red); color: #fff; }
 .mi-ico { width: 16px; display: inline-flex; justify-content: center; color: var(--f-text-dim); flex: 0 0 auto; }
 .mi-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mi-kbd { font: 12px -apple-system, system-ui; color: var(--f-text-3); background: none; border: 0; padding: 0; }

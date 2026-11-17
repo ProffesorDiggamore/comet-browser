@@ -91,7 +91,7 @@ function registerIpc ({ getWin, ROOT }) {
   ipcMain.handle("flux:win:is-fullscreen", () => !!getWin()?.isFullScreen())
   ipcMain.handle("flux:open-external", (_e, url) => { if (/^https?:/.test(url ?? "")) shell.openExternal(url) })
   ipcMain.handle("flux:reload-ui", () => { store.saveNow(); getWin()?.webContents.reloadIgnoringCache() })
-  ipcMain.handle("flux:paths:info", () => ({ root: ROOT, userData: app.getPath("userData"), config: store.paths.CONFIG_PATH }))
+  ipcMain.handle("flux:paths:info", () => ({ root: ROOT, userData: app.getPath("userData"), config: store.paths.CONFIG_PATH, version: app.getVersion() }))
 
   // ---- optimization / maintenance --------------------------------
   ipcMain.handle("flux:app:metrics", () => {

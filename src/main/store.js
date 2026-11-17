@@ -22,7 +22,8 @@ const DEFAULTS = {
     newTabPosition: "end",          // end | afterCurrent
     defaultZoom: 1,                 // 0.5 .. 2
     easyFiles: true,                // file pickers on pages offer the clipboard + recent downloads
-    discardBlankTabs: true          // an untouched New Tab you leave closes itself
+    discardBlankTabs: true,         // an untouched New Tab you leave closes itself
+    welcomeDone: false              // first-run Welcome tour seen (also kept in the UI's localStorage, so it is once per install)
   },
   theme: {
     active: "glass",            // glass | sky | mint | sunset | rose | lavender | sand | mono (light + dark)
@@ -39,6 +40,8 @@ const DEFAULTS = {
     styleStrength: 1,          // line / dot opacity multiplier
     styleFps: 20,              // frames per second (Settings → Appearance → Style → Frame rate)
     styleLive: true,           // false = one still frame
+    font: "system",            // interface font: system | rounded | serif | mono
+    contrast: "standard",      // standard | high (Increase Contrast: firmer text, borders, glass)
     customCss: ""
   },
   perf: {
@@ -57,6 +60,8 @@ const DEFAULTS = {
     wallpaper: { kind: "preset", value: "tide" },   // preset | image (userData/wallpaper.*) | color
     dim: 0.15,                  // darkens the wallpaper so widgets stay readable
     widgetStyle: "glass",       // glass | liquid | solid | tinted | clear  (Home Widgets' styles)
+    widgetSize: "m",            // s | m | l  (widget grid unit 132 / 156 / 184px)
+    align: "center",            // top | center | bottom  (where the Home cluster sits)
     showSearch: true,
     showGreeting: true,         // "Good morning, <profile>" above the search field
     widgets: [                  // grid order; size = small 1×1 | medium 2×1 | large 2×2 | wide 4×1
@@ -69,34 +74,22 @@ const DEFAULTS = {
       { id: "hw_battery", kind: "battery", size: "small" }
     ]
   },
-  hotTabs: [
-    { id: "ht_search", label: "DuckDuckGo", url: "https://duckduckgo.com", icon: null, hotkey: "CmdOrCtrl+1", action: "open" },
-    { id: "ht_gh", label: "GitHub", url: "https://github.com", icon: null, hotkey: "CmdOrCtrl+2", action: "open" },
-    { id: "ht_yt", label: "YouTube", url: "https://youtube.com", icon: null, hotkey: "CmdOrCtrl+3", action: "open" },
-    { id: "ht_ai", label: "AI Checkers x6", icon: null, hotkey: "CmdOrCtrl+4", action: "macro",
-      urls: [
-        "https://gptzero.me", "https://copyleaks.com/ai-content-detector",
-        "https://writer.com/ai-content-detector", "https://contentatscale.ai/ai-content-detector",
-        "https://sapling.ai/ai-content-detector", "https://quillbot.com/ai-content-detector"
-      ] }
+  hotTabs: [                    // no default hotkeys: ⌘1–⌘9 select tabs (menu.js) unless a Hot Tab claims one
+    { id: "ht_search", label: "DuckDuckGo", url: "https://duckduckgo.com", icon: null, hotkey: "", action: "open" },
+    { id: "ht_gh", label: "GitHub", url: "https://github.com", icon: null, hotkey: "", action: "open" },
+    { id: "ht_yt", label: "YouTube", url: "https://youtube.com", icon: null, hotkey: "", action: "open" }
   ],
   sidebar: {
     width: 264,
     widgets: [
       { id: "w_home", type: "nav", label: "Home", target: "home", icon: "home" },
-      { id: "w_ai", type: "nav", label: "Comet AI", target: "ai", icon: "spark" },
       { id: "w_library", type: "nav", label: "Library", target: "library", icon: "clock" },
+      { id: "w_ai", type: "nav", label: "Comet AI", target: "ai", icon: "spark" },
       { id: "w_div1", type: "divider" },
-      { id: "w_bruh", type: "button", label: "bruh", onClick: { kind: "toast", value: "bruh" } },
       { id: "w_clock", type: "clock" },
-      { id: "w_macro_ai", type: "macro", label: "Open 6 AI checkers", urls: [
-        "https://gptzero.me", "https://copyleaks.com/ai-content-detector",
-        "https://writer.com/ai-content-detector", "https://contentatscale.ai/ai-content-detector",
-        "https://sapling.ai/ai-content-detector", "https://quillbot.com/ai-content-detector"
-      ] },
       { id: "w_links", type: "links", label: "Quick links", links: [
-        { label: "Localhost 3000", url: "http://localhost:3000" },
-        { label: "MDN", url: "https://developer.mozilla.org" }
+        { label: "Wikipedia", url: "https://www.wikipedia.org" },
+        { label: "YouTube", url: "https://www.youtube.com" }
       ] },
       { id: "w_notes", type: "notes", label: "Scratch", value: "" }
     ]
@@ -133,7 +126,12 @@ const DEFAULTS = {
     tabStyle: "comfortable",    // comfortable | compact tab rows
     tabThumbs: true,            // live preview on the active tab's row
     nowPlaying: true,           // sidebar player for the tab that's playing
-    peek: true                  // ⇧-click a link opens it in Peek
+    peek: true,                 // ⇧-click a link opens it in Peek
+    vtabsSide: "left",          // left | right — which side the tab sidebar sits on
+    toolbar: {                  // buttons on the right of the toolbar (components/toolbar-items.js)
+      reader: true, bookmark: true, home: false, split: false, overview: false,
+      history: false, downloads: false, screenshot: false, pip: false, share: false
+    }
   },
   motion: {
     mode: "full",               // full | reduced | off
@@ -195,7 +193,7 @@ const DEFAULTS = {
     { key: "img", name: "Image search", url: "https://www.google.com/search?tbm=isch&q=%s" }
   ],
   session: { tabs: [], active: 0 },
-  meta: { schema: 6 }
+  meta: { schema: 7 }
 }
 
 // the look from the reference: violet nebula + clear liquid glass
@@ -298,6 +296,15 @@ function loadConfig () {
     const relabel = (list) => { for (const w of Array.isArray(list) ? list : []) if (w?.label === "Flux AI") w.label = "Comet AI" }
     relabel(cache.sidebar?.widgets); relabel(cache.sidebar?.items)
     cache.meta = { schema: 6 }
+    writeJson(CONFIG_PATH, cache)
+  }
+  // one-time v0.9 migration: the default Hot Tabs gave up ⌘1–⌘4 so those keys
+  // select tabs.  Only the untouched defaults lose them; a hotkey the user
+  // picked themselves is kept.
+  if (RAW && (RAW.meta?.schema ?? 0) < 7) {
+    const OLD = { ht_search: "CmdOrCtrl+1", ht_gh: "CmdOrCtrl+2", ht_yt: "CmdOrCtrl+3", ht_ai: "CmdOrCtrl+4" }
+    for (const t of Array.isArray(cache.hotTabs) ? cache.hotTabs : []) if (t && OLD[t.id] && t.hotkey === OLD[t.id]) t.hotkey = ""
+    cache.meta = { schema: 7 }
     writeJson(CONFIG_PATH, cache)
   }
 }

@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Background of the Comet disk image window (660 × 400 pt).  Rendered to
+     build/dmg-background.tiff (1x + 2x) by scripts/make-dmg-bg.js.  Finder draws
+     the Comet icon at (170, 190) and the Applications link at (490, 190) on top;
+     keep those spots clear.  Light on purpose: Finder's icon labels are dark. -->
+<html><head><meta charset="utf-8"><style>
+  html, body { margin: 0; width: 660px; height: 400px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased; color: #1d1d1f;
+    background:
+      radial-gradient(420px 260px at 12% -10%, rgba(79, 125, 255, .28), transparent 70%),
+      radial-gradient(380px 260px at 104% 112%, rgba(138, 92, 255, .22), transparent 70%),
+      linear-gradient(180deg, #fbfbfd 0%, #eef0f6 100%);
+  }
+  .title { position: absolute; top: 34px; width: 100%; text-align: center; }
+  .title h1 { margin: 0; font: 600 22px/1.2 -apple-system, "SF Pro Display", sans-serif; letter-spacing: -.01em; }
+  .title p { margin: 6px 0 0; font-size: 13px; color: rgba(29, 29, 31, .58); }
+  /* soft glass pads behind the two icons */
+  .pad { position: absolute; top: 106px; width: 156px; height: 180px; border-radius: 36px;
+    background: rgba(255, 255, 255, .55); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .9), 0 1px 0 rgba(0, 0, 0, .04), 0 12px 32px rgba(40, 50, 90, .08); }
+  .pad.a { left: 92px; } .pad.b { left: 412px; }
+  svg.arrow { position: absolute; left: 262px; top: 166px; }
+  .note { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 11.5px; line-height: 1.45; color: rgba(29, 29, 31, .5); }
+  .note b { font-weight: 600; color: rgba(29, 29, 31, .68); }
+</style></head><body>
+  <div class="title"><h1>Install Comet</h1><p>Drag Comet onto the Applications folder.</p></div>
+  <div class="pad a"></div><div class="pad b"></div>
+  <svg class="arrow" width="136" height="48" viewBox="0 0 136 48" fill="none">
+    <defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="8" y1="24" x2="118" y2="24"><stop offset="0" stop-color="#4f7dff" stop-opacity=".25"/><stop offset="1" stop-color="#5b6cff"/></linearGradient></defs>
+    <path d="M8 24 H118" stroke="url(#g)" stroke-width="5" stroke-linecap="round"/>
+    <path d="M104 10 L122 24 L104 38" stroke="#5b6cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="note">First launch: if macOS says it can’t check Comet,<br>open <b>System Settings › Privacy &amp; Security</b> and click <b>Open Anyway</b>.</div>
+</body></html>

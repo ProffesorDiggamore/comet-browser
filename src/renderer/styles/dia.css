@@ -88,7 +88,7 @@ body[data-mode="dark"] .vt-ind { background: rgb(var(--ink) / 0.12); box-shadow:
 .vt-row:hover .vt-thumb { display: none; }
 .vt-x, .vt-audio { width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--f-text-dim); display: none; place-items: center; flex: 0 0 auto; }
 .vt-audio:not([hidden]) { display: grid; color: var(--f-accent-text); }
-.vt-row:hover .vt-x { display: grid; }
+.vt-row:is(:hover, :focus-within) .vt-x { display: grid; }
 .vt-x:hover, .vt-audio:hover { background: rgb(var(--ink) / 0.1); color: var(--f-text); }
 /* private tabs: a small mark on the row and a chip in the address pill */
 .vt-priv { display: none; flex: 0 0 auto; color: var(--sys-purple); }

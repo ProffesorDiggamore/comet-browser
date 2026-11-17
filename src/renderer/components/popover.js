@@ -82,5 +82,7 @@ export function menu (anchor, items, opts = {}) {
     if (e.key === "ArrowUp") { e.preventDefault(); btns[(i - 1 + btns.length) % btns.length]?.focus() }
   })
   const el = popover(anchor, list, { className: "pop--menu", ...opts })
+  // opened from the keyboard: focus the first item so the arrow keys work right away
+  if (opts.keyboard || (anchor instanceof Element && anchor.matches(":focus-visible"))) requestAnimationFrame(() => btns.find((b) => !b.disabled)?.focus())
   return el
 }

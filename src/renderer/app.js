@@ -34,7 +34,9 @@ import { initTooltips } from "./components/tooltip.js"
 import { initAutofill } from "./components/passwords.js"
 import { initBmBar, toggleBmBar } from "./components/bmbar.js"
 import { initPeek, closePeek, isPeekOpen } from "./components/peek.js"
+import { openWelcome, maybeShowWelcome } from "./components/onboarding.js"
 import * as G from "./core/groups.js"
+import { initCustom } from "./core/custom.js"
 
 const PANES = ["home", "library", "settings"]
 
@@ -83,6 +85,7 @@ function runAction (action, extra = {}) {
     case "print": return web && T.rawTab(a.id).wv.print()
     case "find": if (web) { bus.emit("view", "tabs"); openFind() } return
     case "reload": return web ? T.reload() : null
+    case "hard-reload": return web ? (a.asleep ? T.reload() : a.wv.reloadIgnoringCache()) : null
     case "reload-ui": return window.flux.reloadUi()
     case "zoom-in": return T.zoomIn()
     case "zoom-out": return T.zoomOut()
@@ -101,6 +104,7 @@ function runAction (action, extra = {}) {
     case "history": return bus.emit("library:open", "history")
     case "bookmark": return toggleBookmark()
     case "bookmarks": return bus.emit("library:open", "bookmarks")
+    case "select-tab": return selectTab(extra.index)
     case "next-tab": return T.cycle(1)
     case "prev-tab": return T.cycle(-1)
     case "pin": return web && T.setPinned(a.id, !a.pinned)
@@ -121,7 +125,18 @@ function runAction (action, extra = {}) {
     case "profile-switch": return switchProfile(extra.id)
     case "profile-add": return openProfileSheet()
     case "profile-manage": return bus.emit("settings:goto", "profiles")
+    case "welcome": return openWelcome()
+    case "shortcuts": return bus.emit("settings:goto", "shortcuts")
   }
+}
+
+// ⌘1–⌘9 (menu): a Hot Tab bound to that key wins, otherwise pick the nth tab (⌘9 = last)
+const plainDigit = (k) => !!k.meta && !k.ctrl && !k.alt && !k.shift && /^[1-9]$/.test(k.key)
+function selectTab (index = 0) {
+  if (matchHotkey({ key: String(index < 0 ? 9 : index + 1), metaKey: true })) return
+  const list = T.getTabs()
+  const t = index < 0 ? list.at(-1) : list[index]
+  if (t) T.setActive(t.id)
 }
 
 function escape () {
@@ -149,6 +164,7 @@ async function main () {
   initAIPanel()
   initDownloads()
   initOverlays()
+  initCustom()
   initSchematic()
   initEasyFiles()
   initAutofill()
@@ -197,7 +213,7 @@ async function main () {
 
   bus.on("page-key", (k) => {
     if (k.key === "Escape") { escape(); return }
-    if (tabArrow(k, k.editable)) return
+    if (tabArrow(k, k.editable) || plainDigit(k)) return   // ⌘1–9 arrive through the menu
     matchHotkey({ key: k.key, metaKey: k.meta ?? true, ctrlKey: !!k.ctrl, shiftKey: !!k.shift, altKey: !!k.alt })
   })
   // capture phase: fields like the omnibox handle arrows themselves
@@ -206,11 +222,13 @@ async function main () {
   }, true)
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { escape(); return }
+    if (plainDigit({ key: e.key, meta: e.metaKey, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey })) return
     if (e.metaKey && matchHotkey(e)) e.preventDefault()
   })
 
   if (!T.restoreSession()) T.newTab()
   document.getElementById("app").dataset.ready = "1"
+  maybeShowWelcome()   // first run: the Welcome tour, once per install
 }
 
 main().catch((e) => {

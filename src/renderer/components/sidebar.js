@@ -14,7 +14,7 @@ let editing = false
 let activeView = "home"
 
 const ADD_MENU = [
-  { type: "button", label: "Text button", make: () => ({ type: "button", label: "bruh", onClick: { kind: "toast", value: "bruh" } }) },
+  { type: "button", label: "Text button", make: () => ({ type: "button", label: "Button", onClick: { kind: "toast", value: "Hello" } }) },
   { type: "macro", label: "Macro (many URLs)", make: () => ({ type: "macro", label: "Open group", urls: ["https://example.com"] }) },
   { type: "links", label: "Quick links", make: () => ({ type: "links", label: "Links", links: [{ label: "Example", url: "https://example.com" }] }) },
   { type: "nav", label: "Nav item", make: () => ({ type: "nav", label: "Library", target: "library", icon: "clock" }) },

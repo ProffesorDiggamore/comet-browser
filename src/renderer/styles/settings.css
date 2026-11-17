@@ -84,6 +84,8 @@
 .set-row--block { display: block; }
 .set-row > .engine-grid, .set-row > .kbd-list, .set-row > .proc, .set-row > div[style*="grid-column"] { flex: 1 1 100%; }
 .set-box > .ease-grid { padding: 12px; }
+/* status lines and empty states that sit straight in a box, not in a row */
+.set-box > .rdesc, .set-box > div:not(.set-row) > .rdesc { padding: var(--f-pad-y) var(--f-pad-x); font-size: 11.5px; color: var(--f-text-dim); line-height: 1.4; }
 
 /* selectable model rows */
 .model-row { cursor: default; transition: background var(--f-fast); }
@@ -126,7 +128,7 @@
   border-radius: 5px; padding: 1px 6px; color: var(--f-text-dim);
 }
 
-.danger { color: #ff6961; }
+.danger { color: var(--sys-red); }
 .kw-row { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 
 /* theme picker — each card shows the light half, the dark half, and the accent */

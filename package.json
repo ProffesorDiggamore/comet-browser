@@ -11,7 +11,8 @@
     "dev": "node scripts/setup-electron.mjs && electron . --dev",
     "postinstall": "node scripts/setup-electron.mjs || true",
     "fix-electron": "node scripts/setup-electron.mjs",
-    "install-app": "bash scripts/install-app.sh"
+    "install-app": "bash scripts/install-app.sh",
+    "dist": "bash scripts/make-dmg.sh"
   },
   "author": "Landon (whoslandon)",
   "license": "UNLICENSED",

@@ -82,7 +82,7 @@ export function applyMotion () {
   b.shimmer = String(mode === "full" && !saver && cur.shimmer !== false)
   b.spotlight = String(mode !== "off" && !saver && cur.spotlight !== false)
   b.lens = String(!saver && cur.lens !== false && CSS.supports("backdrop-filter", "url(#flux-lens)"))
-  ripples = mode !== "off" && cur.ripple !== false
+  ripples = mode === "full" && cur.ripple !== false
 }
 
 // duration of a named token in ms, scaled by speed (for JS-timed exits)
@@ -95,6 +95,7 @@ export function ms (token = "med") {
 // play an exit animation, then resolve (element removal is up to the caller)
 export function leave (el, kind = "fade") {
   if (!el || effectiveMode() === "off" || kind === "none") return Promise.resolve()
+  if (effectiveMode() === "reduced") kind = "fade"
   const d = ms("med")
   const frames = {
     fade: [{ opacity: 1 }, { opacity: 0 }],
@@ -108,7 +109,7 @@ export function leave (el, kind = "fade") {
 
 // FLIP: call before a DOM change, returns fn to call after it
 export function flip (els) {
-  if (effectiveMode() === "off") return () => {}
+  if (effectiveMode() !== "full") return () => {}
   const first = new Map(els.map((el) => [el, el.getBoundingClientRect()]))
   return () => {
     for (const [el, r0] of first) {

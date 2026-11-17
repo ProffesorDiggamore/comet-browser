@@ -20,7 +20,7 @@ export const META = {
   motion: { tint: "#FF9F0A", group: "Look & Feel", desc: "Every animation in Comet — speed, curves and effects." },
   modpacks: { tint: "#30D158", group: "Look & Feel", desc: "One-click looks: theme, sound and background together." },
   audio: { tint: "#FF375F", group: "Look & Feel", desc: "Interface sounds." },
-  ai: { tint: "linear-gradient(135deg, #8b7bff, #4fa8ff 55%, #ff7ad9)", group: "Intelligence", desc: "Your built-in assistant. Runs free on this Mac, or with Claude." },
+  ai: { tint: "#8E8E93", group: "Intelligence", desc: "Your built-in assistant. Runs free on this Mac, or with Claude." },
   vision: { tint: "#8E8E93", group: "Intelligence", desc: "API keys for cloud models." },
   privacy: { tint: "#0A84FF", group: "Privacy & Security", desc: "Tracker blocking, HTTPS, history and site permissions." },
   passwords: { tint: "#8E8E93", group: "Privacy & Security", desc: "Saved logins, encrypted with your macOS keychain." },
@@ -28,9 +28,10 @@ export const META = {
   perf: { tint: "#30D158", group: "System", desc: "Tab sleeping, frame rate and live process usage." },
   extensions: { tint: "#FFD60A", group: "System", desc: "Chrome extensions loaded from a folder." },
   shortcuts: { tint: "#8E8E93", group: "System", desc: "Every keyboard shortcut in Comet." },
-  about: { tint: "#8E8E93", group: "System", desc: "Version, files and diagnostics." }
+  backup: { tint: "#30B0C7", group: "System", desc: "Save every setting to one file, or bring a saved setup back." },
+  about: { tint: "#8E8E93", group: "System", desc: "Version, data folder and the Welcome tour." }
 }
-const ORDER = ["General", "Look & Feel", "Intelligence", "Privacy & Security", "System"]
+const ORDER = ["General", "Look & Feel", "Privacy & Security", "Intelligence", "System"]
 
 
 export function initShell (CATS) {
@@ -38,6 +39,7 @@ export function initShell (CATS) {
   let activeCat = "search"   // Settings opens on the everyday page, not Comet AI
   let query = ""
   const scrollMemo = new Map()
+  let qt = null
 
   async function render () {
     const prevMain = pane.querySelector(".set-main")
@@ -47,12 +49,21 @@ export function initShell (CATS) {
     const count = allProfiles().length
     const searchInput = h("input.set-search", {
       type: "text", placeholder: "Search", value: query, spellcheck: false,
-      oninput: () => { query = searchInput.value.trim().toLowerCase(); paintMain() }
+      // debounced: a search renders every category, so wait for a pause in typing
+      oninput: () => {
+        clearTimeout(qt)
+        qt = setTimeout(() => {
+          query = searchInput.value.trim().toLowerCase()
+          nav.querySelectorAll(".set-nav-item").forEach((b) => b.classList.toggle("is-active", !query && b.dataset.cat === activeCat))
+          paintMain()
+        }, 120)
+      }
     })
 
     const navGroups = ORDER.map((g) => {
       const items = CATS.filter((c) => (META[c.id]?.group ?? "System") === g)
       return items.length && h("div.set-nav-group", {}, items.map((c) => h(`button.set-nav-item${c.id === activeCat && !query ? ".is-active" : ""}`, {
+        dataset: { cat: c.id },
         onclick: () => { activeCat = c.id; query = ""; render() }
       }, [tile(catGlyph(c.id, 15, c.icon), META[c.id]?.tint ?? "#8E8E93"), h("span", { text: c.label })])))
     })

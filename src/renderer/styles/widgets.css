@@ -55,6 +55,12 @@ body[data-mode="light"] .hw-grid[data-style="glass"] .hw {
 .hw-grid[data-style="clear"] .hw { --hw-bg: transparent; --hw-rim: transparent; --hw-filter: none; --hw-shadow: none; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45); }
 .hw-grid[data-style="liquid"] .hw, .hw-grid[data-style="tinted"] .hw, .hw-grid[data-style="clear"] .hw { --hw-dim: rgba(255, 255, 255, 0.72); --hw-faint: rgba(255, 255, 255, 0.5); }
 .hw { --hw-dim: var(--f-text-dim); --hw-faint: var(--f-text-3); --hw-hl: var(--f-accent); }
+/* light wallpapers are pale, so Liquid and Clear switch to dark ink instead of white */
+body[data-mode="light"] .hw-grid:is([data-style="liquid"], [data-style="clear"]) .hw {
+  color: var(--f-text); text-shadow: 0 1px 2px rgb(255 255 255 / 0.5);
+  --hw-dim: var(--f-text-dim); --hw-faint: var(--f-text-3);
+}
+body[data-mode="light"] .hw-grid[data-style="liquid"] .hw { --hw-bg: rgba(255, 255, 255, 0.28); }
 .hw-grid[data-style="tinted"] .hw { --hw-hl: #fff; }
 
 /* ── shared bits ───────────────────────────────────────────────── */
