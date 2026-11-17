@@ -7,3 +7,4 @@ dist/
 config.json
 *.key
 .claude-flow/
+.claude/
