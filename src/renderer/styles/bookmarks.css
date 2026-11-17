@@ -1,0 +1,142 @@
+/* ═══════════════════════════════════════════════════════════════════
+   BOOKMARKS — the Bookmarks popover (components/bookmarks.js), the
+   toolbar's Bookmarks button, and the inline rename field shared by
+   the bar, the popover and the Library.  Neutrals ride --ink so light
+   and dark both work.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── the toolbar button: always there with tabs on top; in the sidebar
+      layout it lives in the sidebar footer, so the toolbar copy only
+      shows while the sidebar is folded away (⌘B) ─────────────────── */
+body[data-layout="dia"]:not(.vt-collapsed) .tb-marks { display: none; }
+/* tabs on top hide the page actions on Home; Bookmarks stays */
+body.on-home:not([data-layout="dia"]) .tl-actions { opacity: 1; visibility: visible; transform: none; }
+body.on-home:not([data-layout="dia"]) .tl-actions > :not(.tb-marks) { opacity: 0; visibility: hidden; }
+
+/* ── popover shell ─────────────────────────────────────────────── */
+.pop.bmp-pop { padding: 0; max-height: none; overflow: visible !important; }
+.bmp {
+  position: relative; z-index: 2; display: flex; flex-direction: column;
+  max-height: min(60vh, 540px); min-height: 0;
+}
+
+/* search + list/grid toggle */
+.bmp-head { display: flex; align-items: center; gap: 6px; padding: 8px 8px 6px; flex: 0 0 auto; }
+.bmp-searchbox {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px;
+  border-radius: 9px; background: rgb(var(--ink) / 0.06); color: var(--f-text-3); cursor: text;
+  box-shadow: inset 0 0 0 0.5px rgb(var(--ink) / 0.07);
+  transition: box-shadow var(--f-fast) var(--f-ease-out), background var(--f-fast) var(--f-ease-out);
+}
+.bmp-searchbox:focus-within {
+  background: rgb(var(--ink) / 0.08);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--f-accent) 60%, transparent), 0 0 0 3px color-mix(in srgb, var(--f-accent) 20%, transparent);
+}
+.bmp-search, .bmp-search:focus {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0;
+  background: transparent; box-shadow: none; outline: 0; color: var(--f-text); font: inherit; font-size: 13px;
+}
+.bmp-search::placeholder { color: var(--f-text-3); }
+.bmp-view {
+  flex: 0 0 auto; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 9px;
+  background: transparent; color: var(--f-text-dim); display: grid; place-items: center;
+  transition: background var(--f-fast) var(--f-ease-out), color var(--f-fast) var(--f-ease-out);
+}
+.bmp-view:hover { background: rgb(var(--ink) / 0.07); color: var(--f-text); }
+
+/* "Add This Page" / "Remove This Page" */
+.bmp-here { position: relative; padding: 0 6px 6px; flex: 0 0 auto; }
+.bmp-here::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 0.5px; background: var(--f-sep); }
+.bmp-here-btn {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 5px 10px 5px 8px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--f-text); text-align: left; font: inherit;
+  transition: background var(--f-fast) var(--f-ease-out);
+}
+.bmp-here-btn:hover { background: rgb(var(--ink) / 0.07); }
+.bmp-here-ico {
+  width: 28px; height: 28px; flex: 0 0 auto; border-radius: 8px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--f-accent) 16%, transparent); color: var(--f-accent);
+}
+.bmp-here-btn.is-on .bmp-here-ico svg { fill: currentColor; }
+.bmp-kbd { flex: 0 0 auto; font: 11.5px -apple-system, system-ui; color: var(--f-text-3); background: none; border: 0; padding: 0; }
+
+/* the list */
+.bmp-list {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+  display: flex; flex-direction: column; gap: 1px; padding: 6px;
+}
+.bmp-list.is-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-content: start; gap: 4px; }
+.bmp-row {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 10px; height: 42px; padding: 0 8px;
+  border-radius: 9px; color: var(--f-text); cursor: default;
+}
+.bmp-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0;
+  padding: 10px 4px 8px; border-radius: 11px; color: var(--f-text); cursor: default;
+}
+.bmp-row.is-sel, .bmp-tile.is-sel { background: rgb(var(--ink) / 0.08); }
+.bmp-row:active, .bmp-tile:active { background: rgb(var(--ink) / 0.12); }
+.bmp-row.is-editing, .bmp-tile.is-editing { background: transparent; }
+.bmp-row.is-opened, .bmp-tile.is-opened { animation: bmp-flash calc(700ms * var(--f-speed)) var(--f-ease-out); }
+@keyframes bmp-flash { from { background: color-mix(in srgb, var(--f-accent) 30%, transparent); } }
+
+.bmp-fav {
+  width: 28px; height: 28px; flex: 0 0 auto; border-radius: 8px; display: grid; place-items: center; overflow: hidden;
+  background: rgb(var(--ink) / 0.06); box-shadow: inset 0 0 0 0.5px rgb(var(--ink) / 0.07);
+}
+.bmp-fav img { width: 16px; height: 16px; border-radius: 3px; display: block; }
+.bmp-mono { font-size: 12px; font-weight: 700; line-height: 1; color: var(--f-text-dim); }
+.bmp-tile .bmp-fav { width: 40px; height: 40px; border-radius: 11px; }
+.bmp-tile .bmp-fav img { width: 20px; height: 20px; border-radius: 4px; }
+.bmp-tile .bmp-mono { font-size: 15px; }
+
+.bmp-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.bmp-title { font-size: 13px; font-weight: 500; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bmp-host { font-size: 11.5px; line-height: 1.3; color: var(--f-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bmp-tile .bmp-title { max-width: 100%; font-size: 11.5px; text-align: center; }
+
+/* nothing yet / nothing matches */
+.bmp-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 24px 24px;
+  text-align: center; font-size: 12.5px; line-height: 1.45; color: var(--f-text-dim);
+}
+.bmp-empty strong { font-size: 13.5px; font-weight: 600; color: var(--f-text); }
+.bmp-empty-ico {
+  width: 44px; height: 44px; margin-bottom: 4px; border-radius: 12px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--f-accent) 14%, transparent); color: var(--f-accent);
+}
+
+/* count + bar toggle */
+.bmp-foot {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 14px 9px; border-top: 0.5px solid var(--f-sep); font-size: 11.5px; color: var(--f-text-3);
+}
+.bmp-link {
+  margin-right: -5px; padding: 2px 5px; border: 0; border-radius: 5px; background: none;
+  color: var(--f-text-dim); font: inherit; font-size: 11.5px; font-weight: 500;
+  transition: color var(--f-fast) var(--f-ease-out);
+}
+.bmp-link:hover { color: var(--f-accent); }
+
+.bmp-here[hidden], .bmp-foot[hidden], .bmp-view[hidden] { display: none; }
+
+/* right-click menu, drawn inside the popover */
+.pop .bmp-ctx {
+  position: absolute; z-index: 10; min-width: 200px; padding: 5px; border-radius: 12px;
+  background-color: var(--f-pop-bg); --f-blur: 40px;
+}
+body:not([data-anim-popover="none"]) .bmp-ctx { animation: m-fade var(--f-fast) var(--f-ease-out) both; }
+body[data-mode="light"] .bmp-ctx { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.1), 0 18px 44px -16px rgba(0, 0, 0, 0.3); }
+
+/* ── inline rename (bar, popover, Library) ─────────────────────── */
+.bm-edit, .bm-edit:focus {
+  min-width: 0; height: 24px; padding: 0 7px; border-radius: 6px; outline: none;
+  border: 1px solid color-mix(in srgb, var(--f-accent) 70%, transparent);
+  background: var(--f-frame-bg); color: var(--f-text); font: inherit; font-weight: 500;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--f-accent) 22%, transparent);
+}
+.bm-item.is-editing { background: transparent; }
+.bm-item.is-editing .bm-edit { width: 160px; height: 22px; font-size: 12.5px; }
+.bmp-text .bmp-edit { width: 100%; height: 22px; margin-left: -8px; font-size: 13px; }
+.bmp-tile .bmp-edit { width: 100%; height: 22px; padding: 0 4px; font-size: 11.5px; text-align: center; }
+.lib-edit { width: 100%; position: relative; z-index: 3; font-size: 13px; font-weight: 600; }

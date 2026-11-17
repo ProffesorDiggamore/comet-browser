@@ -1,8 +1,8 @@
 // ───────────────────────────────────────────────────────────────────
 //  passwords.js — autofill.  When a page focuses a login field, the
 //  webview preload reports where it is; this draws a glass list under
-//  it with every saved login for the site from EVERY profile, each
-//  marked with its profile's avatar (Personal vs Business at a glance).
+//  it with this window's profile's saved logins for the site (profiles
+//  are fully isolated: main only ever answers from the asking profile).
 //  The password only reaches the page after the user picks a row.
 //  After a sign-in, offers to save the login to the current profile.
 // ───────────────────────────────────────────────────────────────────

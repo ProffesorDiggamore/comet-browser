@@ -29,10 +29,11 @@ import { closeReader } from "./components/reader.js"
 import { closePopover, isPopoverOpen } from "./components/popover.js"
 import { initSchematic } from "./components/schematic.js"
 import { initEasyFiles } from "./components/easyfiles.js"
-import { initProfiles, switchProfile, openProfileSheet } from "./components/profiles.js"
+import { initProfiles, switchProfile, openProfileSheet, openWindowPicker } from "./components/profiles.js"
 import { initTooltips } from "./components/tooltip.js"
 import { initAutofill } from "./components/passwords.js"
 import { initBmBar, toggleBmBar } from "./components/bmbar.js"
+import { openBookmarks } from "./components/bookmarks.js"
 import { initPeek, closePeek, isPeekOpen } from "./components/peek.js"
 import { openWelcome, maybeShowWelcome } from "./components/onboarding.js"
 import * as G from "./core/groups.js"
@@ -103,7 +104,7 @@ function runAction (action, extra = {}) {
     case "home": return bus.emit("view", "home")
     case "history": return bus.emit("library:open", "history")
     case "bookmark": return toggleBookmark()
-    case "bookmarks": return bus.emit("library:open", "bookmarks")
+    case "bookmarks": return openBookmarks()
     case "select-tab": return selectTab(extra.index)
     case "next-tab": return T.cycle(1)
     case "prev-tab": return T.cycle(-1)
@@ -125,6 +126,7 @@ function runAction (action, extra = {}) {
     case "profile-switch": return switchProfile(extra.id)
     case "profile-add": return openProfileSheet()
     case "profile-manage": return bus.emit("settings:goto", "profiles")
+    case "new-window": return openWindowPicker()   // each window is one profile: pick which
     case "welcome": return openWelcome()
     case "shortcuts": return bus.emit("settings:goto", "shortcuts")
   }
@@ -227,6 +229,8 @@ async function main () {
   })
 
   if (!T.restoreSession()) T.newTab()
+  // closing this window (or quitting) inside the 1.2 s save debounce: write the tabs now
+  window.addEventListener("beforeunload", () => { if (!T.isFrozen()) window.flux.session.saveSync(T.sessionSnapshot()) })
   document.getElementById("app").dataset.ready = "1"
   maybeShowWelcome()   // first run: the Welcome tour, once per install
 }

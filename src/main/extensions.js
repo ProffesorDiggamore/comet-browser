@@ -4,12 +4,13 @@
 //  (content scripts, action popups, storage, most chrome.* stubs).
 // ───────────────────────────────────────────────────────────────────
 const fs = require("node:fs")
-const { store } = require("./store")
+
+// store: the profile store whose extensions.paths this session loads
 
 // Electron 36+ moved these onto session.extensions (the session methods are deprecated)
 const api = (ses) => ses.extensions ?? ses
 
-async function loadSavedExtensions (ses) {
+async function loadSavedExtensions (ses, store) {
   const paths = store.get("extensions.paths") ?? []
   const kept = []
   for (const p of paths) {
@@ -24,7 +25,7 @@ async function loadSavedExtensions (ses) {
   if (kept.length !== paths.length) store.set("extensions.paths", kept)
 }
 
-async function addExtension (ses, dirPath) {
+async function addExtension (ses, store, dirPath) {
   if (!dirPath || !fs.existsSync(dirPath)) return { ok: false, text: "Folder not found." }
   try {
     const ext = await api(ses).loadExtension(dirPath, { allowFileAccess: true })
@@ -37,7 +38,7 @@ async function addExtension (ses, dirPath) {
   }
 }
 
-async function removeExtension (ses, id) {
+async function removeExtension (ses, store, id) {
   try {
     const all = api(ses).getAllExtensions()
     const found = all.find((x) => x.id === id)

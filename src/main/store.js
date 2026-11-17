@@ -9,9 +9,8 @@ const path = require("node:path")
 
 const { profiles } = require("./profiles")
 
-// config.json lives in the active profile's dir; switching profiles re-points it (useDir)
-let DATA_DIR = profiles.dir()
-let CONFIG_PATH = path.join(DATA_DIR, "config.json")
+// one store per profile: createStore(dir) reads and writes <dir>/config.json.
+// Windows of different profiles each talk to their own (main/contexts.js).
 
 const DEFAULTS = {
   general: {
@@ -237,15 +236,7 @@ function writeJson (p, obj, mode) {
   }
 }
 
-let cache = {}
-let saveTimer = null
-
-function loadConfig () {
-  const RAW = readJson(CONFIG_PATH, null)
-  // a fresh copy: deepMerge hands arrays through by reference, and several
-  // profiles load into one process, so nothing may alias DEFAULTS
-  cache = deepMerge(structuredClone(DEFAULTS), RAW ?? {})
-
+function migrate (CONFIG_PATH, RAW, cache) {
   // one-time v0.4 migration: switch to the Nebula look, keeping the old look
   // as an installed modpack so it is one click to go back.  Adds the AI and
   // Library entries to an existing sidebar.
@@ -307,46 +298,19 @@ function loadConfig () {
     cache.meta = { schema: 7 }
     writeJson(CONFIG_PATH, cache)
   }
+  return cache
 }
-loadConfig()
 
-const store = {
-  all () { return cache },
-  get (dotPath) {
-    return dotPath.split(".").reduce((o, k) => (o == null ? o : o[k]), cache)
-  },
-  set (dotPath, value) {
-    const keys = dotPath.split(".")
-    let node = cache
-    while (keys.length > 1) {
-      const k = keys.shift()
-      node[k] = node[k] ?? {}
-      node = node[k]
-    }
-    node[keys[0]] = value
-    this.save()
-    return cache
-  },
-  merge (partial) {
-    cache = deepMerge(cache, partial)
-    this.save()
-    return cache
-  },
-  save () {
-    clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => writeJson(CONFIG_PATH, cache), 60)
-  },
-  saveNow () { clearTimeout(saveTimer); return writeJson(CONFIG_PATH, cache) },
-  // profile switch: flush this profile, then load another's config.json
-  useDir (dir) {
-    this.saveNow()
-    DATA_DIR = dir
-    CONFIG_PATH = path.join(dir, "config.json")
-    loadConfig()
-    return cache
-  },
+// app-wide settings that can't be per profile (they apply to the whole
+// process): hardware acceleration is decided once, before any window exists
+const APP_PREFS_PATH = path.join(profiles.BASE, "app-prefs.json")
+const appPrefs = {
+  get (key) { return readJson(APP_PREFS_PATH, {})[key] },
+  set (key, value) { const raw = readJson(APP_PREFS_PATH, {}); raw[key] = value; return writeJson(APP_PREFS_PATH, raw) }
+}
 
-  // ---- secrets ---------------------------------------------------
+// ---- secrets: API keys are the person's, shared by every profile -----
+const secrets = {
   getSecret (name) {
     const raw = readJson(SECRETS_PATH, {})
     const entry = raw[name]
@@ -366,10 +330,59 @@ const store = {
     }
     return writeJson(SECRETS_PATH, raw, 0o600)
   },
-  hasSecret (name) { return Boolean(this.getSecret(name)) },
-
-  DEFAULTS,
-  paths: { get DATA_DIR () { return DATA_DIR }, get CONFIG_PATH () { return CONFIG_PATH }, SECRETS_PATH }
+  hasSecret (name) { return Boolean(this.getSecret(name)) }
 }
 
-module.exports = { store }
+function createStore (dir) {
+  const CONFIG_PATH = path.join(dir, "config.json")
+  let saveTimer = null
+  let disposed = false
+  const RAW = readJson(CONFIG_PATH, null)
+  // a fresh copy: deepMerge hands arrays through by reference, and several
+  // profiles load into one process, so nothing may alias DEFAULTS
+  let cache = migrate(CONFIG_PATH, RAW, deepMerge(structuredClone(DEFAULTS), RAW ?? {}))
+  // hardware acceleration is app-wide (one GPU process for every window)
+  const hw = appPrefs.get("hardwareAccel")
+  if (typeof hw === "boolean") cache.perf = { ...cache.perf, hardwareAccel: hw }
+
+  return {
+    all () { return cache },
+    get (dotPath) {
+      return dotPath.split(".").reduce((o, k) => (o == null ? o : o[k]), cache)
+    },
+    set (dotPath, value) {
+      const keys = dotPath.split(".")
+      let node = cache
+      while (keys.length > 1) {
+        const k = keys.shift()
+        node[k] = node[k] ?? {}
+        node = node[k]
+      }
+      node[keys[0]] = value
+      this.save()
+      return cache
+    },
+    merge (partial) {
+      cache = deepMerge(cache, partial)
+      this.save()
+      return cache
+    },
+    save () {
+      if (disposed) return
+      clearTimeout(saveTimer)
+      saveTimer = setTimeout(() => { if (!disposed) writeJson(CONFIG_PATH, cache) }, 60)
+    },
+    saveNow () { clearTimeout(saveTimer); return disposed ? false : writeJson(CONFIG_PATH, cache) },
+    // profile removed: no more writes (writeJson would re-create its trashed folder)
+    dispose () { clearTimeout(saveTimer); disposed = true },
+
+    getSecret: (name) => secrets.getSecret(name),
+    setSecret: (name, value) => secrets.setSecret(name, value),
+    hasSecret: (name) => secrets.hasSecret(name),
+
+    DEFAULTS,
+    paths: { DATA_DIR: dir, CONFIG_PATH, SECRETS_PATH }
+  }
+}
+
+module.exports = { createStore, secrets, appPrefs, DEFAULTS }

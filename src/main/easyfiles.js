@@ -10,7 +10,7 @@
 const { app, clipboard, dialog, ipcMain, nativeImage } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
-const { store } = require("./store")
+const { profiles } = require("./profiles")
 
 const MAX_BYTES = 200 * 1024 * 1024   // per pick, across all files
 const RECENT_DOWNLOADS = 6
@@ -27,7 +27,9 @@ const MIME = {
 }
 const mimeOf = (p) => MIME[path.extname(p).slice(1).toLowerCase()] ?? "application/octet-stream"
 
-let allowed = new Map()   // id -> { kind, path? } from the latest listing
+// the ids each window may read live on its profile context (ctx.easyAllowed:
+// id -> { kind, path? } from that window's latest listing), so two windows
+// never invalidate or retarget each other's offers
 
 // Finder "Copy" puts file URLs on the pasteboard; the plist form carries all of them
 function copiedPaths () {
@@ -59,7 +61,18 @@ function fileItem (id, p, source) {
   return { id, source, name: path.basename(p), type, size: st.size, mtime: st.mtimeMs, thumb: type.startsWith("image/") ? thumbOf(p) : null }
 }
 
-function recentDownloads () {
+// with several profiles, a window offers only what ITS profile downloaded
+// this session; a single-profile user keeps the ~/Downloads scan
+function recentDownloads (ctx) {
+  if (profiles.list().length > 1) {
+    return [...ctx.downloads.values()]
+      .filter(({ info }) => info.state === "completed")
+      .map(({ info }) => { try { return fs.statSync(info.path).isFile() ? { p: info.path, t: info.finished ?? 0 } : null } catch { return null } })
+      .filter(Boolean)
+      .sort((a, b) => b.t - a.t)
+      .slice(0, RECENT_DOWNLOADS)
+      .map((x) => x.p)
+  }
   const dir = app.getPath("downloads")
   let names = []
   try { names = fs.readdirSync(dir) } catch { return [] }
@@ -72,8 +85,9 @@ function recentDownloads () {
     .map((x) => x.p)
 }
 
-function list () {
-  allowed = new Map()
+function list (ctx) {
+  const allowed = ctx.easyAllowed
+  allowed.clear()
   const clip = []
   copiedPaths().forEach((p, i) => {
     const id = `cf_${i}`
@@ -95,7 +109,7 @@ function list () {
       clip.push({ id: "ct", source: "clipboard", name: "Clipboard text.txt", type: "text/plain", size: Buffer.byteLength(text), preview: text.trim().slice(0, 140) })
     }
   }
-  const downloads = recentDownloads().map((p, i) => {
+  const downloads = recentDownloads(ctx).map((p, i) => {
     const id = `dl_${i}`
     allowed.set(id, { kind: "path", path: p })
     return fileItem(id, p, "downloads")
@@ -107,7 +121,7 @@ function readPath (p) {
   return { name: path.basename(p), type: mimeOf(p), lastModified: fs.statSync(p).mtimeMs, data: fs.readFileSync(p) }
 }
 
-function readOne (id) {
+function readOne (allowed, id) {
   const a = allowed.get(id)
   if (!a) throw new Error("That file is no longer offered — reopen the picker")
   if (a.kind === "path") return readPath(a.path)
@@ -140,27 +154,29 @@ function acceptExtensions (accept) {
   return [...exts]
 }
 
-function registerEasyFilesIpc (getWin) {
-  // the page preload asks once at load whether to intercept pickers
-  ipcMain.on("flux:files:enabled", (e) => { e.returnValue = store.get("general.easyFiles") !== false })
+function registerEasyFilesIpc ({ ctxFor, winFor }) {
+  // the page preload asks once at load whether to intercept pickers;
+  // the sender is the <webview> guest, resolved through its host window
+  ipcMain.on("flux:files:enabled", (e) => { e.returnValue = ctxFor(e).store.get("general.easyFiles") !== false })
 
-  ipcMain.handle("flux:files:list", () => {
-    try { return { ok: true, ...list() } } catch (e) { return { ok: false, text: e.message } }
+  ipcMain.handle("flux:files:list", (e) => {
+    try { return { ok: true, ...list(ctxFor(e)) } } catch (err) { return { ok: false, text: err.message } }
   })
 
-  ipcMain.handle("flux:files:read", (_e, ids) => {
-    try { return { ok: true, files: capped((ids ?? []).map(readOne)) } } catch (e) { return { ok: false, text: e.message } }
+  ipcMain.handle("flux:files:read", (e, ids) => {
+    const allowed = ctxFor(e).easyAllowed
+    try { return { ok: true, files: capped((ids ?? []).map((id) => readOne(allowed, id))) } } catch (err) { return { ok: false, text: err.message } }
   })
 
-  ipcMain.handle("flux:files:browse", async (_e, { accept, multiple } = {}) => {
+  ipcMain.handle("flux:files:browse", async (e, { accept, multiple } = {}) => {
     const exts = acceptExtensions(accept)
-    const r = await dialog.showOpenDialog(getWin(), {
+    const r = await dialog.showOpenDialog(winFor(e), {
       title: "Choose a file to upload",
       properties: ["openFile", ...(multiple ? ["multiSelections"] : [])],
       filters: exts.length ? [{ name: "Accepted files", extensions: exts }, { name: "All files", extensions: ["*"] }] : []
     })
     if (r.canceled || !r.filePaths.length) return { ok: false, canceled: true }
-    try { return { ok: true, files: capped(r.filePaths.map(readPath)) } } catch (e) { return { ok: false, text: e.message } }
+    try { return { ok: true, files: capped(r.filePaths.map(readPath)) } } catch (err) { return { ok: false, text: err.message } }
   })
 }
 

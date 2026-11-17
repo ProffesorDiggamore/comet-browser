@@ -19,9 +19,10 @@ function jpeg (img) {
   return (k < 1 ? img.resize({ width: Math.round(width * k), height: Math.round(height * k), quality: "best" }) : img).toJPEG(90)
 }
 
-function upload (wcId, bytes) {
+// hostId: the Comet window that asked; it may only drive its own tabs
+function upload (hostId, wcId, bytes) {
   const wc = webContents.fromId(Number(wcId))
-  if (!wc || wc.isDestroyed() || wc.getType() !== "webview") return { ok: false, text: "That tab is gone" }
+  if (!wc || wc.isDestroyed() || wc.getType() !== "webview" || wc.hostWebContents?.id !== hostId) return { ok: false, text: "That tab is gone" }
   const buf = Buffer.from(bytes ?? [])
   if (!buf.length || buf.length > MAX_BYTES) return { ok: false, text: "That image is empty or too large" }
   const boundary = `----CometLens${crypto.randomBytes(12).toString("hex")}`
@@ -37,8 +38,8 @@ function upload (wcId, bytes) {
   return { ok: true }
 }
 
-function registerLensIpc (getWin) {
-  ipcMain.handle("flux:lens:upload", (_e, wcId, bytes) => upload(wcId, bytes))
+function registerLensIpc ({ winFor }) {
+  ipcMain.handle("flux:lens:upload", (e, wcId, bytes) => upload(e.sender.id, wcId, bytes))
 
   // what's on the clipboard: an image (bytes) or an image link (url)
   ipcMain.handle("flux:lens:clipboard", () => {
@@ -50,8 +51,8 @@ function registerLensIpc (getWin) {
   })
 
   // choose a file — HEIC too (macOS decodes it)
-  ipcMain.handle("flux:lens:pick", async () => {
-    const r = await dialog.showOpenDialog(getWin(), {
+  ipcMain.handle("flux:lens:pick", async (e) => {
+    const r = await dialog.showOpenDialog(winFor(e), {
       title: "Search with Google Lens",
       defaultPath: app.getPath("pictures"),
       properties: ["openFile"],

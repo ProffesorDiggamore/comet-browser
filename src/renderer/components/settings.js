@@ -262,7 +262,7 @@ function catPerformance () {
       row("Hardware acceleration", [
         sw(p.hardwareAccel, (v) => state.set("perf.hardwareAccel", v)),
         btn("Restart Comet", () => window.flux.app.restart(), "btn btn--ghost")
-      ], "GPU rendering. Turning off can fix flicker on some machines. Needs a restart.")
+      ], "GPU rendering for every profile and window. Turning off can fix flicker on some machines. Needs a restart.")
     ]),
     group("Process monitor", [procWrap])
   ]

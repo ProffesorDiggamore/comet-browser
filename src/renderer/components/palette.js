@@ -10,6 +10,8 @@ import { state } from "../core/state.js"
 import { leave } from "../core/motion.js"
 import { fillActiveTab } from "./passwords.js"
 import { toggleBookmark } from "./library.js"
+import { openBookmarks } from "./bookmarks.js"
+import { allProfiles, currentProfile, openProfileWindow } from "./profiles.js"
 import * as T from "../core/tabs.js"
 
 let overlay = null
@@ -20,6 +22,9 @@ function commands () {
   return [
     cmd("New tab", "plus", () => T.newTab(), "⌘T"),
     cmd("New private tab", "eyeoff", () => T.newTab(null, { private: true }), "⇧⌘N"),
+    cmd("New window…", "window", () => bus.emit("menu", { action: "new-window" }), "⌘N"),
+    // each other profile, in a window of its own (one window per profile)
+    ...allProfiles().filter((p) => p.id !== currentProfile().id).map((p) => cmd(`Open ${p.name} in new window`, "window", () => openProfileWindow(p.id))),
     cmd("Copy link to this page", "link", () => { navigator.clipboard.writeText(T.getActive().url); bus.emit("toast", "Link copied") }, "⇧⌘C", web),
     cmd("Reopen closed tab", "reload", () => T.reopenClosed(), "⇧⌘T"),
     cmd("Tab overview", "overview", () => bus.emit("overview:open"), "⇧⌘\\"),
@@ -35,7 +40,8 @@ function commands () {
     cmd("Fill saved login", "key", () => fillActiveTab(), "", web),
     cmd("Sleep background tabs", "sleep", () => { T.sleepAllBackground(); toast("Background tabs asleep") }),
     cmd("History", "clock", () => bus.emit("library:open", "history"), "⌘Y"),
-    cmd("Bookmarks", "bookmark", () => bus.emit("library:open", "bookmarks"), "⌥⌘B"),
+    cmd("Bookmarks", "bookmarks", () => openBookmarks(), "⌥⌘B"),
+    cmd("Manage Bookmarks in Library", "bookmark", () => bus.emit("library:open", "bookmarks")),
     cmd("Downloads", "download", () => bus.emit("menu", { action: "downloads" }), "⌥⌘L"),
     cmd("Focus mode", "focus", () => bus.emit("focus:toggle"), "⇧⌘F"),
     cmd("Toggle sidebar", "sidebar", () => bus.emit("sidebar:toggle"), "⌘B"),

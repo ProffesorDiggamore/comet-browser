@@ -45,7 +45,7 @@ const ID_RE = /^[a-z0-9]{8}$/
 const COLOR_RE = /^#[0-9a-f]{6}$/i
 
 function fresh () {
-  return { active: DEFAULT_ID, list: [{ id: DEFAULT_ID, name: "Personal", color: "#0a84ff", emoji: "" }] }
+  return { active: DEFAULT_ID, list: [{ id: DEFAULT_ID, name: "Personal", color: "#0a84ff", emoji: "" }], open: [] }
 }
 
 function load () {
@@ -54,7 +54,9 @@ function load () {
     const list = (raw.list ?? []).filter((p) => p && (p.id === DEFAULT_ID || ID_RE.test(p.id)))
     if (!list.some((p) => p.id === DEFAULT_ID)) list.unshift(fresh().list[0])
     const active = list.some((p) => p.id === raw.active) ? raw.active : DEFAULT_ID
-    return { active, list }
+    // profiles whose windows were open at quit, in focus order (last = front)
+    const open = Array.isArray(raw.open) ? [...new Set(raw.open)].filter((id) => list.some((p) => p.id === id)) : []
+    return { active, list, open }
   } catch { return fresh() }
 }
 
@@ -78,6 +80,9 @@ function clean (patch) {
 
 const dirFor = (id) => (id === DEFAULT_ID ? BASE : path.join(BASE, "Profiles", id))
 const partitionFor = (id) => (id === DEFAULT_ID ? "persist:comet" : `persist:comet-${id}`)
+// private tabs: in memory only (no "persist:"), one per profile so windows of
+// different profiles never share (or clear) each other's private data
+const privatePartitionFor = (id) => (id === DEFAULT_ID ? "comet-private" : `comet-private-${id}`)
 
 // ── profile pictures: any image → a 256px square PNG beside the profile's data ──
 const PIC_SIZE = 256
@@ -137,6 +142,8 @@ const profiles = {
   DEFAULT_ID,
   list () { return data.list.map(withPic) },
   get (id) { return data.list.find((p) => p.id === id) ?? null },
+  // "active" = the profile of the last-focused window: the default for a new
+  // window and for a launch with nothing to restore
   activeId () { return data.active },
   current () { return withPic(this.get(data.active)) },
   squarePng,
@@ -147,6 +154,15 @@ const profiles = {
   dir (id = data.active) { return dirFor(id) },
   partition (id = data.active) { return partitionFor(id) },
   session (id = data.active) { return session.fromPartition(partitionFor(id)) },
+  privatePartition (id = data.active) { return privatePartitionFor(id) },
+  // ids whose windows are open (restored on launch), focus order, last = front
+  openIds () { return data.open.filter((id) => this.get(id)) },
+  setOpen (ids) {
+    const next = [...new Set(ids)].filter((id) => this.get(id))
+    if (next.length === data.open.length && next.every((id, i) => id === data.open[i])) return
+    data.open = next
+    save()
+  },
 
   // seed: the new profile's first config.json (written before it is ever opened)
   create (patch, seed) {
@@ -199,6 +215,7 @@ const profiles = {
   },
   setActive (id) {
     if (!this.get(id)) return false
+    if (data.active === id) return true
     data.active = id
     save()
     return true
@@ -207,8 +224,9 @@ const profiles = {
   // removed profiles go to the Trash (reversible), never rm -rf
   async remove (id) {
     if (id === DEFAULT_ID) return { ok: false, text: "The first profile can be renamed but not removed." }
-    if (id === data.active) return { ok: false, text: "Switch to another profile before removing this one." }
     if (!this.get(id)) return { ok: false, text: "No such profile." }
+    // main refuses to remove the asking window's own profile and closes the
+    // target's window first; here the last-focused marker just falls back
     try {
       const ses = this.session(id)
       await ses.clearStorageData()
@@ -219,6 +237,8 @@ const profiles = {
       try { await shell.trashItem(dir) } catch (e) { console.error("[profiles] trash", dir, e.message) }
     }
     data.list = data.list.filter((p) => p.id !== id)
+    data.open = data.open.filter((x) => x !== id)
+    if (data.active === id) data.active = DEFAULT_ID
     save()
     return { ok: true }
   }

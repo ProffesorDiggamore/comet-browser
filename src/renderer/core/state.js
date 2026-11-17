@@ -52,6 +52,18 @@ export function resolvedMode () {
   return t.mode === "light" || t.mode === "dark" ? t.mode : systemDark.matches ? "dark" : "light"
 }
 
+// the native glass is app-wide and can't follow this window when another
+// profile's window pins a different mode: then the UI's tint thickens
+let glassDark = null
+function markGlass () {
+  const t = cfg.theme ?? {}
+  const auto = themeById(t.active).family !== "classic" && t.mode !== "light" && t.mode !== "dark"
+  if (auto) { document.body.dataset.glass = "match"; return }   // Auto never pins: the glass is macOS's, like the UI
+  if (glassDark == null) return
+  document.body.dataset.glass = (resolvedMode() === "dark") === glassDark ? "match" : "mismatch"
+}
+window.flux.win.onGlass?.((dark) => { glassDark = !!dark; markGlass() })
+
 let lastNative = ""
 export function applyTheme () {
   const t = cfg.theme ?? {}
@@ -61,8 +73,11 @@ export function applyTheme () {
   body.dataset.family = theme.family
   body.dataset.mode = resolvedMode()
   // native window glass + pages' prefers-color-scheme follow along
-  const nativeKey = `${theme.family}|${t.mode}`
-  if (nativeKey !== lastNative) { lastNative = nativeKey; window.flux.win.appearance?.() }
+  const nativeKey = `${theme.family === "classic" ? theme.id : theme.family}|${t.mode}`   // classic themes each fix a mode
+  if (nativeKey !== lastNative) {
+    lastNative = nativeKey   // the glass may change with it: mark once main answers
+    window.flux.win.appearance?.().then((dark) => { if (typeof dark === "boolean") { glassDark = dark; markGlass() } }).catch(() => {})
+  } else markGlass()
   body.dataset.density = t.density ?? "comfortable"
   body.dataset.vibrancy = String(t.vibrancy !== false)
   const r = document.documentElement.style

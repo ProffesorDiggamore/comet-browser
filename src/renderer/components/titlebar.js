@@ -2,7 +2,8 @@
 //  titlebar.js — the chrome.  Row 1 (window title bar): pinned-tab
 //  capsule, tab pills, + and a right cluster (bookmark, downloads, AI,
 //  overview).  Toolbar (inside the content frame): nav, the omnibox
-//  with site/zoom/shield chips, and page actions.  Tabs render keyed so
+//  with site/zoom/shield chips, the Bookmarks button (always, tabs on
+//  top; with the sidebar folded away) and page actions.  Tabs render keyed so
 //  they animate in/out and FLIP when reordered.
 // ───────────────────────────────────────────────────────────────────
 import { h, mount } from "../core/dom.js"
@@ -19,6 +20,7 @@ import * as T from "../core/tabs.js"
 import { profileButton } from "./profiles.js"
 import * as G from "../core/groups.js"
 import { initToolbarItems } from "./toolbar-items.js"
+import { openBookmarks } from "./bookmarks.js"
 
 const els = new Map()       // tabId -> element
 let strip, pinnedBox, address, omni, btnStar, btnDl, btnBack, btnFwd, btnReload, chipZoom, chipShield, chipSite, chipCopy, addrWrap, crumb, btnStar2
@@ -312,11 +314,14 @@ export function initTitlebar () {
   // Dia-only pieces (hidden in the classic layout)
   const btnSide = iconBtn("sidebar", "Toggle sidebar (⌘B)", () => bus.emit("sidebar:toggle"), ".dia-only")
   btnStar2 = iconBtn("bookmark", "Bookmark this page (⌘D)", () => toggleBookmark(), ".dia-only.web-only")
+  // every bookmark in a popover; the sidebar layout has this in the sidebar footer (CSS hides this one there)
+  const btnMarks = iconBtn("bookmarks", "Bookmarks (⌥⌘B)", () => openBookmarks(btnMarks), ".tb-marks")
+  btnMarks.dataset.bookmarksBtn = ""
 
   mount(toolbar, h("div.tl-inner", {}, [
     h("div.tl-nav", {}, [btnSide, btnBack, h("span.tl-sep"), btnFwd, btnReload]),
     addrWrap,
-    h("div.tl-actions", {}, [btnReader, btnStar2, btnMore])
+    h("div.tl-actions", {}, [btnMarks, btnReader, btnStar2, btnMore])
   ]))
   initToolbarItems(toolbar.querySelector(".tl-actions"), { reader: btnReader, bookmark: btnStar2 }, btnMore)
 
@@ -354,7 +359,7 @@ export function moreMenu (anchor, opts = {}) {
     { label: "Open in System Browser", icon: "external", disabled: !web, run: () => window.flux.openExternal(a.url) },
     "-",
     { label: "History", icon: "clock", kbd: "⌘Y", run: () => bus.emit("library:open", "history") },
-    { label: "Bookmarks", icon: "bookmark", kbd: "⌥⌘B", run: () => bus.emit("library:open", "bookmarks") },
+    { label: "Bookmarks", icon: "bookmarks", kbd: "⌥⌘B", run: () => openBookmarks() },
     { label: "Bookmarks Bar", checked: state.get("layout.bookmarksBar") !== false, kbd: "⇧⌘B", run: () => bus.emit("menu", { action: "bookmarks-bar" }) },
     { label: "Downloads", icon: "download", run: () => openDownloads(anchor) },
     "-",

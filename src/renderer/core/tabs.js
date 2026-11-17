@@ -12,7 +12,7 @@ import { DARK_CSS } from "./pagescripts.js"
 import { sessionGroups, restoreGroups, groupAlive } from "./groups.js"
 
 const host = () => document.getElementById("tabs-host")
-const PRIVATE_PARTITION = "comet-private"   // no "persist:" prefix = memory only (main.js prepares it)
+const PRIVATE_PARTITION = window.flux.paths.privatePartition ?? "comet-private"   // memory only; one per profile (contexts.js)
 const tabs = []
 const closedStack = []
 const byWc = new Map()           // webContentsId -> tab
@@ -521,13 +521,14 @@ window.flux.shield.onCounts(({ counts }) => {
 let saveT = null
 let restoring = false
 let frozen = false
-function writeSession () {
+export function sessionSnapshot () {
   const list = tabs.filter((t) => (!t.isHome || t.pinned) && !t.private).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null, group: t.group ?? undefined, customTitle: t.customTitle ?? undefined }))
     .filter((t) => t.url && t.url !== "about:blank")
   const active = Math.max(0, tabs.filter((t) => !t.isHome && !t.private).findIndex((t) => t.id === activeId))
   const used = new Set(list.map((t) => t.group).filter(Boolean))
-  return state.set("session", { tabs: list.slice(0, 200), active, groups: sessionGroups().filter((g) => used.has(g.id)) })
+  return { tabs: list.slice(0, 200), active, groups: sessionGroups().filter((g) => used.has(g.id)) }
 }
+function writeSession () { return state.set("session", sessionSnapshot()) }
 function saveSession () {
   if (restoring || frozen) return
   clearTimeout(saveT)
@@ -541,6 +542,7 @@ export async function flushSession () {
   await writeSession()
 }
 export function thawSession () { frozen = false }
+export function isFrozen () { return frozen || restoring }
 
 export function restoreSession () {
   const s = state.get("session")

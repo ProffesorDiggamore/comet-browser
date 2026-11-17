@@ -39,7 +39,7 @@ function open (url, priv) {
   isPrivate = !!priv
 
   wv = document.createElement("webview")
-  wv.setAttribute("partition", priv ? "comet-private" : window.flux.paths.partition ?? "persist:comet")
+  wv.setAttribute("partition", priv ? (window.flux.paths.privatePartition ?? "comet-private") : window.flux.paths.partition ?? "persist:comet")
   wv.setAttribute("allowpopups", "")
   wv.setAttribute("preload", `file://${window.flux.paths.webviewPreload}`)
   wv.src = url

@@ -4,23 +4,30 @@
 //  and site logins, Home, theme.  The switcher sits at the top of the
 //  sidebar (the toolbar in the classic layout); Settings → Profiles
 //  manages them; Profiles in the menu bar has ⌃⌘1…9.
-//  Switching saves this profile's tabs, then main reloads the UI.
+//  Switching saves this window's tabs, then main reloads it into the
+//  other profile.  Any profile can also have a window of its own, side
+//  by side with the others (one window per profile; profile-menu.js).
 // ───────────────────────────────────────────────────────────────────
 import { h } from "../core/dom.js"
 import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
-import { popover, closePopover } from "./popover.js"
+import { closePopover } from "./popover.js"
 import { group, block, btn } from "./settings/kit.js"
 import * as T from "../core/tabs.js"
+
+export { profileButton, openProfileMenu, openWindowPicker } from "./profile-menu.js"
 
 // Apple system colors, so every profile reads well in light and dark
 export const PROFILE_COLORS = ["#0a84ff", "#30d158", "#ff9f0a", "#ff375f", "#bf5af2", "#5e5ce6", "#64d2ff", "#ff6482", "#ac8e68", "#8e8e93"]
 const EMOJI = ["", "💼", "🎓", "🏠", "💻", "📚", "🎮", "🎨", "🛒", "✈️", "⚽️", "🎵", "🧪", "🌿", "⭐️", "🔥"]
 
-let data = { active: window.flux.paths.profile?.id ?? "default", list: window.flux.paths.profile ? [window.flux.paths.profile] : [] }
+// active = THIS window's profile; open = profiles that have a window
+let data = { active: window.flux.paths.profile?.id ?? "default", list: window.flux.paths.profile ? [window.flux.paths.profile] : [], open: new Set() }
 
 export const currentProfile = () => data.list.find((p) => p.id === data.active) ?? data.list[0] ?? { id: "default", name: "Personal", color: "#0a84ff", emoji: "" }
 export const allProfiles = () => data.list
+// profiles with a window of their own, other than this one
+export const openProfiles = () => new Set([...data.open].filter((id) => id !== data.active))
 
 function initials (name) {
   const w = String(name ?? "").trim().split(/\s+/).filter(Boolean)
@@ -37,63 +44,37 @@ export function avatar (p, size = 22) {
   return el
 }
 
+// main owns the window title ("Comet — <Profile>")
 async function refresh (r) {
-  if (r?.list) data = { active: r.active, list: r.list }
-  else data = await window.flux.profiles.list()
-  document.title = data.list.length > 1 ? `Comet — ${currentProfile().name}` : "Comet"
+  const next = r?.list ? r : await window.flux.profiles.list()
+  data = { active: next.active ?? data.active, list: next.list ?? [], open: new Set(next.open ?? []) }
   bus.emit("profiles", data)
   bus.emit("settings:rerender")
 }
 
+// this window becomes that profile.  A profile open in another window is
+// focused instead (this window stays as it is).
 export async function switchProfile (id) {
   if (!id || id === data.active) return
   closePopover()
+  if (openProfiles().has(id)) return openProfileWindow(id)
   document.body.classList.add("is-switching-profile")
   await T.flushSession()
   const r = await window.flux.profiles.switch(id)
-  // on success main reloads the UI; only a failure gets here with a live page
-  if (!r?.ok) {
+  // on a switch main reloads the UI; a failure, or a focused other window, gets here live
+  if (!r?.ok || r.focused) {
     T.thawSession()
     document.body.classList.remove("is-switching-profile")
-    toast(r?.text ?? "Couldn't switch profiles")
+    if (!r?.ok) toast(r?.text ?? "Couldn't switch profiles")
   }
 }
 
-// ── the switcher popover ─────────────────────────────────────────
-export function openProfileMenu (anchor) {
-  const cur = currentProfile()
-  const others = data.list.filter((p) => p.id !== cur.id)
-  const item = (kids, onclick, title) => h("button.mi.pf-mi", { role: "menuitem", onclick, title }, kids)
-  const list = h("div.menu.pf-menu", { role: "menu" }, [
-    h("div.pf-head", {}, [
-      avatar(cur, 38),
-      h("div.pf-head-text", {}, [h("strong", { text: cur.name }), h("span", { text: "Current profile" })]),
-      h("button.pf-head-edit", { title: "Edit profile", "aria-label": "Edit profile", onclick: () => { closePopover(); openProfileSheet(cur) } }, [ico("edit", 14)])
-    ]),
-    others.length ? h("div.mi-sep") : null,
-    ...others.map((p) => {
-      const n = data.list.indexOf(p) + 1
-      return item([avatar(p, 20), h("span.mi-label", { text: p.name }), n <= 9 ? h("kbd.mi-kbd", { text: `⌃⌘${n}` }) : null], () => switchProfile(p.id), `Switch to ${p.name}`)
-    }),
-    h("div.mi-sep"),
-    item([h("span.mi-ico", {}, [ico("plus", 15)]), h("span.mi-label", { text: "Add Profile…" })], () => { closePopover(); openProfileSheet() }),
-    item([h("span.mi-ico", {}, [ico("users", 15)]), h("span.mi-label", { text: "Manage Profiles…" })], () => { closePopover(); bus.emit("settings:goto", "profiles") })
-  ].filter(Boolean))
-  return popover(anchor, list, { className: "pop--menu pf-pop", width: 260 })
-}
-
-// the button that opens it: avatar + name in the sidebar, avatar only in the toolbar
-export function profileButton ({ compact = false } = {}) {
-  const b = h(`button.pf-btn.no-drag${compact ? ".is-compact" : ""}`, { onclick: () => openProfileMenu(b) })
-  const paint = () => {
-    const p = currentProfile()
-    b.title = `${p.name} — switch profile`
-    b.setAttribute("aria-label", b.title)
-    b.replaceChildren(avatar(p, compact ? 22 : 20), compact ? "" : h("span.pf-btn-name", { text: p.name }), compact ? "" : ico("chevronDown", 12))
-  }
-  bus.on("profiles", paint)
-  paint()
-  return b
+// that profile in a window of its own (or its window, brought forward)
+export async function openProfileWindow (id) {
+  closePopover()
+  const r = await window.flux.profiles.openWindow(id)
+  if (!r?.ok) toast(r?.text ?? "Couldn't open that profile")
+  return r
 }
 
 // ── create / edit sheet ──────────────────────────────────────────
@@ -213,7 +194,9 @@ function cropEditor (src, start, onDone, onCancel) {
 const imageIn = (dt) => [...(dt?.files ?? [])].find((f) => f.type.startsWith("image/")) ??
   [...(dt?.items ?? [])].find((i) => i.kind === "file" && i.type.startsWith("image/"))?.getAsFile()
 
-export function openProfileSheet (existing = null) {
+// open: "window" (⌘N picker) = the new profile gets a window of its own and
+// this window stays as it is; otherwise this window switches to it, like Chrome
+export function openProfileSheet (existing = null, { open = true } = {}) {
   const draft = existing ? { ...existing } : { name: "", color: PROFILE_COLORS[data.list.length % PROFILE_COLORS.length], emoji: "" }
   let picture        // undefined = unchanged, null = remove, "data:…" = new picture
   let original = null, crop = null   // the uncropped image + where it was cropped (for Move & Scale again)
@@ -284,15 +267,22 @@ export function openProfileSheet (existing = null) {
       await refresh(r)
       return
     }
+    if (open === "window") {
+      const r = await window.flux.profiles.create(patch, { open: "window" })
+      if (!r?.ok) { save.disabled = false; return toast(r?.text ?? "Couldn't create the profile") }
+      closeSheet()
+      await refresh(r)
+      return
+    }
     // a new profile opens right away, like Chrome
     await T.flushSession()
     document.body.classList.add("is-switching-profile")
     const r = await window.flux.profiles.create(patch, { open: true })
-    if (!r?.ok) {
+    if (!r?.ok || r.focused) {
       T.thawSession()
       document.body.classList.remove("is-switching-profile")
       save.disabled = false
-      toast(r?.text ?? "Couldn't create the profile")
+      if (!r?.ok) toast(r?.text ?? "Couldn't create the profile")
     }
   }
   const save = btn(existing ? "Done" : "Create Profile", submit, "btn btn--accent")
@@ -326,7 +316,7 @@ function confirmRemove (p) {
   modal(h("div.pf-sheet.pf-sheet--confirm.glass", { role: "alertdialog", "aria-modal": "true" }, [
     h("div.pf-preview", {}, [avatar(p, 52)]),
     h("h2.pf-title", { text: `Remove “${p.name}”?` }),
-    h("p.pf-sub", { text: "Its tabs, bookmarks, history, saved passwords and site logins move to the Trash, so you can still get them back from there." }),
+    h("p.pf-sub", { text: `${data.open.has(p.id) ? "Its window will close. " : ""}Its tabs, bookmarks, history, saved passwords and site logins move to the Trash, so you can still get them back from there.` }),
     h("div.pf-actions", {}, [btn("Cancel", closeSheet), go])
   ]))
   setTimeout(() => go.focus(), 30)
@@ -335,16 +325,19 @@ function confirmRemove (p) {
 // ── Settings → Profiles ──────────────────────────────────────────
 export function catProfiles () {
   const cur = currentProfile()
+  const open = openProfiles()
   const rows = data.list.map((p, i) => {
     const on = p.id === cur.id
-    return h("div.set-row.pf-row", { dataset: { search: `profile ${p.name}` } }, [
+    const elsewhere = open.has(p.id)
+    return h("div.set-row.pf-row", { dataset: { search: `profile ${p.name} window` } }, [
       avatar(p, 34),
       h("div.rtext", {}, [
         h("div.rlabel", { text: p.name }),
-        h("div.rdesc", { text: on ? "Current profile" : i < 9 ? `⌃⌘${i + 1} to switch` : "" })
+        h("div.rdesc", { text: on ? (open.size ? "This window" : "Current profile") : elsewhere ? "Open in another window" : i < 9 ? `⌃⌘${i + 1} to switch` : "" })
       ]),
       h("div.control", {}, [
-        on ? h("span.pf-badge", {}, [ico("check", 12), "In use"]) : btn("Switch", () => switchProfile(p.id)),
+        on ? h("span.pf-badge", {}, [ico("check", 12), "In use"]) : elsewhere ? null : btn("Switch", () => switchProfile(p.id)),
+        on ? null : btn(elsewhere ? "Show Window" : "Open in New Window", () => openProfileWindow(p.id)),
         h("button.btn.btn--icon", { title: `Edit ${p.name}`, "aria-label": `Edit ${p.name}`, onclick: () => openProfileSheet(p) }, [ico("edit", 14)]),
         p.id !== "default" && !on ? h("button.btn.btn--icon", { title: `Remove ${p.name}`, "aria-label": `Remove ${p.name}`, onclick: () => confirmRemove(p) }, [ico("trash", 14)]) : null
       ].filter(Boolean))
@@ -354,10 +347,11 @@ export function catProfiles () {
     group("Profiles", [
       ...rows,
       block([h("button.btn.pf-add", { onclick: () => openProfileSheet() }, [ico("plus", 14), "Add Profile…"])], "add profile new account")
-    ], "Each profile keeps its own tabs, bookmarks, history, passwords, cookies and site logins, Home screen and look. API keys are shared."),
+    ], "Each profile keeps its own tabs, bookmarks, history, passwords, cookies and site logins, Home screen and look, and can have a window of its own beside the others (⌘N). API keys are shared."),
   ]
 }
 
 export async function initProfiles () {
+  window.flux.profiles.onChange((r) => refresh(r))
   await refresh()
 }

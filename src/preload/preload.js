@@ -19,7 +19,7 @@ function on (channel, cb) {
 }
 
 contextBridge.exposeInMainWorld("flux", {
-  paths, // { root, userData, webviewPreload, partition, profile }
+  paths, // { root, userData, webviewPreload, partition, privatePartition, profile } of THIS window
 
   config: {
     all: () => ipcRenderer.invoke("flux:config:all"),
@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld("flux", {
     close: () => ipcRenderer.invoke("flux:win:close"),
     vibrancy: (on) => ipcRenderer.invoke("flux:win:vibrancy", on),
     appearance: () => ipcRenderer.invoke("flux:win:appearance"),
+    onGlass: (cb) => on("flux:win:glass", cb),
     isFullscreen: () => ipcRenderer.invoke("flux:win:is-fullscreen"),
     onFullscreen: (cb) => on("flux:win:fullscreen", cb),
     onActive: (cb) => on("flux:win:active", cb)
@@ -171,7 +172,8 @@ contextBridge.exposeInMainWorld("flux", {
 
   web: { clearData: (kinds) => ipcRenderer.invoke("flux:web:clearData", kinds) },
 
-  // Chrome-style profiles: switching reloads the UI into the other profile
+  // Chrome-style profiles: switching reloads this window into the other profile;
+  // each profile can also have a window of its own
   profiles: {
     list: () => ipcRenderer.invoke("flux:profiles:list"),
     create: (patch, opts) => ipcRenderer.invoke("flux:profiles:create", patch, opts),
@@ -179,8 +181,14 @@ contextBridge.exposeInMainWorld("flux", {
     remove: (id) => ipcRenderer.invoke("flux:profiles:remove", id),
     switch: (id) => ipcRenderer.invoke("flux:profiles:switch", id),
     pickPicture: () => ipcRenderer.invoke("flux:profiles:pickPicture"),
-    pictureOriginal: (id) => ipcRenderer.invoke("flux:profiles:pictureOriginal", id)
+    pictureOriginal: (id) => ipcRenderer.invoke("flux:profiles:pictureOriginal", id),
+    // a profile in a window of its own (focuses it when it already has one)
+    openWindow: (id) => ipcRenderer.invoke("flux:profiles:openWindow", id),
+    // { active: this window's profile, open: [ids with a window], list }
+    onChange: (cb) => on("flux:profiles:changed", cb)
   },
+  // the tab snapshot, written before this window closes or reloads (synchronous)
+  session: { saveSync: (snapshot) => { try { return ipcRenderer.sendSync("flux:session:save", snapshot) } catch { return false } } },
   onMenu: (cb) => on("flux:menu", cb),
 
   openExternal: (url) => ipcRenderer.invoke("flux:open-external", url),

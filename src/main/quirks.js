@@ -19,7 +19,6 @@
 //  reloads the navigation and hung the test.  Toggle: privacy.googleSignInFix.
 // ───────────────────────────────────────────────────────────────────
 const { app } = require("electron")
-const { store } = require("./store")
 
 // Electron's untouched default (the token is app.name, which stays "Flux": see main.js): "… Flux/0.7.0 Chrome/152.x Electron/44.x Safari/537.36"
 const realUA = () => app.userAgentFallback
@@ -28,9 +27,9 @@ function isGoogleSignIn (url) {
   try { const u = new URL(url); return u.protocol === "https:" && u.hostname === "accounts.google.com" } catch { return false }
 }
 
-// called from the session's one onBeforeSendHeaders hook (shield.js)
-function applyRequestQuirks (details) {
-  if (store.get("privacy.googleSignInFix") !== false && isGoogleSignIn(details.url)) {
+// called from the session's one onBeforeSendHeaders hook (shield.js), with that profile's store
+function applyRequestQuirks (details, store) {
+  if (store?.get("privacy.googleSignInFix") !== false && isGoogleSignIn(details.url)) {
     details.requestHeaders["User-Agent"] = realUA()
   }
 }

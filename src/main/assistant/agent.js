@@ -8,8 +8,7 @@
 // ───────────────────────────────────────────────────────────────────
 const { ipcMain } = require("electron")
 const { Anthropic } = require("@anthropic-ai/sdk")
-const { store } = require("../store")
-const { chats } = require("./chats")
+const { secrets } = require("../store")
 const { CLIENT_TOOLS, webSearchTool, validate, normalize, NEEDS_CONFIRM } = require("./tools")
 const { chatStep: ollamaStep } = require("./ollama")
 const { LOCAL_WEB_TOOLS, runLocalWebTool } = require("./websearch")
@@ -38,13 +37,14 @@ You are running on a local model. Call tools with exact JSON arguments matching 
 let client = null
 let clientKey = ""
 function getClient () {
-  const key = store.getSecret("anthropic")
+  const key = secrets.getSecret("anthropic")
   if (!key) return null
   if (!client || key !== clientKey) { client = new Anthropic({ apiKey: key, maxRetries: 2 }); clientKey = key }
   return client
 }
 
-function systemPrompt (local) {
+// store: the asking profile's store (its ai settings and the user's name)
+function systemPrompt (store, local) {
   const ai = store.get("ai") ?? {}
   const name = (store.get("user.name") ?? "").trim()
   let s = SYSTEM + (local ? LOCAL_ADDENDUM : "")
@@ -93,7 +93,7 @@ function bridge (wc, channel, payload, pending, timeoutMs) {
   })
 }
 
-async function runTool (wc, chatId, block, signal, local) {
+async function runTool (wc, chatId, block, signal, local, store) {
   // local models get their sloppy arguments repaired (history stays as sent)
   const input = local ? normalize(block.name, block.input, LOCAL_WEB_TOOLS) : block.input
   const err = validate(block.name, input, local ? LOCAL_WEB_TOOLS : [])
@@ -111,13 +111,13 @@ async function runTool (wc, chatId, block, signal, local) {
 }
 
 // ── one Claude turn (streaming) ───────────────────────────────────
-async function claudeStep ({ api, model, ai, messages, signal, emit, view }) {
+async function claudeStep ({ api, model, ai, store, messages, signal, emit, view }) {
   const tools = [...CLIENT_TOOLS, ...(ai.webSearch !== false ? [webSearchTool(model)] : [])]
   const betas = FALLBACK_OK.has(model) ? ["server-side-fallback-2026-07-01"] : []
   const stream = api.beta.messages.stream({
     model,
     max_tokens: 32000,
-    system: systemPrompt(false),
+    system: systemPrompt(store, false),
     tools,
     messages,
     thinking: { type: "adaptive", display: ai.showThinking === false ? "omitted" : "summarized" },
@@ -151,11 +151,12 @@ async function claudeStep ({ api, model, ai, messages, signal, emit, view }) {
 }
 
 // ── one local (Ollama) turn ───────────────────────────────────────
-async function localStep ({ ai, messages, signal, emit, view }) {
+async function localStep ({ ai, store, messages, signal, emit, view }) {
   let textPart = null
   const r = await ollamaStep({
+    ai,
     model: ai.localModel || "qwen3:8b",
-    system: systemPrompt(true),
+    system: systemPrompt(store, true),
     messages,
     tools: [...CLIENT_TOOLS, ...(ai.webSearch !== false ? LOCAL_WEB_TOOLS : [])],
     effort: ai.effort,
@@ -169,7 +170,11 @@ async function localStep ({ ai, messages, signal, emit, view }) {
   return r
 }
 
-async function send (wc, { chatId, text, images = [], context = {}, page = null }) {
+// ctx: the asking window's profile.  Its store and chats are captured once,
+// so an in-place profile switch mid-answer can't write into the other profile.
+async function send (wc, { chatId, text, images = [], context = {}, page = null }, ctx) {
+  const store = ctx.store
+  const chats = ctx.chats
   const ai = store.get("ai") ?? {}
   const local = (ai.provider ?? "local") === "local"
   const api = local ? null : getClient()
@@ -204,8 +209,8 @@ async function send (wc, { chatId, text, images = [], context = {}, page = null 
       let r
       try {
         r = local
-          ? await localStep({ ai, messages: chat.messages, signal: ctrl.signal, emit, view })
-          : await claudeStep({ api, model, ai, messages: chat.messages, signal: ctrl.signal, emit, view })
+          ? await localStep({ ai, store, messages: chat.messages, signal: ctrl.signal, emit, view })
+          : await claudeStep({ api, model, ai, store, messages: chat.messages, signal: ctrl.signal, emit, view })
         jsonRetries = 0
       } catch (err) {
         if (ctrl.signal.aborted) { outcome = { ok: true, stopped: true }; break }
@@ -231,7 +236,7 @@ async function send (wc, { chatId, text, images = [], context = {}, page = null 
         let res
         if (ctrl.signal.aborted) res = { content: "Stopped by the user.", is_error: true }
         else {
-          try { res = await runTool(wc, chat.id, tu, ctrl.signal, local) } catch (e) { res = { content: `Tool crashed: ${e.message}`, is_error: true } }
+          try { res = await runTool(wc, chat.id, tu, ctrl.signal, local, store) } catch (e) { res = { content: `Tool crashed: ${e.message}`, is_error: true } }
         }
         part.status = res.is_error ? "error" : "done"
         part.summary = typeof res.content === "string" ? res.content.slice(0, 160) : "image"
@@ -265,16 +270,16 @@ async function send (wc, { chatId, text, images = [], context = {}, page = null 
   return { ok: outcome.ok, chatId: chat.id, text: outcome.text }
 }
 
-function registerAssistantIpc () {
-  ipcMain.handle("flux:ai:send", (e, args) => send(e.sender, args ?? {}))
+function registerAssistantIpc ({ ctxFor }) {
+  ipcMain.handle("flux:ai:send", (e, args) => send(e.sender, args ?? {}, ctxFor(e)))
   ipcMain.handle("flux:ai:stop", (_e, chatId) => { running.get(chatId)?.abort(); return { ok: true } })
   ipcMain.on("flux:ai:tool-result", (_e, { callId, ...r }) => { const f = pendingTools.get(callId); if (f) { pendingTools.delete(callId); f(r) } })
   ipcMain.on("flux:ai:confirm-reply", (_e, { callId, ok }) => { const f = pendingConfirms.get(callId); if (f) { pendingConfirms.delete(callId); f({ ok }) } })
-  ipcMain.handle("flux:ai:new", () => ({ id: chats.create().id }))
-  ipcMain.handle("flux:ai:list", () => chats.list())
-  ipcMain.handle("flux:ai:view", (_e, id) => chats.view(id))
-  ipcMain.handle("flux:ai:remove", (_e, id) => chats.remove(id))
-  ipcMain.handle("flux:ai:clear", () => chats.clear())
+  ipcMain.handle("flux:ai:new", (e) => ({ id: ctxFor(e).chats.create().id }))
+  ipcMain.handle("flux:ai:list", (e) => ctxFor(e).chats.list())
+  ipcMain.handle("flux:ai:view", (e, id) => ctxFor(e).chats.view(id))
+  ipcMain.handle("flux:ai:remove", (e, id) => ctxFor(e).chats.remove(id))
+  ipcMain.handle("flux:ai:clear", (e) => ctxFor(e).chats.clear())
 }
 
-module.exports = { registerAssistantIpc, flushChats: () => chats.flush() }
+module.exports = { registerAssistantIpc }

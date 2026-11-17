@@ -5,7 +5,6 @@
 //  remembers the answer per site (siteSettings[host].perms).
 // ───────────────────────────────────────────────────────────────────
 const { ipcMain } = require("electron")
-const { store } = require("./store")
 
 const ALWAYS = new Set(["fullscreen", "clipboard-sanitized-write", "pointerLock", "window-management"])
 const ASK = new Set(["media", "geolocation", "notifications", "midi", "midiSysex", "clipboard-read", "display-capture", "idle-detection", "speaker-selection"])
@@ -18,11 +17,11 @@ function key (permission, details) {
   return types.includes("video") ? (types.includes("audio") ? "camera+mic" : "camera") : "microphone"
 }
 
-function remembered (host, k) {
+function remembered (store, host, k) {
   return store.get("siteSettings")?.[host]?.perms?.[k] ?? null
 }
 
-function remember (host, k, value) {
+function remember (store, host, k, value) {
   const all = { ...(store.get("siteSettings") ?? {}) }
   const site = { ...(all[host] ?? {}) }
   site.perms = { ...(site.perms ?? {}), [k]: value }
@@ -38,24 +37,25 @@ ipcMain.on("flux:perm:reply", (_e, { id, allow, remember: rem }) => {
   if (r) { waiting.delete(id); r(Boolean(allow), Boolean(rem)) }
 })
 
-function initPermissions (ses, getWin) {
+// ctx: the profile context that owns this session; its store and window
+function initPermissions (ses, ctx) {
   ses.setPermissionRequestHandler((wc, permission, callback, details) => {
     if (ALWAYS.has(permission)) return callback(true)
     if (!ASK.has(permission)) return callback(false)
     const url = details?.requestingUrl || wc.getURL()
     const host = hostOf(url)
     const k = key(permission, details)
-    const prior = remembered(host, k)
+    const prior = remembered(ctx.store, host, k)
     if (prior === "allow") return callback(true)
     if (prior === "block") return callback(false)
 
-    const w = getWin()
+    const w = ctx.win
     if (!w || w.isDestroyed()) return callback(false)
     const id = `perm_${++seq}`
     const timer = setTimeout(() => { if (waiting.has(id)) { waiting.delete(id); callback(false) } }, 60_000)
     waiting.set(id, (allow, rem) => {
       clearTimeout(timer)
-      if (rem) remember(host, k, allow ? "allow" : "block")
+      if (rem) remember(ctx.store, host, k, allow ? "allow" : "block")
       callback(allow)
     })
     w.webContents.send("flux:perm:ask", { id, host, permission: k, webContentsId: wc.id })
@@ -65,7 +65,7 @@ function initPermissions (ses, getWin) {
     if (ALWAYS.has(permission)) return true
     const host = hostOf(origin || details?.requestingUrl)
     const k = permission === "media" ? (details?.mediaType === "video" ? "camera" : "microphone") : permission
-    return remembered(host, k) === "allow" || remembered(host, "camera+mic") === "allow"
+    return remembered(ctx.store, host, k) === "allow" || remembered(ctx.store, host, "camera+mic") === "allow"
   })
 }
 

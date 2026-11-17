@@ -167,3 +167,5 @@ body[data-vibrancy="true"]::before {
   background: var(--f-vibrancy-tint);
 }
 body[data-vibrancy="true"] #ambient { opacity: 0.35; }
+/* the glass is the other mode (another profile's window pins it): mostly cover it */
+body[data-vibrancy="true"][data-glass="mismatch"][data-mode][data-family] { --f-vibrancy-tint: color-mix(in srgb, var(--f-bg) 92%, transparent); }

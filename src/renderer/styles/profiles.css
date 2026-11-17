@@ -46,6 +46,25 @@
 .pf-mi { height: 30px; }
 .pf-mi .pf-av { box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.0); }
 .pf-mi:hover .pf-av { box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.7); }
+/* other profiles: the row switches this window; the trailing glass button
+   opens (or shows) that profile's own window */
+.pf-mi-row { display: flex; align-items: center; gap: 2px; }
+.pf-mi-row > .pf-mi { flex: 1; min-width: 0; }
+.pf-mi:has(.pf-mi-sub) { height: 38px; }
+.pf-mi-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; line-height: 1.2; }
+.pf-mi-sub { font-size: 11px; color: var(--f-text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi:is(:hover, :focus-visible) .pf-mi-sub { color: rgb(255 255 255 / 0.8); }
+.pf-open-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--f-accent); box-shadow: 0 0 0 2px rgb(var(--ink) / 0.06); }
+.mi:is(:hover, :focus-visible) .pf-open-dot { background: #fff; box-shadow: none; }
+.pf-mi-win {
+  flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 8px;
+  color: var(--f-text-dim); background: rgb(var(--ink) / 0.05);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--ink) / 0.08), inset 0 1px 0 rgb(var(--ink) / 0.03);
+  transition: background 120ms ease, color 120ms ease;
+}
+.pf-mi-win:hover { background: rgb(var(--ink) / 0.1); color: var(--f-text); }
+.pf-mi-win:active { background: rgb(var(--ink) / 0.14); }
+.pf-mi-win:focus-visible { outline: 0; box-shadow: 0 0 0 2px var(--f-accent); color: var(--f-text); }
 
 /* ── sheet ─────────────────────────────────────────────────────── */
 .pf-scrim {

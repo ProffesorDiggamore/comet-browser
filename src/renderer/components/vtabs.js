@@ -1,8 +1,8 @@
 // ───────────────────────────────────────────────────────────────────
 //  vtabs.js — the Dia-style sidebar: pinned sites as big tiles, a calm
 //  vertical tab list with tab groups (folders), "New Tab", a Now
-//  Playing card, and Settings / Library / Downloads / appearance at the
-//  bottom.  Drag to reorder (onto a group to file it), drop a tab on
+//  Playing card, and Settings / Bookmarks / Downloads / appearance at
+//  the bottom (the Library is ⌘Y, the menu and the command palette).  Drag to reorder (onto a group to file it), drop a tab on
 //  the tiles to pin it, right-click for the tab menu, drag the right
 //  edge to resize.
 // ───────────────────────────────────────────────────────────────────
@@ -18,6 +18,7 @@ import * as G from "../core/groups.js"
 import { profileButton } from "./profiles.js"
 import { headerFor, paintHeader, dropHeader, inlineEdit, renameHeader } from "./vgroups.js"
 import { nowPlaying } from "./nowplaying.js"
+import { openBookmarks } from "./bookmarks.js"
 
 let root, tiles, list, ind, btnNew
 const rows = new Map()      // tabId -> row element
@@ -251,7 +252,7 @@ function paintMode () {
   if (!first) { modeBtn.classList.remove("is-turn"); void modeBtn.offsetWidth; modeBtn.classList.add("is-turn") }
 }
 
-// a second click on Settings / Library closes it again
+// a second click on Settings closes it again
 function toggleView (v, open) {
   const a = T.getActive()
   if (v === "settings" && a?.pane === "settings") T.closeTab(a.id)      // Settings is a tab: closing it goes back
@@ -305,6 +306,8 @@ export function initVTabs () {
   })
   ind = h("div.vt-ind", { "aria-hidden": "true" })
   list = h("div.vt-list", {}, [ind])
+  const btnMarks = foot("bookmarks", "Bookmarks (⌥⌘B)", () => openBookmarks(btnMarks), ".vt-marks")
+  btnMarks.dataset.bookmarksBtn = ""
   btnNew = h("button.vt-row.vt-new", { title: "New tab (⌘T)", onclick: () => T.newTab() }, [h("span.vt-fav", {}, [ico("plus", 15)]), h("span.vt-title", { text: "New Tab" })])
   mount(root, h("div.vt", {}, [
     h("div.vt-top", {}, [profileButton()]),
@@ -314,7 +317,7 @@ export function initVTabs () {
     nowPlaying(),
     h("div.vt-bottom", {}, [
       foot("gear", "Settings (⌘,)", () => toggleView("settings", () => bus.emit("view", "settings"))),
-      foot("clock", "Library (⌘Y)", () => toggleView("library", () => bus.emit("library:open", "history"))),
+      btnMarks,
       foot("download", "Downloads (⌥⌘L)", () => openDownloadsPopover()),
       foot("eyeoff", "New private tab (⇧⌘N)", () => T.newTab(null, { private: true })),
       h("span.vt-flex"),

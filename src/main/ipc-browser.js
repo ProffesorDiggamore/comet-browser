@@ -2,26 +2,27 @@
 //  ipc-browser.js — v0.4 channels: history, downloads, shield stats,
 //  screenshots to disk, and browsing-data clearing for the web session.
 // ───────────────────────────────────────────────────────────────────
-const { ipcMain, app, shell, clipboard, nativeImage } = require("electron")
+const { ipcMain, app, shell, clipboard, nativeImage, BrowserWindow } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
-const { history } = require("./history")
 const { downloads } = require("./downloads")
 const { shieldStats } = require("./shield")
-const { store } = require("./store")
 
-function registerBrowserIpc ({ getSes }) {
-  // ---- history ------------------------------------------------------
-  ipcMain.on("flux:history:record", (_e, entry) => { if (store.get("privacy.recordHistory") !== false) history.record(entry ?? {}) })
-  ipcMain.on("flux:history:title", (_e, entry) => history.title(entry ?? {}))
-  ipcMain.handle("flux:history:search", (_e, opts) => history.search(opts ?? {}))
-  ipcMain.handle("flux:history:remove", (_e, url) => history.remove(url))
-  ipcMain.handle("flux:history:clear", (_e, opts) => history.clear(opts ?? {}))
+// ctxFor(e): the profile context of the window that asked
+function registerBrowserIpc ({ ctxFor }) {
+  // ---- history (this window's profile) -----------------------------
+  // (not from a window mid profile-switch: its old UI would record into the new profile)
+  const switching = (e) => !!BrowserWindow.fromWebContents(e.sender)?.switching
+  ipcMain.on("flux:history:record", (e, entry) => { const ctx = ctxFor(e); if (!switching(e) && ctx.store.get("privacy.recordHistory") !== false) ctx.history.record(entry ?? {}) })
+  ipcMain.on("flux:history:title", (e, entry) => ctxFor(e).history.title(entry ?? {}))
+  ipcMain.handle("flux:history:search", (e, opts) => ctxFor(e).history.search(opts ?? {}))
+  ipcMain.handle("flux:history:remove", (e, url) => ctxFor(e).history.remove(url))
+  ipcMain.handle("flux:history:clear", (e, opts) => ctxFor(e).history.clear(opts ?? {}))
 
-  // ---- downloads ----------------------------------------------------
-  ipcMain.handle("flux:dl:list", () => downloads.list())
-  ipcMain.handle("flux:dl:action", (_e, id, verb) => downloads.action(id, verb))
-  ipcMain.handle("flux:dl:clear", () => downloads.clearFinished())
+  // ---- downloads (this window's profile) ---------------------------
+  ipcMain.handle("flux:dl:list", (e) => downloads.list(ctxFor(e)))
+  ipcMain.handle("flux:dl:action", (e, id, verb) => downloads.action(ctxFor(e), id, verb))
+  ipcMain.handle("flux:dl:clear", (e) => downloads.clearFinished(ctxFor(e)))
 
   // ---- shield -------------------------------------------------------
   ipcMain.handle("flux:shield:stats", () => shieldStats())
@@ -42,15 +43,16 @@ function registerBrowserIpc ({ getSes }) {
   ipcMain.handle("flux:shot:reveal", (_e, p) => { if (p) shell.showItemInFolder(p) })
 
   // ---- browsing data (the web session, not the UI's) -----------------
-  ipcMain.handle("flux:web:clearData", async (_e, kinds) => {
+  ipcMain.handle("flux:web:clearData", async (e, kinds) => {
+    const ctx = ctxFor(e)
     try {
       const storages = []
       if (kinds?.cookies) storages.push("cookies")
       if (kinds?.storage) storages.push("localstorage", "indexdb", "websql", "filesystem", "serviceworkers", "cachestorage")
-      const ses = getSes()
+      const ses = ctx.session
       if (kinds?.cache) await ses.clearCache()
       if (storages.length) await ses.clearStorageData({ storages })
-      if (kinds?.history) history.clear()
+      if (kinds?.history) ctx.history.clear()
       return { ok: true }
     } catch (e) { return { ok: false, text: e.message } }
   })

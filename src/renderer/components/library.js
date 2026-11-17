@@ -14,7 +14,8 @@ export const isBookmarked = (url) => !!url && (state.get("bookmarks") ?? []).som
 
 export async function addBookmark ({ url, title }) {
   if (!url || isBookmarked(url)) return false
-  const list = [{ id: `bm_${Date.now().toString(36)}`, url, title: title || url, ts: Date.now() }, ...(state.get("bookmarks") ?? [])]
+  // pageTitle remembers what the page called itself, so clearing a rename restores it
+  const list = [{ id: `bm_${Date.now().toString(36)}`, url, title: title || url, pageTitle: title || "", ts: Date.now() }, ...(state.get("bookmarks") ?? [])]
   await state.set("bookmarks", list)
   bus.emit("bookmarks")
   return true
@@ -23,6 +24,53 @@ export async function addBookmark ({ url, title }) {
 export async function removeBookmark (url) {
   await state.set("bookmarks", (state.get("bookmarks") ?? []).filter((b) => b.url !== url))
   bus.emit("bookmarks")
+}
+
+export const hostLabel = (url) => T.hostOf(url).replace(/^www\./, "")
+// what a bookmark is called on screen: its name, else the site
+export const bookmarkLabel = (b) => (b.title && b.title !== b.url ? b.title : hostLabel(b.url) || b.url)
+// the text a rename field starts with (a URL standing in for a name starts empty)
+export const bookmarkName = (b) => (b.title && b.title !== b.url ? b.title : "")
+const pageName = (b) => { const p = b.pageTitle ?? b.title; return p && p !== b.url ? p : "" }
+export const bookmarkPlaceholder = (b) => pageName(b) || hostLabel(b.url) || "Bookmark name"
+
+// empty = back to the page's own title (or the site's host)
+export async function renameBookmark (url, title) {
+  const list = state.get("bookmarks") ?? []
+  const b = list.find((x) => x.url === url)
+  if (!b) return
+  const page = b.pageTitle ?? b.title
+  const next = String(title ?? "").trim() || pageName(b) || hostLabel(url) || url
+  if (next === b.title) return
+  await state.set("bookmarks", list.map((x) => (x.url === url ? { ...x, title: next, pageTitle: page } : x)))
+  bus.emit("bookmarks")
+}
+
+// swap a label for a text field: Enter / blur saves, Esc cancels.
+// onDone(value) gets the trimmed text, or null when cancelled.  Keys are
+// caught on window first, so an open popover doesn't take Esc to close itself.
+export function inlineRename (label, { value = "", placeholder = "", onDone, cls = "" } = {}) {
+  const input = h(`input.bm-edit${cls ? "." + cls : ""}`, { type: "text", value, placeholder, spellcheck: false, draggable: false, autocomplete: "off", "aria-label": "Bookmark name" })
+  let done = false
+  const key = (e) => {
+    if (e.target !== input || (e.key !== "Enter" && e.key !== "Escape")) return
+    e.preventDefault(); e.stopPropagation()
+    finish(e.key === "Enter")
+  }
+  const finish = (save) => {
+    if (done) return
+    done = true
+    window.removeEventListener("keydown", key, true)
+    if (input.isConnected) input.replaceWith(label)
+    onDone?.(save ? input.value.trim() : null)
+  }
+  window.addEventListener("keydown", key, true)
+  input.addEventListener("keydown", (e) => e.stopPropagation())
+  input.addEventListener("blur", () => finish(true))
+  for (const ev of ["click", "mousedown", "dblclick", "auxclick", "contextmenu"]) input.addEventListener(ev, (e) => e.stopPropagation())
+  label.replaceWith(input)
+  input.focus(); input.select()
+  return { cancel: () => finish(false), input }
 }
 
 export async function toggleBookmark () {
@@ -61,9 +109,9 @@ export function initLibrary () {
     if (tab === "bookmarks") {
       const bms = (state.get("bookmarks") ?? []).filter((b) => !q || `${b.title} ${b.url}`.toLowerCase().includes(q))
       if (!bms.length) { listEl.append(h("div.lib-empty", { text: q ? "No bookmarks match." : "No bookmarks yet — press ⌘D on any page." })); return }
-      listEl.append(h("div.lib-grid", {}, bms.map((b) => h("div.lib-card.glass.lit", { onclick: (e) => open(b.url, e), onauxclick: (e) => open(b.url, e) }, [
+      listEl.append(h("div.lib-grid", {}, bms.map((b) => h("div.lib-card.glass.lit", { onclick: (e) => open(b.url, e), onauxclick: (e) => open(b.url, e), oncontextmenu: (e) => cardMenu(e, b) }, [
         h("div.lib-card-top", {}, [favImg(b.url), h("button.tb-btn", { title: "Remove", onclick: (e) => { e.stopPropagation(); removeBookmark(b.url).then(fill) } }, [ico("close", 13)])]),
-        h("div.lib-card-title", { text: b.title || b.url }),
+        h("div.lib-card-title", { text: bookmarkLabel(b) }),
         h("div.lib-card-sub", { text: T.hostOf(b.url) })
       ]))))
       return
@@ -83,6 +131,21 @@ export function initLibrary () {
         h("button.tb-btn.lib-del", { title: "Remove from history", onclick: async (ev) => { ev.stopPropagation(); await window.flux.history.remove(e.url); fill() } }, [ico("close", 13)])
       ]))
     }
+  }
+
+  function cardMenu (e, b) {
+    e.preventDefault()
+    const card = e.currentTarget
+    menu({ x: e.clientX, y: e.clientY }, [
+      { label: "Open in New Tab", icon: "plus", run: () => T.newTab(b.url) },
+      { label: "Rename…", icon: "edit", run: () => {
+        const title = card.querySelector(".lib-card-title")
+        if (title) inlineRename(title, { value: bookmarkName(b), placeholder: bookmarkPlaceholder(b), cls: "lib-edit", onDone: (v) => { if (v !== null) renameBookmark(b.url, v) } })
+      } },
+      { label: "Copy Link", icon: "link", run: () => { navigator.clipboard.writeText(b.url); toast("Link copied") } },
+      "-",
+      { label: "Delete", icon: "trash", danger: true, run: () => removeBookmark(b.url) }
+    ])
   }
 
   function render () {

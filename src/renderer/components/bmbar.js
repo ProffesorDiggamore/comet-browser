@@ -1,15 +1,18 @@
 // ───────────────────────────────────────────────────────────────────
 //  bmbar.js — the bookmarks bar: one slim row under the top bar with
 //  every bookmark (⌘D adds one).  Click opens it here, ⌘-click opens a
-//  background tab; what doesn't fit goes under ».  Show / hide with
-//  ⇧⌘B, View → Bookmarks Bar, More, or Settings → Layout.
+//  background tab; what doesn't fit goes under » (the Bookmarks
+//  popover, limited to those).  Right-click › Rename… names one in
+//  place.  Show / hide with ⇧⌘B, View → Bookmarks Bar, More, or
+//  Settings → Layout.
 // ───────────────────────────────────────────────────────────────────
 import { h, mount } from "../core/dom.js"
 import { state } from "../core/state.js"
 import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { menu } from "./popover.js"
-import { removeBookmark } from "./library.js"
+import { removeBookmark, renameBookmark, inlineRename, bookmarkLabel, bookmarkName, bookmarkPlaceholder } from "./library.js"
+import { openBookmarks } from "./bookmarks.js"
 import * as T from "../core/tabs.js"
 
 export const bmBarOn = () => state.get("layout.bookmarksBar") !== false
@@ -34,6 +37,17 @@ function open (b, e) {
   else T.navigate(b.url)
 }
 
+// edit the name right on the bar: the button becomes a field until Enter / Esc / click away
+function renameItem (el, b) {
+  const name = h("span.bm-name")
+  const box = h("span.bm-item.is-editing", {}, [h("span.bm-fav", {}, [favFor(b.url)]), name])
+  el.replaceWith(box)
+  inlineRename(name, {
+    value: bookmarkName(b), placeholder: bookmarkPlaceholder(b),
+    onDone: (v) => { if (box.isConnected) box.replaceWith(el); if (v !== null) renameBookmark(b.url, v) }
+  })
+}
+
 function itemMenu (anchor, b) {
   menu(anchor, [
     { label: "Open", icon: "arrowRight", run: () => T.navigate(b.url) },
@@ -41,6 +55,7 @@ function itemMenu (anchor, b) {
     { label: "Open in Private Tab", icon: "eyeoff", run: () => T.newTab(b.url, { private: true }) },
     { label: "Copy Link", icon: "link", run: () => { navigator.clipboard.writeText(b.url); toast("Link copied") } },
     "-",
+    { label: "Rename…", icon: "edit", run: () => renameItem(anchor, b) },
     { label: "Remove Bookmark", icon: "trash", danger: true, run: () => removeBookmark(b.url) },
     "-",
     { label: "Hide Bookmarks Bar", icon: "eyeoff", kbd: "⇧⌘B", run: toggleBmBar }
@@ -53,14 +68,12 @@ export function initBmBar () {
   content.append(bar)
   const items = h("div.bm-items")
   const more = h("button.bm-more", { title: "More bookmarks", "aria-label": "More bookmarks" }, [ico("chevron", 13)])
-  more.addEventListener("click", () => {
-    const hidden = marks().slice(more._from ?? 0)
-    menu(more, hidden.map((b) => ({ label: short(b.title || b.url, 40), icon: "bookmark", run: () => T.navigate(b.url) })), { align: "end" })
-  })
+  // the ones that didn't fit, in the Bookmarks popover (search, rename, right-click there too)
+  more.addEventListener("click", () => openBookmarks(more, { only: marks().slice(more._from ?? 0).map((b) => b.url) }))
   bar.addEventListener("contextmenu", (e) => {
     if (e.target.closest(".bm-item")) return
     e.preventDefault()
-    menu(bar, [{ label: "Hide Bookmarks Bar", icon: "eyeoff", kbd: "⇧⌘B", run: toggleBmBar }, { label: "Manage Bookmarks…", icon: "bookmark", kbd: "⌥⌘B", run: () => bus.emit("library:open", "bookmarks") }])
+    menu(bar, [{ label: "Hide Bookmarks Bar", icon: "eyeoff", kbd: "⇧⌘B", run: toggleBmBar }, { label: "Show All Bookmarks", icon: "bookmarks", kbd: "⌥⌘B", run: () => openBookmarks() }, { label: "Manage in Library…", icon: "clock", run: () => bus.emit("library:open", "bookmarks") }])
   })
   mount(bar, h("div.bm-row", {}, [items, more]))
 
@@ -92,7 +105,7 @@ export function initBmBar () {
     if (!on) return
     items.replaceChildren(...(list.length
       ? list.map((b) => {
-        const el = h("button.bm-item", { title: `${b.title || b.url}\n${b.url}` }, [h("span.bm-fav", {}, [favFor(b.url)]), h("span.bm-name", { text: short(b.title || T.hostOf(b.url) || b.url) })])
+        const el = h("button.bm-item", { title: `${bookmarkLabel(b)}\n${b.url}` }, [h("span.bm-fav", {}, [favFor(b.url)]), h("span.bm-name", { text: short(bookmarkLabel(b)) })])
         el.addEventListener("click", (e) => open(b, e))
         el.addEventListener("auxclick", (e) => { if (e.button === 1) { e.preventDefault(); open(b, e) } })
         el.addEventListener("contextmenu", (e) => { e.preventDefault(); itemMenu(el, b) })

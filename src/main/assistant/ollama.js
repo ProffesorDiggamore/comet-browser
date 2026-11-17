@@ -7,9 +7,9 @@
 const { ipcMain } = require("electron")
 const { execFile, spawn } = require("node:child_process")
 const fs = require("node:fs")
-const { store } = require("../store")
 
-const base = () => (store.get("ai.localUrl") || "http://127.0.0.1:11434").replace(/\/+$/, "")
+// ai: the asking profile's "ai" config (each profile can point at its own Ollama)
+const base = (ai) => (ai?.localUrl || "http://127.0.0.1:11434").replace(/\/+$/, "")
 const APP = "/Applications/Ollama.app"
 const BINS = ["/usr/local/bin/ollama", "/opt/homebrew/bin/ollama", `${APP}/Contents/Resources/ollama`]
 
@@ -21,21 +21,21 @@ const RECOMMENDED = [
   { name: "llama3.2:3b", label: "Llama 3.2 3B", size: "2.0 GB", note: "Tiny and instant. Fine for quick questions." }
 ]
 
-async function req (path, opts = {}, timeoutMs = 4000) {
+async function req (ai, path, opts = {}, timeoutMs = 4000) {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), timeoutMs)
-  try { return await fetch(base() + path, { ...opts, signal: opts.signal ?? ctrl.signal }) }
+  try { return await fetch(base(ai) + path, { ...opts, signal: opts.signal ?? ctrl.signal }) }
   finally { clearTimeout(t) }
 }
 
 const installed = () => fs.existsSync(APP) || BINS.some((b) => fs.existsSync(b))
 
-async function running () {
-  try { const r = await req("/api/version", {}, 1500); return r.ok ? (await r.json()).version ?? "?" : null } catch { return null }
+async function running (ai) {
+  try { const r = await req(ai, "/api/version", {}, 1500); return r.ok ? (await r.json()).version ?? "?" : null } catch { return null }
 }
 
-async function start () {
-  if (await running()) return { ok: true }
+async function start (ai) {
+  if (await running(ai)) return { ok: true }
   if (!installed()) return { ok: false, text: "Ollama isn't installed." }
   try {
     if (fs.existsSync(APP)) execFile("open", ["-g", "-a", "Ollama"])
@@ -46,17 +46,17 @@ async function start () {
   } catch (e) { return { ok: false, text: e.message } }
   for (let i = 0; i < 30; i++) {
     await new Promise((r) => setTimeout(r, 400))
-    if (await running()) return { ok: true }
+    if (await running(ai)) return { ok: true }
   }
   return { ok: false, text: "Ollama didn't start. Open the Ollama app once, then try again." }
 }
 
 // capabilities per model: tools / vision / thinking (cached)
 const caps = new Map()
-async function capabilities (model) {
+async function capabilities (ai, model) {
   if (caps.has(model)) return caps.get(model)
   try {
-    const r = await req("/api/show", { method: "POST", body: JSON.stringify({ model }) }, 6000)
+    const r = await req(ai, "/api/show", { method: "POST", body: JSON.stringify({ model }) }, 6000)
     const j = await r.json()
     const c = new Set(j.capabilities ?? [])
     const info = { tools: c.has("tools"), vision: c.has("vision"), thinking: c.has("thinking"), ctx: Object.entries(j.model_info ?? {}).find(([k]) => k.endsWith(".context_length"))?.[1] ?? null }
@@ -65,34 +65,34 @@ async function capabilities (model) {
   } catch { return { tools: true, vision: false, thinking: false, ctx: null } }
 }
 
-async function list () {
-  const r = await req("/api/tags", {}, 4000)
+async function list (ai) {
+  const r = await req(ai, "/api/tags", {}, 4000)
   const j = await r.json()
   const models = await Promise.all((j.models ?? []).map(async (m) => ({
     name: m.name, size: m.size, params: m.details?.parameter_size ?? "", family: m.details?.family ?? "",
-    quant: m.details?.quantization_level ?? "", ...(await capabilities(m.name))
+    quant: m.details?.quantization_level ?? "", ...(await capabilities(ai, m.name))
   })))
   return models.sort((a, b) => a.name.localeCompare(b.name))
 }
 
-async function status () {
-  const version = await running()
+async function status (ai) {
+  const version = await running(ai)
   let models = []
-  if (version) { try { models = await list() } catch {} }
-  return { installed: installed(), running: !!version, version, models, recommended: RECOMMENDED, url: base() }
+  if (version) { try { models = await list(ai) } catch {} }
+  return { installed: installed(), running: !!version, version, models, recommended: RECOMMENDED, url: base(ai) }
 }
 
 // ── pulls (streamed progress → renderer) ──────────────────────────
 const pulls = new Map()   // name -> AbortController
-async function pull (wc, name) {
+async function pull (ai, wc, name) {
   if (pulls.has(name)) return { ok: true, already: true }
-  const up = await start()
+  const up = await start(ai)
   if (!up.ok) return up
   const ctrl = new AbortController()
   pulls.set(name, ctrl)
   const emit = (p) => { if (!wc.isDestroyed()) wc.send("flux:ollama:pull", { name, ...p }) }
   try {
-    const res = await fetch(base() + "/api/pull", { method: "POST", body: JSON.stringify({ model: name, stream: true }), signal: ctrl.signal })
+    const res = await fetch(base(ai) + "/api/pull", { method: "POST", body: JSON.stringify({ model: name, stream: true }), signal: ctrl.signal })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     let last = 0
     for await (const obj of ndjson(res.body)) {
@@ -109,8 +109,8 @@ async function pull (wc, name) {
   } finally { pulls.delete(name) }
 }
 
-async function remove (name) {
-  try { const r = await req("/api/delete", { method: "DELETE", body: JSON.stringify({ model: name }) }, 15000); caps.delete(name); return { ok: r.ok } }
+async function remove (ai, name) {
+  try { const r = await req(ai, "/api/delete", { method: "DELETE", body: JSON.stringify({ model: name }) }, 15000); caps.delete(name); return { ok: r.ok } }
   catch (e) { return { ok: false, text: e.message } }
 }
 
@@ -166,26 +166,26 @@ function toOllama (system, messages, vision) {
 const toolsForOllama = (tools) => tools.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } }))
 
 // one model turn; returns canonical content blocks + a normalized stop reason
-async function chatStep ({ model, system, messages, tools, effort, showThinking, signal, onText, onThinking, onTextStart }) {
-  const up = await start()
+async function chatStep ({ ai, model, system, messages, tools, effort, showThinking, signal, onText, onThinking, onTextStart }) {
+  const up = await start(ai)
   if (!up.ok) throw new Error(up.text)
   const cap = await capabilities(model)
   const body = {
     model,
     messages: toOllama(system, messages, cap.vision),
     stream: true,
-    keep_alive: store.get("ai.localKeepAlive") || "15m",
-    options: { num_ctx: Number(store.get("ai.localCtx")) || 16384 }
+    keep_alive: ai?.localKeepAlive || "15m",
+    options: { num_ctx: Number(ai?.localCtx) || 16384 }
   }
   if (cap.tools && tools.length) body.tools = toolsForOllama(tools)
   if (cap.thinking) body.think = /gpt-oss/.test(model) ? (effort === "low" ? "low" : effort === "high" || effort === "xhigh" ? "high" : "medium") : effort !== "low"
 
-  let res = await fetch(base() + "/api/chat", { method: "POST", body: JSON.stringify(body), signal })
+  let res = await fetch(base(ai) + "/api/chat", { method: "POST", body: JSON.stringify(body), signal })
   if (res.status === 404) throw new Error(`The model "${model}" isn't downloaded yet. Get it in Settings → Comet AI.`)
   if (!res.ok) {
     const txt = await res.text().catch(() => "")
     // older builds / odd templates: retry once without thinking
-    if (body.think !== undefined && /think/i.test(txt)) { delete body.think; res = await fetch(base() + "/api/chat", { method: "POST", body: JSON.stringify(body), signal }) }
+    if (body.think !== undefined && /think/i.test(txt)) { delete body.think; res = await fetch(base(ai) + "/api/chat", { method: "POST", body: JSON.stringify(body), signal }) }
     if (!res.ok) throw new Error(`Ollama: ${txt.slice(0, 200) || `HTTP ${res.status}`}`)
   }
 
@@ -228,12 +228,13 @@ async function chatStep ({ model, system, messages, tools, effort, showThinking,
   return { content, stop: calls.length ? "tool_use" : doneReason === "length" ? "max_tokens" : "end_turn", toolsCapable: cap.tools }
 }
 
-function registerOllamaIpc () {
-  ipcMain.handle("flux:ollama:status", () => status())
-  ipcMain.handle("flux:ollama:start", () => start())
-  ipcMain.handle("flux:ollama:pull", (e, name) => pull(e.sender, String(name ?? "").trim()))
+function registerOllamaIpc ({ ctxFor }) {
+  const aiOf = (e) => ctxFor(e).store.get("ai") ?? {}
+  ipcMain.handle("flux:ollama:status", (e) => status(aiOf(e)))
+  ipcMain.handle("flux:ollama:start", (e) => start(aiOf(e)))
+  ipcMain.handle("flux:ollama:pull", (e, name) => pull(aiOf(e), e.sender, String(name ?? "").trim()))
   ipcMain.handle("flux:ollama:cancel", (_e, name) => { pulls.get(name)?.abort(); return { ok: true } })
-  ipcMain.handle("flux:ollama:remove", (_e, name) => remove(name))
+  ipcMain.handle("flux:ollama:remove", (e, name) => remove(aiOf(e), name))
 }
 
 module.exports = { registerOllamaIpc, chatStep, RECOMMENDED }

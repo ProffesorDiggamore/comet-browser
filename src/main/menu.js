@@ -2,37 +2,52 @@
 //  menu.js — the macOS menu bar is the single source of truth for
 //  browser shortcuts.  Menu accelerators fire no matter which surface
 //  has focus (the Comet UI or a web page), so ⌘T / ⌘L / ⌘F / ⌘J … always
-//  work.  Each item forwards an action to the renderer bus.
+//  work.  Each item forwards an action to the renderer bus of the window
+//  it was pressed in (several profile windows can be open at once).
 // ───────────────────────────────────────────────────────────────────
 const { app, Menu } = require("electron")
 const { profiles } = require("./profiles")
 
-function buildMenu (getWin) {
-  const go = (action) => () => {
-    const w = getWin()
-    if (w && !w.isDestroyed()) w.webContents.send("flux:menu", { action })
+const label = (p) => (p.emoji ? `${p.emoji}  ${p.name}` : p.name)
+
+// api (windows.js): targetWin(bw) maps the clicked-in window (a pop-up → its
+// parent, none → the last-focused window); openProfileWindow(id) opens or
+// focuses a profile's window; newWindow() is ⌘N; focusedProfileId(); openIds()
+function buildMenu (api) {
+  const send = (payload) => (_mi, bw) => {
+    const w = api.targetWin(bw)
+    if (w && !w.isDestroyed()) w.webContents.send("flux:menu", payload)
   }
+  const go = (action) => send({ action })
   const item = (label, accelerator, action) => ({ label, accelerator, click: go(action) })
   // shortcut-only items: the accelerator works, the menu doesn't show a duplicate row
   const hidden = (label, accelerator, action) => ({ ...item(label, accelerator, action), visible: false, acceleratorWorksWhenHidden: true })
-  // the renderer saves its tabs before switching, so profile picks go through it
-  const send = (payload) => () => {
-    const w = getWin()
-    if (w && !w.isDestroyed()) w.webContents.send("flux:menu", payload)
-  }
   // ⌘1–⌘8 pick that tab, ⌘9 the last one (every browser does this)
   const selectTab = Array.from({ length: 9 }, (_, i) => ({
     ...hidden(i === 8 ? "Select Last Tab" : `Select Tab ${i + 1}`, `CmdOrCtrl+${i + 1}`, "select-tab"),
     click: send({ action: "select-tab", index: i === 8 ? -1 : i })
   }))
-  const active = profiles.activeId()
-  const profileItems = profiles.list().map((p, i) => ({
-    label: p.emoji ? `${p.emoji}  ${p.name}` : p.name,
+  // ⌃⌘1…9 switch THIS window (through the renderer, which saves its tabs first);
+  // a profile already open elsewhere is focused instead of duplicated
+  const list = profiles.list().filter((p) => !api.removing?.has(p.id))
+  const here = api.focusedProfileId()
+  const open = new Set(api.openIds())
+  const profileItems = list.map((p, i) => ({
+    label: label(p),
     type: "checkbox",
-    checked: p.id === active,
+    checked: p.id === here,
     accelerator: i < 9 ? `Ctrl+CmdOrCtrl+${i + 1}` : undefined,
     click: send({ action: "profile-switch", id: p.id })
   }))
+  // a window of its own: checked = already open (clicking focuses it)
+  const windowItems = list.length > 1
+    ? [{ type: "separator" }, {
+        label: "Open in New Window",
+        submenu: list.map((p) => ({ label: label(p), type: "checkbox", checked: open.has(p.id), click: () => api.openProfileWindow(p.id) }))
+      }]
+    : []
+  // ⌘W closes a pop-up itself, not the tab behind it
+  const closeTab = { ...item("Close Tab", "CmdOrCtrl+W", "close-tab"), click: (mi, bw) => (bw && !bw.isDestroyed() && api.targetWin(bw) !== bw ? bw.close() : go("close-tab")(mi, bw)) }
 
   const template = [
     {
@@ -53,9 +68,11 @@ function buildMenu (getWin) {
       label: "File",
       submenu: [
         item("New Tab", "CmdOrCtrl+T", "new-tab"),
+        { label: "New Window…", accelerator: "CmdOrCtrl+N", click: () => api.newWindow() },
         item("New Private Tab", "Shift+CmdOrCtrl+N", "new-private-tab"),
         item("Reopen Closed Tab", "Shift+CmdOrCtrl+T", "reopen"),
-        item("Close Tab", "CmdOrCtrl+W", "close-tab"),
+        closeTab,
+        { role: "close", label: "Close Window", accelerator: "Shift+CmdOrCtrl+W" },
         { type: "separator" },
         item("Open Location…", "CmdOrCtrl+L", "focus-address"),
         item("Copy Link to This Page", "Shift+CmdOrCtrl+C", "copy-url"),
@@ -153,6 +170,7 @@ function buildMenu (getWin) {
       label: "Profiles",
       submenu: [
         ...profileItems,
+        ...windowItems,
         { type: "separator" },
         item("Add Profile…", "", "profile-add"),
         item("Manage Profiles…", "", "profile-manage")
@@ -170,4 +188,18 @@ function buildMenu (getWin) {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-module.exports = { buildMenu }
+// right-click the Dock icon: every profile (checked = has a window) opens or
+// focuses its window.  One profile: nothing extra.
+function buildDockMenu (api) {
+  if (process.platform !== "darwin" || !app.dock) return
+  const list = profiles.list().filter((p) => !api.removing?.has(p.id))
+  if (list.length < 2) { app.dock.setMenu(Menu.buildFromTemplate([])); return }
+  const open = new Set(api.openIds())
+  app.dock.setMenu(Menu.buildFromTemplate([
+    ...list.map((p) => ({ label: label(p), type: "checkbox", checked: open.has(p.id), click: () => api.openProfileWindow(p.id) })),
+    { type: "separator" },
+    { label: "New Window…", click: () => api.newWindow() }
+  ]))
+}
+
+module.exports = { buildMenu, buildDockMenu }

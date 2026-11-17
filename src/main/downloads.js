@@ -7,7 +7,8 @@ const { app, shell } = require("electron")
 const fs = require("node:fs")
 const path = require("node:path")
 
-const items = new Map()     // id -> { item, info }
+// each profile context keeps its own list (ctx.downloads: id -> { item, info });
+// ids stay unique across profiles
 let seq = 0
 
 function uniquePath (dir, name) {
@@ -19,7 +20,7 @@ function uniquePath (dir, name) {
   return p
 }
 
-function snapshot (id) {
+function snapshot (items, id) {
   const rec = items.get(id)
   if (!rec) return null
   const { item, info } = rec
@@ -29,10 +30,11 @@ function snapshot (id) {
   return { ...info, received, total }
 }
 
-function initDownloads (ses, getWin) {
+function initDownloads (ses, ctx) {
+  const items = ctx.downloads
   const send = (id) => {
-    const w = getWin()
-    if (w && !w.isDestroyed()) w.webContents.send("flux:dl:update", snapshot(id))
+    const w = ctx.win
+    if (w && !w.isDestroyed()) w.webContents.send("flux:dl:update", snapshot(items, id))
   }
 
   ses.on("will-download", (_e, item) => {
@@ -73,8 +75,9 @@ function initDownloads (ses, getWin) {
 }
 
 const downloads = {
-  list () { return [...items.keys()].map(snapshot).filter(Boolean).reverse() },
-  action (id, verb) {
+  list (ctx) { return [...ctx.downloads.keys()].map((id) => snapshot(ctx.downloads, id)).filter(Boolean).reverse() },
+  action (ctx, id, verb) {
+    const items = ctx.downloads
     const rec = items.get(id)
     if (!rec) return { ok: false }
     const { item, info } = rec
@@ -88,9 +91,13 @@ const downloads = {
       return { ok: true }
     } catch (e) { return { ok: false, text: e.message } }
   },
-  clearFinished () {
-    for (const [id, { info }] of items) if (info.state !== "progressing") items.delete(id)
+  clearFinished (ctx) {
+    for (const [id, { info }] of ctx.downloads) if (info.state !== "progressing") ctx.downloads.delete(id)
     return { ok: true }
+  },
+  // profile removed: stop what is still running
+  cancelAll (ctx) {
+    for (const { item, info } of ctx.downloads.values()) if (info.state === "progressing") try { item.cancel() } catch {}
   }
 }
 

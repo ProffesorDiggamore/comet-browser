@@ -4,7 +4,6 @@
 //  Blocking is domain-based (fast Set lookup per hostname label), only
 //  ever applied to sub-resources — a page you navigate to always loads.
 // ───────────────────────────────────────────────────────────────────
-const { store } = require("./store")
 const { applyRequestQuirks } = require("./quirks")
 
 // Curated list: the ad exchanges + analytics beacons that cover the bulk
@@ -60,7 +59,8 @@ function isLocal (host) {
 const counts = new Map()       // webContentsId -> blocked count (per page load)
 let total = 0
 
-function initShield (ses, getWin) {
+// ctx: the profile context that owns this session (main/contexts.js)
+function initShield (ses, ctx) {
   let pending = new Map()
   let flushT = null
   const notify = (wcId) => {
@@ -68,7 +68,7 @@ function initShield (ses, getWin) {
     if (flushT) return
     flushT = setTimeout(() => {
       flushT = null
-      const w = getWin()
+      const w = ctx.win
       if (w && !w.isDestroyed()) w.webContents.send("flux:shield:counts", { counts: Object.fromEntries(pending), total })
       pending = new Map()
     }, 400)
@@ -77,7 +77,7 @@ function initShield (ses, getWin) {
   ses.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, cb) => {
     let u
     try { u = new URL(details.url) } catch { return cb({}) }
-    const priv = store.get("privacy") ?? {}
+    const priv = ctx.store.get("privacy") ?? {}
 
     if (details.resourceType === "mainFrame") {
       // a new top-level page resets that tab's counter
@@ -100,11 +100,11 @@ function initShield (ses, getWin) {
 
   // a session gets one header hook, so site quirks ride along here
   ses.webRequest.onBeforeSendHeaders({ urls: ["<all_urls>"] }, (details, cb) => {
-    if (store.get("privacy.sendGpc") !== false) {
+    if (ctx.store.get("privacy.sendGpc") !== false) {
       details.requestHeaders["Sec-GPC"] = "1"
       details.requestHeaders.DNT = "1"
     }
-    applyRequestQuirks(details)
+    applyRequestQuirks(details, ctx.store)
     cb({ requestHeaders: details.requestHeaders })
   })
 }

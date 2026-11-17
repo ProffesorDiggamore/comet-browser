@@ -5,10 +5,10 @@
 //  (press Fn twice in any field) works with no key at all.
 // ───────────────────────────────────────────────────────────────────
 const { ipcMain, systemPreferences } = require("electron")
-const { store } = require("../store")
+const { secrets } = require("../store")
 
 async function transcribe ({ audio, mime }) {
-  const key = store.getSecret("openai")
+  const key = secrets.getSecret("openai")
   if (!key) return { ok: false, needsKey: true, text: "Voice input uses an OpenAI key (Settings → API Keys). Or press Fn twice to use macOS dictation." }
   try {
     const bytes = Buffer.from(audio)
