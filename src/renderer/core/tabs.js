@@ -212,6 +212,7 @@ function wire (tab) {
     else if (e.channel === "flux-login-blur") bus.emit("login-blur", { id: tab.id })
     else if (e.channel === "flux-login-key") bus.emit("login-key", e.args[0])
     else if (e.channel === "flux-login-submit") bus.emit("login-submit", { id: tab.id, ...e.args[0] })
+    else if (e.channel === "flux-login-state" || e.channel === "flux-login-ident") bus.emit(e.channel.slice(5), { id: tab.id, ...e.args[0] })
   })
   wv.addEventListener("focus", () => { if (isInSplit(tab.id) && activeId !== tab.id) setActive(tab.id) })
 }

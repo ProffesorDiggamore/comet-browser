@@ -150,6 +150,9 @@ function registerIpc ({ getWin, ROOT }) {
   ipcMain.handle("flux:vault:match-all", (_e, url) => vault.matchAll(String(url ?? "")))
   ipcMain.handle("flux:vault:fill", (_e, profileId, id) => vault.fill(String(profileId), String(id)))
   ipcMain.handle("flux:vault:known", (_e, url, username, password) => vault.known(String(url ?? ""), String(username ?? ""), String(password ?? "")))
+  ipcMain.handle("flux:vault:plan", (_e, url, username, password) => vault.plan(String(url ?? ""), String(username ?? ""), String(password ?? "")))
+  ipcMain.handle("flux:vault:update", (_e, id, patch) => vault.update(String(id ?? ""), { username: typeof patch?.username === "string" ? patch.username : undefined, password: typeof patch?.password === "string" ? patch.password : undefined }))
+  ipcMain.handle("flux:vault:never", (_e, url) => vault.never(String(url ?? "")))
 }
 
 function broadcast (getWin, channel, payload) {

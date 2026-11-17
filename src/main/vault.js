@@ -38,6 +38,8 @@ function hostOf (url) {
   try { return new URL(url).host.replace(/^www\./, "") } catch { return (url || "").slice(0, 60) }
 }
 
+const norm = (u) => String(u ?? "").trim().toLowerCase()
+
 function id () { return `pw_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}` }
 
 const vault = {
@@ -106,6 +108,48 @@ const vault = {
   known (url, username, password) {
     const host = hostOf(url)
     return profiles.list().some((p) => load(p.id).entries.some((e) => sameSite(e.host, host) && e.username === (username || "") && e.password === password))
+  },
+  // the active profile's logins for this site (metadata only)
+  findForSite (url) {
+    const host = hostOf(url)
+    return load().entries.filter((e) => sameSite(e.host, host)).map((e) => ({ id: e.id, host: e.host, username: e.username }))
+  },
+  // after a sign-in: what should the save card offer?
+  //   never  — the user said never for this site
+  //   none   — this exact login is already saved (any profile)
+  //   update — this username is saved here with a different password
+  //   save   — new for this profile; `others` = other usernames saved for the site
+  plan (url, username, password) {
+    const host = hostOf(url)
+    const data = load()
+    if ((data.never ?? []).some((h) => sameSite(h, host))) return { action: "never" }
+    const u = norm(username)
+    if (profiles.list().some((p) => load(p.id).entries.some((e) => sameSite(e.host, host) && norm(e.username) === u && e.password === password))) return { action: "none" }
+    const site = data.entries.filter((e) => sameSite(e.host, host))
+    const same = site.filter((e) => norm(e.username) === u)
+    const hit = same.find((e) => e.host === host) ?? same[0]
+    if (hit) return { action: "update", id: hit.id, username: hit.username }
+    return { action: "save", others: site.map((e) => ({ id: e.id, username: e.username })) }
+  },
+  // replace a saved login's password in place: keeps id, addedAt and any notes
+  update (entryId, { username, password } = {}) {
+    const data = load()
+    const e = data.entries.find((x) => x.id === entryId)
+    if (!e) return { ok: false }
+    if (password) e.password = password
+    if (typeof username === "string") e.username = username
+    e.updatedAt = Date.now()
+    save(data)
+    return { ok: true }
+  },
+  // never offer to save on this site (active profile)
+  never (url) {
+    const host = hostOf(url)
+    if (!host) return { ok: false }
+    const data = load()
+    data.never = [...new Set([...(data.never ?? []), host])]
+    save(data)
+    return { ok: true }
   }
 }
 
