@@ -4,10 +4,8 @@
 //  it).  Styles sit on top of any theme and take its accent color, so
 //  "Topographic in Rose, dark" is just Style + Theme + Mode.
 //
-//  Kept cheap on purpose: each style redraws ~10–15 times a second on
-//  Home, at most 5 while a web page fills the window (only the sidebar
-//  and top bar show it), and not at all while Comet isn't the app in
-//  front.  Motion off / reduced, Battery Saver or "Animate" off draws
+//  Redraws at the Frame rate you pick (theme.styleFps, 5–60), and not
+//  at all while Comet isn't the app in front.  Motion off / reduced, Battery Saver or "Animate" off draws
 //  one still frame.
 // ───────────────────────────────────────────────────────────────────
 import { bus } from "./bus.js"
@@ -15,7 +13,6 @@ import { state } from "./state.js"
 import { effectiveMode } from "./motion.js"
 import { isWinActive } from "./perf.js"
 
-const FPS_OFF_HOME = 5
 
 // ── classic 3D Perlin noise (seeded) ──────────────────────────────
 const perm = new Uint8Array(512)
@@ -282,8 +279,8 @@ function frame () {
   ctx.clearRect(0, 0, env.W, env.H)
   cur.draw(env, sstate, t)
   if (!animated() || !isWinActive()) return             // resumes on "win-active"
-  const fps = document.body.classList.contains("on-home") ? cur.fps : Math.min(cur.fps, FPS_OFF_HOME)
-  timer = setTimeout(frame, 1000 / fps)
+  const fps = Math.min(60, Math.max(5, Number(state.get("theme.styleFps")) || 20))
+  timer = setTimeout(frame, Math.max(0, 1000 / fps - (performance.now() - now)))   // minus the draw time, so 30 means 30
 }
 
 function kick () {
@@ -321,7 +318,7 @@ export function initBackdrop () {
   let lastSig = ""
   bus.on("config", () => {
     const th = state.get("theme") ?? {}
-    const sig = JSON.stringify([th.style, th.styleStrength, th.styleLive, th.active, th.mode, th.accent, th.accentCustom, th.custom, document.body.dataset.mode])
+    const sig = JSON.stringify([th.style, th.styleStrength, th.styleLive, th.styleFps, th.active, th.mode, th.accent, th.accentCustom, th.custom, document.body.dataset.mode])
     if (sig === lastSig) return
     lastSig = sig
     setTimeout(sync, 0)          // after state.js has re-applied the theme's colors

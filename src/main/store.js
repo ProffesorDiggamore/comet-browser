@@ -36,6 +36,7 @@ const DEFAULTS = {
     vibrancy: true,            // real macOS window glass behind the chrome
     style: "none",             // live backdrop on any theme: none | topo | dots | waves | constellation | stars
     styleStrength: 1,          // line / dot opacity multiplier
+    styleFps: 20,              // frames per second (Settings → Appearance → Style → Frame rate)
     styleLive: true,           // false = one still frame
     customCss: ""
   },

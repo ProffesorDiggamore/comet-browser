@@ -117,6 +117,7 @@ function styleGroup (t) {
   return group("Style", [
     h("div.set-row", { dataset: { search: "style pattern background topographic topo contour dot grid waves constellation stars starfield live animated" } }, [h("div.style-grid", {}, cards)]),
     active !== "none" && row("Strength", rng(t.styleStrength ?? 1, 0.4, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => state.set("theme.styleStrength", v)), "How bold the lines and dots are."),
+    active !== "none" && t.styleLive !== false && row("Frame rate", rng(t.styleFps ?? 20, 5, 60, 1, (v) => `${v} fps`, (v) => state.set("theme.styleFps", v)), "Higher is smoother; lower saves battery. It pauses while Comet isn't the app in front."),
     active !== "none" && row("Animate", sw(t.styleLive !== false, (v) => state.set("theme.styleLive", v)), "Off draws one still frame. It also holds still with Reduce Motion or Battery Saver.")
   ].filter(Boolean), "A live pattern behind the sidebar, top bar and New Tab. It works with every theme and uses the theme's accent color — pick both.")
 }
