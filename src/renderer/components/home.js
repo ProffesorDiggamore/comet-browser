@@ -123,7 +123,8 @@ function tile (w, idx) {
   return el
 }
 
-// "Good morning, Personal" — the active profile's name, by time of day
+// "Good morning, Landon" — your name (Settings → Home Screen), by time of
+// day.  Never the profile's name: "Good night, Personal" read like a typo.
 export function greetingFor (d = new Date()) {
   const hr = d.getHours()
   return hr < 5 ? "Good night" : hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : hr < 21 ? "Good evening" : "Good night"
@@ -133,7 +134,8 @@ function greeting () {
   const sub = h("div.home-hello-sub")
   const paint = () => {
     const d = new Date()
-    line.textContent = `${greetingFor(d)}, ${currentProfile().name}`
+    const name = String(state.get("user.name") ?? "").trim().split(/\s+/)[0]
+    line.textContent = name ? `${greetingFor(d)}, ${name}` : greetingFor(d)
     sub.textContent = d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
   }
   paint()

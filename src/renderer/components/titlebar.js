@@ -17,6 +17,7 @@ import { openSiteInfo } from "./siteinfo.js"
 import { openDownloads, downloadsBadge } from "./downloads.js"
 import * as T from "../core/tabs.js"
 import { profileButton } from "./profiles.js"
+import * as G from "../core/groups.js"
 
 const els = new Map()       // tabId -> element
 let strip, pinnedBox, address, omni, btnStar, btnDl, btnBack, btnFwd, btnReload, chipZoom, chipShield, chipSite, chipCopy, addrWrap, crumb, btnStar2
@@ -40,9 +41,25 @@ export function openDownloadsPopover () {
   openDownloads(side?.offsetParent ? side : btnDl)
 }
 
+// group entries for the tab menu: new group, move to another, or out
+function groupItems (t) {
+  if (t.pinned) return []
+  const others = G.getGroups().filter((g) => g.id !== t.group)
+  return [
+    "-",
+    { label: "Add Tab to New Group", icon: "folder", kbd: "⌥⌘G", run: () => G.createGroup([t.id]) },
+    ...others.slice(0, 8).map((g) => ({ label: `Move to “${g.name || "Untitled group"}”`, swatch: G.colorVar(g.color), run: () => G.addToGroup(t.id, g.id) })),
+    t.group && { label: "Remove from Group", icon: "layers", run: () => G.removeFromGroup(t.id) }
+  ]
+}
+
 export function tabMenu (t, anchor) {
+  const dia = document.body.dataset.layout === "dia"
   menu(anchor, [
-    { label: "New Tab to the Right", icon: "plus", run: () => T.newTab(null, { index: T.getTabs().findIndex((x) => x.id === t.id) + 1 }) },
+    { label: dia ? "New Tab Below" : "New Tab to the Right", icon: "plus", run: () => T.newTab(null, { index: T.getTabs().findIndex((x) => x.id === t.id) + 1, group: t.group }) },
+    dia && { label: "Rename Tab…", icon: "edit", run: () => bus.emit("tab:rename", t.id) },
+    dia && t.customTitle && { label: "Restore Page Title", icon: "reset", run: () => T.patchTab(t.id, { customTitle: null }) },
+    ...(dia ? groupItems(t) : []),
     "-",
     { label: t.pinned ? "Unpin Tab" : "Pin Tab", icon: "pin", run: () => T.setPinned(t.id, !t.pinned), disabled: t.isHome },
     { label: t.muted ? "Unmute Tab" : "Mute Tab", icon: t.muted ? "volume" : "volumeX", run: () => T.setMuted(t.id) },
@@ -58,14 +75,14 @@ export function tabMenu (t, anchor) {
     { label: "Ask Comet AI About This Tab", icon: "spark", disabled: t.isHome, run: () => { T.setActive(t.id); bus.emit("ai:ask", { text: "Summarize this page.", withPage: true }) } },
     "-",
     { label: "Close Other Tabs", icon: "layers", run: () => T.closeOthers(t.id) },
-    { label: "Close Tabs to the Right", icon: "forward", run: () => T.closeRight(t.id) },
+    { label: dia ? "Close Tabs Below" : "Close Tabs to the Right", icon: dia ? "chevronDown" : "forward", run: () => T.closeRight(t.id) },
     { label: "Close Tab", icon: "close", kbd: "⌘W", danger: true, run: () => T.closeTab(t.id) }
   ])
 }
 
 function favNode (t) {
   if (t.pane === "settings") return ico("gear", 13)
-  if (t.isHome) return ico("flux", 13)
+  if (t.isHome) return ico("home", 13)       // the comet mark read as a loading spinner at this size
   if (t.asleep && !t.favicon) return ico("sleep", 13)
   if (t.favicon) return h("img", { src: t.favicon, draggable: false, onerror: (e) => e.target.replaceWith(ico("globe", 13)) })
   return ico("globe", 13)
@@ -166,6 +183,8 @@ function renderTabs ({ tabs, activeId }) {
   const a = tabs.find((t) => t.id === activeId)
   const web = a && !a.isHome
   document.body.classList.toggle("on-home", !web)
+  // New Tab has its own big search field: the toolbar's pill would be a second copy of it
+  document.body.classList.toggle("on-newtab", !!a && a.isHome && !a.pane && state.get("home.showSearch") !== false)
   document.body.classList.toggle("is-private-tab", !!a?.private)
   if (document.activeElement !== address) setAddress(a)
   btnBack.toggleAttribute("disabled", !web)
@@ -193,7 +212,8 @@ function setAddress (a) {
   if (crumb) {
     let hostName = ""
     try { hostName = url ? new URL(url).host.replace(/^www\./, "") : "" } catch {}
-    const title = a && !a.isHome ? (a.title && a.title !== url ? a.title : "") : ""
+    if (a?.pane === "settings") hostName = "Comet"
+    const title = a?.pane === "settings" ? "Settings" : a && !a.isHome ? (a.title && a.title !== url ? a.title : "") : ""
     const key = `${hostName}\n${title}`
     if (key !== crumbKey) {
       const swapSite = key.split("\n")[0] !== crumbKey.split("\n")[0]
@@ -213,7 +233,7 @@ function setAddress (a) {
   }
   if (chipCopy) chipCopy.hidden = !url
   const secure = url.startsWith("https:")
-  chipSite.replaceChildren(ico(!url ? "search" : secure ? "lock" : "info", 13))
+  chipSite.replaceChildren(ico(a?.pane === "settings" ? "gear" : !url ? "search" : secure ? "lock" : "info", 13))
   chipSite.classList.toggle("is-insecure", !!url && !secure)
 }
 
@@ -306,6 +326,7 @@ export function initTitlebar () {
     if (!was && btnStar2.classList.contains("is-on")) { kick(btnStar2, "is-pop"); kick(btnStar, "is-pop") }
   })
   bus.on("zoom", updateZoomChip)
+  bus.on("config", () => { const a = T.getActive(); document.body.classList.toggle("on-newtab", !!a && a.isHome && !a.pane && state.get("home.showSearch") !== false) })
   bus.on("focus-address", () => {
     if (T.getActive()?.isHome) { bus.emit("home:focus"); return }
     address.focus(); address.select()

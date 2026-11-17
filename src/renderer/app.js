@@ -33,6 +33,8 @@ import { initProfiles, switchProfile, openProfileSheet } from "./components/prof
 import { initTooltips } from "./components/tooltip.js"
 import { initAutofill } from "./components/passwords.js"
 import { initBmBar, toggleBmBar } from "./components/bmbar.js"
+import { initPeek, closePeek, isPeekOpen } from "./components/peek.js"
+import * as G from "./core/groups.js"
 
 const PANES = ["home", "library", "settings"]
 
@@ -103,6 +105,9 @@ function runAction (action, extra = {}) {
     case "prev-tab": return T.cycle(-1)
     case "pin": return web && T.setPinned(a.id, !a.pinned)
     case "duplicate": return T.duplicate(a?.id)
+    case "group-tab": return a && !a.pinned && document.body.dataset.layout === "dia" ? G.createGroup([a.id]) : null
+    case "rename-tab": return a && document.body.dataset.layout === "dia" ? bus.emit("tab:rename", a.id) : null
+    case "peek": return bus.emit("peek:open", { url: extra.url, private: T.isPrivateWc(extra.from) })
     case "mute": return a && T.setMuted(a.id)
     case "pip": return pip()
     case "sleep-all": T.sleepAllBackground(); return toast("Background tabs asleep")
@@ -121,6 +126,7 @@ function runAction (action, extra = {}) {
 
 function escape () {
   if (isPopoverOpen()) return closePopover()
+  if (isPeekOpen()) return closePeek()
   closePalette(); closeFind(); closeOverview(); closeReader()
 }
 
@@ -146,6 +152,7 @@ async function main () {
   initSchematic()
   initEasyFiles()
   initAutofill()
+  initPeek()
 
   // "home" is the New Tab page — asking for it with no home tab active opens one
   bus.on("view", (v) => {

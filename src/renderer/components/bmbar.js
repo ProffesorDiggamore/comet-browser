@@ -16,7 +16,8 @@ export const bmBarOn = () => state.get("layout.bookmarksBar") !== false
 export function toggleBmBar () {
   const on = !bmBarOn()
   state.set("layout.bookmarksBar", on)
-  toast(on ? "Bookmarks bar on (⇧⌘B hides it)" : "Bookmarks bar hidden (⇧⌘B shows it)")
+  const none = !(state.get("bookmarks") ?? []).length
+  toast(on ? (none ? "Bookmarks bar on — it appears once you bookmark a page (⌘D)" : "Bookmarks bar on (⇧⌘B hides it)") : "Bookmarks bar hidden (⇧⌘B shows it)")
 }
 
 const short = (s, n = 22) => { const t = String(s ?? "").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t }
@@ -84,10 +85,11 @@ export function initBmBar () {
   }
 
   const render = () => {
-    const on = bmBarOn()
+    // an empty bar only said "bookmarks show up here" and cost every page a row
+    const list = marks()
+    const on = bmBarOn() && list.length > 0
     document.body.classList.toggle("has-bmbar", on)
     if (!on) return
-    const list = marks()
     items.replaceChildren(...(list.length
       ? list.map((b) => {
         const el = h("button.bm-item", { title: `${b.title || b.url}\n${b.url}` }, [h("span.bm-fav", {}, [favFor(b.url)]), h("span.bm-name", { text: short(b.title || T.hostOf(b.url) || b.url) })])

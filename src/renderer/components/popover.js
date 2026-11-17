@@ -69,6 +69,7 @@ export function menu (anchor, items, opts = {}) {
       onclick: () => { closePopover(); it.run?.() }
     }, [
       h("span.mi-ico", {}, [it.checked != null ? (it.checked ? ico("check", 14) : h("span")) : it.icon ? ico(it.icon, 15) : h("span")]),
+      it.swatch && h("span.mi-swatch", { style: { background: it.swatch } }),
       h("span.mi-label", { text: it.label }),
       it.kbd && h("kbd.mi-kbd", { text: it.kbd })
     ])

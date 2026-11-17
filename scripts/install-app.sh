@@ -29,7 +29,7 @@ fi
 # build outside ~/Documents: iCloud re-adds FinderInfo mid-build and breaks codesign
 STAGE="$(mktemp -d "${TMPDIR:-/tmp}/comet-build.XXXXXX")"
 APP="$STAGE/Comet.app"
-echo "Building Comet $VERSION…"
+echo "Building Comet ${VERSION}…"
 ditto "$ELECTRON" "$APP"
 
 RES="$APP/Contents/Resources"

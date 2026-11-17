@@ -56,6 +56,7 @@ function catSearch () {
     group("Tabs", [
       row("New tab opens", seg([{ v: "end", label: "At the end" }, { v: "afterCurrent", label: "Next to current" }], state.get("general.newTabPosition"), (v) => state.set("general.newTabPosition", v))),
       row("Show Home on new tab", sw(state.get("general.homeOnNewTab"), (v) => state.set("general.homeOnNewTab", v))),
+      row("Close unused New Tabs", sw(state.get("general.discardBlankTabs") !== false, (v) => state.set("general.discardBlankTabs", v)), "A New Tab you leave without opening anything closes itself, so blank tabs don't pile up."),
       row("Restore tabs on launch", sw(state.get("general.restoreTabs"), (v) => state.set("general.restoreTabs", v))),
       row("Easy Files uploads", sw(state.get("general.easyFiles") !== false, (v) => state.set("general.easyFiles", v)), "When a site asks for a file, offer what you copied and your recent downloads first. Applies to pages loaded after the change."),
       row("Default page zoom", rng(state.get("general.defaultZoom") ?? 1, 0.5, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => state.set("general.defaultZoom", v)), "Applied to newly opened tabs.")
@@ -172,11 +173,11 @@ function catHome () {
       h("div.set-row", { dataset: { search: "wallpaper background photo desktop picture home widgets dim style frosted liquid solid tinted clear" } }, [wallpaperPicker()])
     ]),
     group("Home screen", [
-      row("Greeting", sw(state.get("home.showGreeting") !== false, (v) => state.set("home.showGreeting", v)), "“Good morning, …” with this profile's name and picture."),
+      row("Greeting", sw(state.get("home.showGreeting") !== false, (v) => state.set("home.showGreeting", v)), "“Good morning, …” with your name and this profile's picture."),
       row("Search field", sw(state.get("home.showSearch") !== false, (v) => state.set("home.showSearch", v))),
       row("24-hour clock", sw(state.get("home.clock24") === true, (v) => state.set("home.clock24", v))),
       row("Temperature", seg([{ v: "f", label: "°F" }, { v: "c", label: "°C" }], state.get("home.tempUnit") ?? "f", (v) => state.set("home.tempUnit", v))),
-      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "Used by Comet AI" })),
+      row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "First name" }), "Shown in the Home greeting (and used by Comet AI)."),
       row("Widgets", btn("Reset to default widgets", async () => {
         const d = await window.flux.config.defaults()
         state.set("home.widgets", d.home.widgets); toast("Widgets reset")

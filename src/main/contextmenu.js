@@ -33,6 +33,7 @@ function attachContextMenu (contents, getWin) {
     if (isPage && p.linkURL) {
       t.push(
         { label: "Open Link in New Tab", click: () => send("flux:open-tab", { url: p.linkURL, background: true, from: contents.id }) },
+        { label: "Peek at Link  (⇧-click)", visible: /^https?:/i.test(p.linkURL), click: () => send("flux:menu", { action: "peek", url: p.linkURL, from: contents.id }) },
         { label: "Open Link in Private Tab", click: () => send("flux:open-tab", { url: p.linkURL, private: true }) },
         { label: "Open Link in Split View", click: () => send("flux:menu", { action: "split-with-url", url: p.linkURL }) },
         { label: "Open Link in System Browser", click: () => /^https?:/.test(p.linkURL) && shell.openExternal(p.linkURL) },

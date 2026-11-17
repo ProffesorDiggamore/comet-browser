@@ -16,19 +16,19 @@
 
 /* ── sidebar ───────────────────────────────────────────────────── */
 [data-layout="dia"] #vtabs {
-  display: block; position: relative; z-index: 9; flex: 0 0 auto; width: 240px; overflow: hidden;
+  display: block; position: relative; z-index: 9; flex: 0 0 auto; width: var(--vt-w, 240px); overflow: hidden;
   transition: width var(--f-med) var(--f-ease), opacity var(--f-fast) var(--f-ease-out);
 }
 body.vt-collapsed #vtabs { width: 0; opacity: 0; }
 body.vt-collapsed #vtabs.is-peek {
-  position: absolute; left: 8px; top: 8px; bottom: 8px; width: 240px; opacity: 1; z-index: 60; border-radius: 14px;
+  position: absolute; left: 8px; top: 8px; bottom: 8px; width: var(--vt-w, 240px); opacity: 1; z-index: 60; border-radius: 14px;
   background: var(--f-pop-bg); -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%);
   box-shadow: var(--f-shadow), 0 0 0 0.5px rgb(var(--ink) / 0.1), inset 0 0.5px 0 rgb(var(--spec) / 0.14);
 }
 #vtabs-edge { display: none; }
 body.vt-collapsed[data-layout="dia"] #vtabs-edge { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; z-index: 59; }
 
-.vt { width: 240px; height: 100%; display: flex; flex-direction: column; padding: 0 10px 10px; }
+.vt { width: var(--vt-w, 240px); height: 100%; display: flex; flex-direction: column; padding: 0 10px 10px; }
 .vt-top { height: 46px; flex: 0 0 auto; -webkit-app-region: drag; }
 
 /* pinned sites: favicon tiles, big and legible */
@@ -69,7 +69,7 @@ body[data-mode="dark"] .vt-ind { background: rgb(var(--ink) / 0.12); box-shadow:
 .vt-row {
   position: relative; display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 6px 0 10px; border-radius: 10px; flex: 0 0 auto;
   border: 0; background: transparent; color: var(--f-text); font-size: 13px; font-weight: 500; text-align: left; width: 100%;
-  transition: background var(--f-fast) var(--f-ease-out), box-shadow var(--f-fast);
+  transition: background var(--f-fast) var(--f-ease-out), box-shadow var(--f-fast), height var(--f-med) var(--f-ease), opacity var(--f-fast) var(--f-ease-out), margin var(--f-med) var(--f-ease);
 }
 .vt-row:hover { background: rgb(var(--ink) / 0.06); }
 .vt-row.is-active { background: transparent; }
@@ -99,6 +99,8 @@ body[data-mode="dark"] .vt-ind { background: rgb(var(--ink) / 0.12); box-shadow:
 body.is-private-tab .ob-private { display: inline-flex; }
 .tab.is-private .tab-title { color: var(--sys-purple); }
 .vt-new { color: var(--f-text-dim); font-weight: 400; margin-top: 2px; }
+/* already on an empty New Tab: the button folds away instead of repeating it */
+.vt-new.is-hidden { height: 0; opacity: 0; margin-top: 0; pointer-events: none; overflow: hidden; }
 .vt-new:hover { color: var(--f-text); }
 .vt-row.is-entering { animation: m-rise var(--f-med) var(--f-ease) both; }
 
@@ -114,6 +116,12 @@ body.ai-open .vt-ai { color: var(--f-accent-text); background: var(--f-accent-so
 [data-layout="dia"] #toolbar { -webkit-app-region: drag; }
 [data-layout="dia"] .tl-inner { grid-template-columns: minmax(max-content, 1fr) minmax(200px, 680px) minmax(max-content, 1fr); gap: 12px; padding: 0 12px 0 4px; }
 body.vt-collapsed[data-layout="dia"] .tl-inner { padding-left: 84px; }
+[data-layout="dia"] .tl-inner { transition: padding-left var(--f-med) var(--f-ease); }
+[data-layout="dia"] #stage .pane, [data-layout="dia"] #stage::after { transition: left var(--f-med) var(--f-ease); }
+/* resizing by hand: follow the pointer exactly, and keep pages from eating the drag */
+body.vt-resizing #vtabs, body.vt-resizing .vt, body.vt-resizing #stage .pane, body.vt-resizing #stage::after { transition: none !important; }
+body.vt-resizing, body.vt-resizing * { cursor: col-resize !important; user-select: none; }
+body.vt-resizing webview { pointer-events: none; }
 /* fullscreen: no traffic lights to make room for */
 body.vt-collapsed.is-fullscreen[data-layout="dia"] .tl-inner { padding-left: 10px; }
 body.is-fullscreen .vt-top { justify-content: flex-start; }
@@ -130,7 +138,7 @@ body.is-fullscreen .vt-top { justify-content: flex-start; }
 [data-layout="dia"].on-home .web-only { opacity: 0; visibility: hidden; transform: scale(0.7); }
 
 /* the card: every pane (web, Home, Settings…) floats with a hairline + soft shadow */
-[data-layout="dia"] #content { --card-r: 12px; --card-gap: 8px; }
+[data-layout="dia"] #content { --card-r: var(--lay-card-r, 12px); --card-gap: var(--lay-card-gap, 8px); }
 [data-layout="dia"] #stage .pane,
 [data-layout="dia"] #stage #home {
   top: var(--tb-h); right: var(--card-gap); bottom: var(--card-gap); left: 0;
@@ -156,6 +164,9 @@ body:not(.vt-collapsed)[data-layout="dia"] #loadbar { left: 6px; }
   transition: width var(--f-slow) var(--f-ease-out), background var(--f-fast) var(--f-ease-out), border-color var(--f-fast), box-shadow var(--f-med) var(--f-ease-out);
 }
 [data-layout="dia"] #address-wrap:hover { background: rgb(var(--ink) / 0.09); border-color: rgb(var(--ink) / 0.1); }
+/* New Tab has its own search field in the middle of the page: no second one up here */
+[data-layout="dia"] #address-wrap { transition: width var(--f-slow) var(--f-ease-out), background var(--f-fast) var(--f-ease-out), border-color var(--f-fast), box-shadow var(--f-med) var(--f-ease-out), opacity var(--f-med) var(--f-ease-out), transform var(--f-med) var(--f-ease), visibility var(--f-med); }
+[data-layout="dia"].on-newtab #address-wrap:not(.is-editing) { opacity: 0; visibility: hidden; transform: translateY(-3px) scale(0.98); pointer-events: none; }
 [data-layout="dia"] #address-wrap.is-editing {
   width: 100%; background: var(--f-frame-bg); border-color: color-mix(in srgb, var(--f-accent) 70%, transparent);
   box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--f-accent) 26%, transparent), 0 10px 28px -14px rgba(0, 0, 0, 0.45);
@@ -188,3 +199,9 @@ body.focus-mode[data-layout="dia"] #stage::after, body.is-page-fullscreen[data-l
 /* press feedback lands on pointer-down, not on release */
 .vt-row:not(.is-active):active { background: rgb(var(--ink) / 0.1); }
 .vt-foot:active { background: rgb(var(--ink) / 0.12); transform: scale(var(--f-press)); }
+
+/* ── compact tab rows (Settings → Layout → Tab rows) ───────────── */
+[data-tab-style="compact"] .vt-row { height: 30px; font-size: 12.5px; gap: 8px; }
+[data-tab-style="compact"] .vt-new.is-hidden { height: 0; }
+[data-tab-style="compact"] .vt-thumb img { width: 34px; height: 21px; border-radius: 4px; }
+[data-tab-style="compact"] .vt-tile { height: 40px; }

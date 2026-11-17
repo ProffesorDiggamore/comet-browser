@@ -49,6 +49,16 @@ window.addEventListener("keydown", (e) => {
 // popovers close on it (click-away)
 window.addEventListener("pointerdown", (e) => { if (e.isTrusted) ipcRenderer.sendToHost("flux-page-down") }, { capture: true, passive: true })
 
+// ⇧-click a link: Comet opens it in Peek, a preview sheet over this page
+// (Settings → Layout can turn that back into a plain new tab)
+window.addEventListener("click", (e) => {
+  if (!e.isTrusted || !e.shiftKey || e.metaKey || e.ctrlKey || e.altKey || e.button !== 0) return
+  const a = e.target && e.target.closest && e.target.closest("a[href]")
+  if (!a || !/^https?:/i.test(a.href)) return
+  e.preventDefault(); e.stopImmediatePropagation()
+  ipcRenderer.sendToHost("flux-peek", a.href)
+}, true)
+
 // Two-finger swipe left / right → back / forward, like Safari.  The page only
 // reports how far a sideways scroll has travelled (and when it crosses the
 // line); the host draws the arrow and decides whether there is anywhere to go.

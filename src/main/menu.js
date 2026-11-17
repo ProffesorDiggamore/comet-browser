@@ -120,6 +120,8 @@ function buildMenu (getWin) {
         { type: "separator" },
         item("Pin / Unpin Tab", "", "pin"),
         item("Duplicate Tab", "", "duplicate"),
+        item("Add Tab to New Group", "Alt+CmdOrCtrl+G", "group-tab"),
+        item("Rename Tab…", "", "rename-tab"),
         item("Mute / Unmute Tab", "Ctrl+M", "mute"),
         item("Picture in Picture", "Alt+CmdOrCtrl+P", "pip"),
         item("Sleep Background Tabs", "", "sleep-all"),

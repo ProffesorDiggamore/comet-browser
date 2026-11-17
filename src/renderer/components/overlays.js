@@ -119,9 +119,17 @@ function sidebarMode () {
 }
 
 function frame () {
+  const num = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d }
   const apply = () => {
-    document.body.dataset.frame = String(state.get("layout.frame") !== false)
-    document.documentElement.style.setProperty("--f-frame-r", `${state.get("layout.frameRadius") ?? 14}px`)
+    const l = state.get("layout") ?? {}
+    const r = document.documentElement.style
+    document.body.dataset.frame = String(l.frame !== false)
+    r.setProperty("--f-frame-r", `${l.frameRadius ?? 14}px`)
+    // the Dia layout's sidebar + page card
+    r.setProperty("--vt-w", `${num(l.vtabsWidth, 240, 190, 420)}px`)
+    r.setProperty("--lay-card-r", `${num(l.cardRadius, 12, 0, 28)}px`)
+    r.setProperty("--lay-card-gap", `${num(l.cardGap, 8, 0, 24)}px`)
+    document.body.dataset.tabStyle = l.tabStyle === "compact" ? "compact" : "comfortable"
   }
   bus.on("config", apply)
   apply()

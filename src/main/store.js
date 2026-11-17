@@ -21,7 +21,8 @@ const DEFAULTS = {
     restoreTabs: true,
     newTabPosition: "end",          // end | afterCurrent
     defaultZoom: 1,                 // 0.5 .. 2
-    easyFiles: true                 // file pickers on pages offer the clipboard + recent downloads
+    easyFiles: true,                // file pickers on pages offer the clipboard + recent downloads
+    discardBlankTabs: true          // an untouched New Tab you leave closes itself
   },
   theme: {
     active: "glass",            // glass | sky | mint | sunset | rose | lavender | sand | mono (light + dark)
@@ -124,7 +125,15 @@ const DEFAULTS = {
     showHomeHotTabs: true,
     showFullUrl: false,         // omnibox shows host only until focused
     bookmarksBar: true,         // the row of bookmarks under the top bar (⇧⌘B)
-    aiPanelWidth: 400
+    aiPanelWidth: 400,
+    // ── v0.9: the Dia-style sidebar + page card, tunable ──
+    vtabsWidth: 240,            // sidebar width (drag its edge; 190–420)
+    cardRadius: 12,             // page card corner radius
+    cardGap: 8,                 // space around the page card
+    tabStyle: "comfortable",    // comfortable | compact tab rows
+    tabThumbs: true,            // live preview on the active tab's row
+    nowPlaying: true,           // sidebar player for the tab that's playing
+    peek: true                  // ⇧-click a link opens it in Peek
   },
   motion: {
     mode: "full",               // full | reduced | off

@@ -15,7 +15,7 @@ export const META = {
   profiles: { tint: "#64D2FF", group: "General", desc: "Separate worlds for school, work and home: each has its own tabs, bookmarks, history, logins and look." },
   search: { tint: "#0A84FF", group: "General", desc: "Search engine, keyword shortcuts and how new tabs behave." },
   home: { tint: "#5E5CE6", group: "General", desc: "Your New Tab page — greeting, background and shortcuts." },
-  layout: { tint: "#40C8E0", group: "General", desc: "Sidebar, content frame and panel sizes." },
+  layout: { tint: "#40C8E0", group: "General", desc: "Sidebar, tab rows, groups and the page card." },
   appearance: { tint: "#BF5AF2", group: "Look & Feel", desc: "Theme, live Style pattern, accent color and the liquid glass material." },
   motion: { tint: "#FF9F0A", group: "Look & Feel", desc: "Every animation in Comet — speed, curves and effects." },
   modpacks: { tint: "#30D158", group: "Look & Feel", desc: "One-click looks: theme, sound and background together." },

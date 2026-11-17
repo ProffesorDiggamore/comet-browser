@@ -7,6 +7,17 @@ vision / companion calls you explicitly configure with your own API key.
 
 ---
 
+## v0.9 — Tab groups, Peek, Now Playing, a sidebar you can shape
+
+- **Tab groups** — sidebar folders with a name and a color. Right-click a tab → Add Tab to New Group (⌥⌘G), or Move to an existing group; drag tabs onto a group (or among its tabs) to file them, anywhere else to take them out. Click a group to fold it (the tab you're on stays visible), double-click to rename, + for a new tab inside it, right-click for color / ungroup / close. A tab opened beside a grouped tab joins the group. Groups are saved with your session. Code: `core/groups.js`, `components/vgroups.js`, `styles/sidebar-plus.css`.
+- **Peek** — ⇧-click a link (or right-click → Peek at Link) and it opens in a sheet over the page instead of a new tab: Open as Tab, Split beside this page, Copy link, or Esc to dismiss. Same session as the page, so you stay signed in. Settings → Layout can turn ⇧-click back into a new tab. Code: `components/peek.js`, `styles/peek.css`, `preload/webview-preload.js`.
+- **Now Playing** — when a tab plays sound, a small player sits at the bottom of the sidebar: artwork and track (from the page's Media Session), play / pause, mute, click to jump to the tab. Code: `components/nowplaying.js`.
+- **Rename tabs** — double-click a tab's title (or right-click → Rename Tab…). Restore Page Title undoes it. Saved with the session.
+- **Shape the sidebar and page card** — drag the sidebar's right edge to resize (double-click resets); Settings → Layout now has Width, Comfortable / Compact tab rows, the active-tab preview, Now Playing, and the page card's Corner radius and Margin (0 + 0 = edge to edge). Layout only shows the controls for the layout you're on — Frame corner radius never reached the vertical-tabs layout.
+- **Unused New Tabs close themselves** — leave a New Tab without opening anything and it goes away, so blank "New Tab" rows don't pile up (Settings → Search & Tabs).
+- **Fixes: nothing in the same place twice** — New Tab no longer shows a second search field in the toolbar above its own; the sidebar no longer lists "New Tab" twice while you're on one; the empty bookmarks bar (just a hint) is gone until you have a bookmark; the Settings tab reads "Comet / Settings" instead of an empty address; the greeting uses your name (Settings → Home Screen → Your name) instead of "Good night, Personal"; New Tab's icon is a house, not the comet mark that read as a loading spinner; the Search keywords hint sits under its box instead of spilling out of it.
+- **Animation fixes** — closing a tab folds its row so the tabs below glide up (they used to jump once the fade ended); the sidebar's highlight follows rows when their size changes (compact rows, folding a group); collapsing the sidebar (⌘B) glides the page edge and toolbar instead of snapping them.
+
 ## v0.8 — Comet: new name and icon, private tabs, a toolbar that works
 
 - **Renamed to Comet** — app, Dock, menus and on-screen text; saved labels migrate once (`main/store.js`, schema 6). `npm run install-app` now builds `Comet.app` and replaces an old `Flux.app`.

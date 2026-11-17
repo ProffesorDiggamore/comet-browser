@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SIDEBAR PLUS — tab groups, the Now Playing card and the resize
+   grip for the Dia layout's sidebar (components/vtabs.js, vgroups.js,
+   nowplaying.js).  Ink tokens only, so it works in light and dark.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── resize grip on the sidebar's right edge ───────────────────── */
+.vt-resize {
+  position: absolute; top: 46px; right: 0; bottom: 0; width: 7px; z-index: 5; cursor: col-resize;
+  -webkit-app-region: no-drag;
+}
+.vt-resize::after {
+  content: ""; position: absolute; top: 0; bottom: 8px; right: 2px; width: 2px; border-radius: 2px;
+  background: var(--f-accent); opacity: 0; transition: opacity var(--f-fast) var(--f-ease-out);
+}
+.vt-resize:hover::after, body.vt-resizing .vt-resize::after { opacity: 0.55; }
+body.vt-collapsed .vt-resize { display: none; }
+
+/* ── tab groups ────────────────────────────────────────────────── */
+.vt-group-h {
+  position: relative; display: flex; align-items: center; gap: 7px; flex: 0 0 auto;
+  height: 30px; margin-top: 4px; padding: 0 5px 0 9px; border-radius: 9px;
+  font-size: 12px; font-weight: 600; color: var(--f-text-dim); cursor: default; user-select: none; outline: none;
+  transition: background var(--f-fast) var(--f-ease-out), color var(--f-fast), box-shadow var(--f-fast);
+}
+.vt-group-h:first-child, .vt-ind + .vt-group-h { margin-top: 0; }
+.vt-group-h:hover { background: rgb(var(--ink) / 0.05); color: var(--f-text); }
+.vt-group-h:focus-visible { box-shadow: 0 0 0 2px var(--f-accent); }
+.vt-group-h.is-drop { background: color-mix(in srgb, var(--g) 16%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--g) 55%, transparent); }
+.vt-group-h.is-entering { animation: m-rise var(--f-med) var(--f-ease) both; }
+.vt-gchev { width: 12px; height: 12px; display: inline-grid; place-items: center; color: var(--f-text-3); flex: 0 0 auto; }
+.vt-gchev svg { transition: transform var(--f-med) var(--f-ease); }
+.vt-group-h.is-collapsed .vt-gchev svg { transform: rotate(-90deg); }
+.vt-gdot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; background: var(--g); box-shadow: 0 0 0 2.5px color-mix(in srgb, var(--g) 22%, transparent); }
+.vt-gname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.01em; }
+.vt-gname.is-empty { color: var(--f-text-3); font-weight: 500; }
+.vt-gcount:empty { display: none; }
+.vt-gcount {
+  flex: 0 0 auto; height: 16px; min-width: 16px; padding: 0 5px; border-radius: 8px; display: inline-grid; place-items: center;
+  font-size: 10.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--f-text-dim);
+  background: color-mix(in srgb, var(--g) 18%, rgb(var(--ink) / 0.04));
+}
+.vt-gadd {
+  width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--f-text-dim);
+  display: grid; place-items: center; flex: 0 0 auto; opacity: 0; transition: opacity var(--f-fast), background var(--f-fast);
+}
+.vt-group-h:hover .vt-gadd, .vt-gadd:focus-visible { opacity: 1; }
+.vt-gadd:hover { background: rgb(var(--ink) / 0.1); color: var(--f-text); }
+
+/* a group's tabs hang off a thin rail in the group's color */
+.vt-row.in-group { padding-left: 24px; }
+.vt-row.in-group::before {
+  content: ""; position: absolute; left: 13px; top: -1px; bottom: -1px; width: 2px; border-radius: 2px; pointer-events: none;
+  background: color-mix(in srgb, var(--g) 65%, transparent);
+}
+/* folded group: rows tuck away (the active one stays) */
+.vt-list .vt-row.is-folded { height: 0; opacity: 0; margin-bottom: -2px; pointer-events: none; overflow: hidden; }
+
+/* inline rename field (tab rows and group names) */
+.vt-edit {
+  flex: 1 1 auto; min-width: 0; height: 24px; padding: 0 7px; margin: 0 -2px; border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--f-accent) 70%, transparent); outline: none;
+  background: var(--f-frame-bg); color: var(--f-text); font: inherit; font-weight: 500;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--f-accent) 22%, transparent);
+}
+.vt-group-h .vt-edit { font-size: 12px; font-weight: 600; }
+
+/* color swatch in menus (group colors) */
+.mi-swatch { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; margin-right: -2px; box-shadow: 0 0 0 0.5px rgb(var(--ink) / 0.2); }
+
+/* ── Now Playing ───────────────────────────────────────────────── */
+.vt-np {
+  position: relative; display: none; align-items: center; gap: 9px; flex: 0 0 auto;
+  margin-top: 8px; padding: 6px 4px 6px 6px; border-radius: 12px; cursor: pointer; outline: none;
+  background: rgb(var(--ink) / 0.055);
+  box-shadow: inset 0 0.5px 0 rgb(var(--spec) / 0.1), 0 0 0 0.5px rgb(var(--ink) / 0.06);
+  transition: background var(--f-fast) var(--f-ease-out);
+}
+.vt-np.is-on { display: flex; animation: m-rise var(--f-med) var(--f-ease) both; }
+.vt-np:hover { background: rgb(var(--ink) / 0.085); }
+.vt-np:focus-visible { box-shadow: 0 0 0 2px var(--f-accent); }
+.np-art {
+  position: relative; width: 34px; height: 34px; border-radius: 8px; overflow: hidden; flex: 0 0 auto;
+  display: grid; place-items: center; color: var(--f-text-dim); background: rgb(var(--ink) / 0.08);
+}
+.np-art img { width: 100%; height: 100%; object-fit: cover; }
+.np-art.is-fav img { width: 18px; height: 18px; border-radius: 4px; object-fit: contain; }
+.np-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; line-height: 1.25; }
+.np-title, .np-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.np-title { font-size: 12px; font-weight: 600; color: var(--f-text); }
+.np-sub { font-size: 11px; color: var(--f-text-dim); }
+.np-btn {
+  width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; flex: 0 0 auto;
+  display: grid; place-items: center; background: transparent; color: var(--f-text-dim);
+  transition: background var(--f-fast), color var(--f-fast), opacity var(--f-fast), transform var(--f-fast) var(--f-ease);
+}
+.np-btn:hover { background: rgb(var(--ink) / 0.1); color: var(--f-text); }
+.np-btn:active { transform: scale(var(--f-press)); }
+.np-btn.is-on { color: var(--sys-red); }
+/* dismiss keeps its slot (no shuffle when it appears) and shows on hover */
+.np-x { width: 18px; opacity: 0; }
+.vt-np:hover .np-x, .np-x:focus-visible { opacity: 1; }
+
+/* little equalizer badge on the artwork while sound is playing */
+.np-eq {
+  position: absolute; left: 27px; top: 27px; width: 15px; height: 13px; padding: 2px 3px; border-radius: 4px; z-index: 1;
+  display: flex; align-items: flex-end; justify-content: space-between; pointer-events: none;
+  background: rgb(0 0 0 / 0.55); opacity: 0; transform: scale(0.6); transition: opacity var(--f-fast), transform var(--f-fast) var(--f-ease);
+}
+.np-eq i { display: block; width: 2px; height: 35%; border-radius: 1px; background: #fff; }
+.vt-np.is-playing .np-eq { opacity: 1; transform: none; }
+.vt-np.is-playing .np-eq i { animation: np-bar 0.8s ease-in-out infinite alternate; }
+.vt-np.is-playing .np-eq i:nth-child(2) { animation-delay: -0.35s; }
+.vt-np.is-playing .np-eq i:nth-child(3) { animation-delay: -0.6s; }
+@keyframes np-bar { from { height: 25%; } to { height: 100%; } }
+[data-motion="off"] .np-eq i, [data-motion="reduced"] .np-eq i { animation: none !important; height: 60%; }

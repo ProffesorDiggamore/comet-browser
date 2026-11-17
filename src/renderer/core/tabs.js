@@ -9,6 +9,7 @@ import { state } from "./state.js"
 import { sfx } from "../audio/sfx.js"
 import { queryTemplate } from "../data/engines.js"
 import { DARK_CSS } from "./pagescripts.js"
+import { sessionGroups, restoreGroups, groupAlive } from "./groups.js"
 
 const host = () => document.getElementById("tabs-host")
 const PRIVATE_PARTITION = "comet-private"   // no "persist:" prefix = memory only (main.js prepares it)
@@ -55,7 +56,7 @@ export function hostOf (url) { try { return new URL(url).host } catch { return "
 
 // ── reads ─────────────────────────────────────────────────────────
 const pub = (t) => ({
-  id: t.id, title: t.title, url: t.url, favicon: t.favicon, loading: t.loading, asleep: t.asleep, isHome: t.isHome, pane: t.pane ?? null,
+  id: t.id, title: t.customTitle || t.title, pageTitle: t.title, customTitle: t.customTitle ?? null, group: t.group ?? null, url: t.url, favicon: t.favicon, loading: t.loading, asleep: t.asleep, isHome: t.isHome, pane: t.pane ?? null,
   pinned: t.pinned, muted: t.muted, audible: t.audible, blocked: t.blocked, thumb: t.thumb, inSplit: isInSplit(t.id),
   private: t.private
 })
@@ -66,6 +67,9 @@ export function getActive () { return tabs.find((t) => t.id === activeId) ?? nul
 export function rawTab (id) { return id ? tabs.find((t) => t.id === id) ?? null : getActive() }
 export function faviconFor (url) { return faviconByHost.get(hostOf(url)) ?? null }
 export const getSplit = () => split
+export const emitTabs = () => emit()
+// small edits other modules make to a tab (group, custom title) — then one emit
+export function patchTab (id, patch) { const t = rawTab(id); if (!t) return; Object.assign(t, patch); emit() }
 
 let emitQueued = false
 function emit () {
@@ -105,7 +109,7 @@ async function applySite (tab) {
 export function refreshSite (id) { const t = rawTab(id); if (t) applySite(t) }
 
 // ── lifecycle ─────────────────────────────────────────────────────
-export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null, private: priv = false, pane = null } = {}) {
+export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null, private: priv = false, pane = null, group = null, customTitle = null } = {}) {
   const id = `tab_${++seq}`
   const wv = document.createElement("webview")
   // a private tab lives in an in-memory partition: its cookies and logins never touch disk
@@ -120,7 +124,7 @@ export function newTab (url = null, { activate = true, background = false, pinne
   const tab = {
     id, wv, title: title ?? (isHome ? "New Tab" : target), url: isHome ? "" : target, favicon: favicon ?? faviconFor(target),
     loading: false, asleep: false, isHome, pinned, muted: false, audible: false, blocked: 0, thumb: null, lastActive: Date.now(),
-    private: !!priv,
+    private: !!priv, group, customTitle,
     pane: url ? null : pane          // a Comet page shown in this tab instead of Home ("settings")
   }
   if (tab.pane === "settings") tab.title = "Settings"
@@ -129,8 +133,11 @@ export function newTab (url = null, { activate = true, background = false, pinne
   let idx = index
   if (idx == null) {
     if (pinned) idx = tabs.filter((t) => t.pinned).length
-    else if (state.get("general.newTabPosition") === "afterCurrent" && activeId) idx = Math.max(tabs.findIndex((t) => t.id === activeId) + 1, tabs.filter((t) => t.pinned).length)
-    else idx = tabs.length
+    else if (state.get("general.newTabPosition") === "afterCurrent" && activeId) {
+      idx = Math.max(tabs.findIndex((t) => t.id === activeId) + 1, tabs.filter((t) => t.pinned).length)
+      // opened beside a grouped tab: it joins that group (like Chrome)
+      if (group == null && !pinned) tab.group = getActive()?.group ?? null
+    } else idx = tabs.length
   }
   tabs.splice(idx, 0, tab)
   host().append(wv)
@@ -196,6 +203,7 @@ function wire (tab) {
   wv.addEventListener("leave-html-full-screen", () => document.body.classList.remove("is-page-fullscreen"))
   wv.addEventListener("ipc-message", (e) => {
     if (e.channel === "flux-key") bus.emit("page-key", e.args[0])
+    else if (e.channel === "flux-peek") bus.emit("peek:open", { url: e.args[0], private: tab.private })
     else if (e.channel === "flux-page-down") bus.emit("page-down", tab.id)
     else if (e.channel === "flux-webauthn") bus.emit("webauthn", e.args[0])
     else if (e.channel === "flux-file-pick") bus.emit("file-pick", { wv, ...e.args[0] })
@@ -214,6 +222,11 @@ export function setActive (id) {
   const prev = getActive()
   if (prev && prev !== tab && !prev.isHome && !prev.asleep) snapThumb(prev)
   activeId = id
+  // an untouched New Tab you click away from goes away (like Dia), so blank
+  // "New Tab" rows don't pile up in the sidebar
+  if (prev && prev !== tab && prev.isHome && !prev.pane && !prev.pinned && !prev.customTitle && !restoring && state.get("general.discardBlankTabs") !== false) {
+    queueMicrotask(() => { if (activeId !== prev.id && tabs.includes(prev) && prev.isHome) closeTab(prev.id, { quiet: true }) })
+  }
   if (tab.asleep) wakeTab(id)
   touch(tab)
   layout(prev?.id !== id)
@@ -230,18 +243,18 @@ export function openSettingsTab () {
   if (t) setActive(t.id); else newTab(null, { pane: "settings" })
 }
 
-export function closeTab (id) {
+export function closeTab (id, { quiet = false } = {}) {
   const idx = tabs.findIndex((t) => t.id === id)
   if (idx === -1) return
   const [tab] = tabs.splice(idx, 1)
-  if (tab.url && tab.url !== "about:blank" && !tab.private) closedStack.push({ url: tab.url, title: tab.title, pinned: tab.pinned, index: idx })
+  if (tab.url && tab.url !== "about:blank" && !tab.private) closedStack.push({ url: tab.url, title: tab.title, pinned: tab.pinned, index: idx, group: tab.group, customTitle: tab.customTitle })
   if (closedStack.length > 50) closedStack.shift()
   if (tab.wcId) byWc.delete(tab.wcId)
   if (isInSplit(id)) clearSplit()
   tab.wv.remove()
   // the last private tab closing ends the private session: its cookies and cache go with it
   if (tab.private && !tabs.some((t) => t.private)) window.flux.privateSession.clear()
-  sfx.play("tabClose")
+  if (!quiet) sfx.play("tabClose")
   if (activeId === id) {
     const next = tabs[idx] ?? tabs[idx - 1] ?? null
     if (next) setActive(next.id)
@@ -265,7 +278,7 @@ export function reopenClosedAt (i) {
 }
 export function reopenClosed () {
   const last = closedStack.pop()
-  if (last) newTab(last.url, { pinned: last.pinned, index: Math.min(last.index ?? tabs.length, tabs.length) })
+  if (last) newTab(last.url, { pinned: last.pinned, index: Math.min(last.index ?? tabs.length, tabs.length), group: groupAlive(last.group), customTitle: last.customTitle })
 }
 
 export function navigate (input, tabId = null, opts = {}) {
@@ -309,6 +322,7 @@ export function cycle (dir = 1) {
 export function setPinned (id, pinned = true) {
   const t = rawTab(id); if (!t || t.isHome) return
   t.pinned = pinned
+  if (pinned) t.group = null            // pinned tiles sit above every group
   tabs.splice(tabs.indexOf(t), 1)
   tabs.splice(tabs.filter((x) => x.pinned).length, 0, t)   // pinned block end / first unpinned slot
   emit()
@@ -323,7 +337,7 @@ export function setMuted (id, muted) {
 
 export function duplicate (id) {
   const t = rawTab(id); if (!t || t.isHome) return null
-  return newTab(t.url, { index: tabs.indexOf(t) + 1, private: t.private })
+  return newTab(t.url, { index: tabs.indexOf(t) + 1, private: t.private, group: t.group })
 }
 
 // ── sleeping ──────────────────────────────────────────────────────
@@ -508,10 +522,11 @@ let saveT = null
 let restoring = false
 let frozen = false
 function writeSession () {
-  const list = tabs.filter((t) => (!t.isHome || t.pinned) && !t.private).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null }))
+  const list = tabs.filter((t) => (!t.isHome || t.pinned) && !t.private).map((t) => ({ url: t.asleep ? t.sleptUrl : t.url, title: t.title, pinned: t.pinned, favicon: (t.favicon ?? "").length < 600 ? t.favicon : null, group: t.group ?? undefined, customTitle: t.customTitle ?? undefined }))
     .filter((t) => t.url && t.url !== "about:blank")
   const active = Math.max(0, tabs.filter((t) => !t.isHome && !t.private).findIndex((t) => t.id === activeId))
-  return state.set("session", { tabs: list.slice(0, 200), active })
+  const used = new Set(list.map((t) => t.group).filter(Boolean))
+  return state.set("session", { tabs: list.slice(0, 200), active, groups: sessionGroups().filter((g) => used.has(g.id)) })
 }
 function saveSession () {
   if (restoring || frozen) return
@@ -531,7 +546,8 @@ export function restoreSession () {
   const s = state.get("session")
   if (!state.get("general.restoreTabs") || !s?.tabs?.length) return false
   restoring = true
-  const ids = s.tabs.map((t, i) => newTab(t.url, { background: true, pinned: !!t.pinned, asleep: i !== s.active, title: t.title, favicon: t.favicon }))
+  restoreGroups(s.groups ?? [])
+  const ids = s.tabs.map((t, i) => newTab(t.url, { background: true, pinned: !!t.pinned, asleep: i !== s.active, title: t.title, favicon: t.favicon, group: groupAlive(t.group), customTitle: t.customTitle ?? null }))
   restoring = false
   setActive(ids[Math.min(s.active ?? 0, ids.length - 1)])
   return true

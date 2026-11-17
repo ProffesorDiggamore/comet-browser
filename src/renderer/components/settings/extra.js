@@ -224,20 +224,45 @@ export function catMotion () {
 }
 
 // ── Layout ────────────────────────────────────────────────────────
+// controls for the layout you're on; the other layout's are hidden, since
+// they did nothing here (corner radius used to only reach Top tabs)
 export function catLayout () {
   const l = state.get("layout") ?? {}
+  const dia = (l.style ?? "dia") === "dia"
+  const setStyle = (v) => { state.set("layout.style", v); setTimeout(rerender, 30) }
+  const px = (v) => `${v}px`
+  const aiWidth = row("AI panel width", rng(l.aiPanelWidth ?? 400, 320, 760, 10, px, (v) => { state.set("layout.aiPanelWidth", v); const p = document.getElementById("aipanel"); if (p) p.style.width = `${v}px` }))
+  const common = [
+    row("Bookmarks bar", sw(l.bookmarksBar !== false, (v) => state.set("layout.bookmarksBar", v)), "A row of your bookmarks under the toolbar, once you have some. ⌘D bookmarks a page; ⇧⌘B shows or hides the bar."),
+    row("Show full URL in address bar", sw(!!l.showFullUrl, (v) => state.set("layout.showFullUrl", v)), "Off shows just the site and path until you click."),
+    row("Peek at links with ⇧-click", sw(l.peek !== false, (v) => state.set("layout.peek", v)), "Opens the link in a sheet over the page: keep it as a tab, split it, or dismiss it. Off opens a new tab instead.")
+  ]
   return [
     group("Layout", [
-      row("Style", seg([{ v: "dia", label: "Vertical tabs" }, { v: "classic", label: "Top tabs" }], l.style ?? "dia", (v) => state.set("layout.style", v)), "Vertical tabs is the clean Dia-style layout. Top tabs brings back the widget sidebar."),
+      row("Style", seg([{ v: "dia", label: "Vertical tabs" }, { v: "classic", label: "Top tabs" }], l.style ?? "dia", setStyle), "Vertical tabs is the clean Dia-style layout. Top tabs brings back the widget sidebar.")
+    ]),
+    dia && group("Sidebar", [
+      row("Width", rng(l.vtabsWidth ?? 240, 190, 420, 2, px, (v) => state.set("layout.vtabsWidth", v)), "Or drag the sidebar's right edge. Double-click the edge to reset."),
+      row("Tab rows", seg([{ v: "comfortable", label: "Comfortable" }, { v: "compact", label: "Compact" }], l.tabStyle ?? "comfortable", (v) => state.set("layout.tabStyle", v))),
+      row("Preview on the active tab", sw(l.tabThumbs !== false, (v) => state.set("layout.tabThumbs", v)), "A small live picture of the page on the tab you're on."),
+      row("Now Playing", sw(l.nowPlaying !== false, (v) => state.set("layout.nowPlaying", v)), "A player at the bottom of the sidebar for the tab playing sound: play / pause, mute, jump to it."),
+      row("Hide sidebar", sw(!!l.vtabsCollapsed, (v) => state.set("layout.vtabsCollapsed", v)), "⌘B. Touch the left edge to peek at your tabs.")
+    ], "Right-click a tab → Add Tab to New Group (⌥⌘G) to start a group. Drag tabs onto a group to file them; double-click a name to rename."),
+    dia && group("Page", [
+      row("Corner radius", rng(l.cardRadius ?? 12, 0, 28, 1, px, (v) => state.set("layout.cardRadius", v))),
+      row("Margin", rng(l.cardGap ?? 8, 0, 24, 1, px, (v) => state.set("layout.cardGap", v)), "Space around the page card. 0 with a 0 radius fills the window edge to edge."),
+      ...common,
+      aiWidth
+    ]),
+    !dia && group("Top tabs", [
       row("Sidebar", seg([{ v: "shown", label: "Always" }, { v: "autohide", label: "Auto-hide" }, { v: "hidden", label: "Hidden" }], l.sidebar ?? "autohide", (v) => state.set("layout.sidebar", v)), "Auto-hide slides it in when you touch the left edge. ⌘B toggles."),
       row("Floating content frame", sw(l.frame !== false, (v) => state.set("layout.frame", v)), "Pages sit in an inset rounded glass frame."),
-      row("Frame corner radius", rng(l.frameRadius ?? 14, 0, 28, 1, (v) => `${v}px`, (v) => state.set("layout.frameRadius", v))),
-      row("Bookmarks bar", sw(l.bookmarksBar !== false, (v) => state.set("layout.bookmarksBar", v)), "A row of your bookmarks under the top bar. ⌘D bookmarks a page; ⇧⌘B shows or hides the bar."),
-      row("Show full URL in address bar", sw(!!l.showFullUrl, (v) => state.set("layout.showFullUrl", v)), "Off shows just the site and path until you click."),
-      row("AI panel width", rng(l.aiPanelWidth ?? 400, 320, 760, 10, (v) => `${v}px`, (v) => { state.set("layout.aiPanelWidth", v); const p = document.getElementById("aipanel"); if (p) p.style.width = `${v}px` }))
+      row("Frame corner radius", rng(l.frameRadius ?? 14, 0, 28, 1, px, (v) => state.set("layout.frameRadius", v))),
+      ...common,
+      aiWidth
     ]),
     group(null, [restore("layout", "layout")])
-  ]
+  ].filter(Boolean)
 }
 
 // ── Privacy & Shield ──────────────────────────────────────────────
@@ -289,5 +314,5 @@ export function catKeywords () {
     wrap.append(btn("Add keyword", () => { list.push({ key: "new", name: "New", url: "https://example.com/search?q=%s" }); paint() }, "btn btn--ghost"))
   }
   paint()
-  return [group("Search keywords", [h("div.rdesc", { text: "Type a keyword then your query in the address bar — e.g. “yt lofi beats”, “gh electron”. %s is where the query goes." }), wrap])]
+  return [group("Search keywords", [wrap], "Type a keyword then your query in the address bar — e.g. “yt lofi beats”, “gh electron”. %s is where the query goes.")]
 }
