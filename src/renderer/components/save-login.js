@@ -4,7 +4,8 @@
 //  from the form, new password on sign-up / change forms).  Nothing is
 //  offered the instant the form submits: the capture is held per tab
 //  until the page settles, then the page is asked whether the sign-in
-//  failed (password box still there + an error message).  A retry
+//  failed (password box still there + an error message); that verdict
+//  is re-checked as the page moves on.  A retry
 //  replaces the held capture and updates an open card in place.
 //  What the card offers depends on the vault: Save, Update, or nothing.
 // ───────────────────────────────────────────────────────────────────
@@ -60,27 +61,48 @@ async function onSubmit ({ id, url, username, password, kind, from }) {
   settle(p)
 }
 
-// wait for the navigation / request the submit started, then look at the page
+// wait for the navigation / request the submit started, then look at the page,
+// and look again: a single-page app can show its error a moment later, and a
+// "failed" seen first may be the last attempt's banner while the server is busy
 async function settle (p) {
   await wait(900)
   for (let i = 0; i < 40 && T.rawTab(p.id)?.loading; i++) await wait(250)
   await wait(450)
-  if (pending.get(p.id) !== p) return            // replaced by a retry, or dropped
-  const st = await probe(p.id)
+  for (const gap of [0, 2200, 3000]) {
+    if (gap) await wait(gap)
+    if (pending.get(p.id) !== p) return            // replaced by a retry, or dropped
+    await check(p)
+  }
+}
+
+// ask the page how the sign-in went.  "Failed" is provisional: it holds only
+// while the same form is still up, and clears once the page moves on
+async function check (p) {
+  if (p.checking) return
+  p.checking = true
+  let st
+  try { st = await probe(p.id) } finally { p.checking = false }
   if (pending.get(p.id) !== p) return
-  p.failed = !!(st && st.error && st.pw > 0)
-  p.landed = hostOf(T.rawTab(p.id)?.url || "")
+  const url = T.rawTab(p.id)?.url || ""
+  p.landed = hostOf(url)
+  const bad = !!(st && st.error && st.pw > 0)
+  const failed = bad || (!!p.failed && (!st || (st.pw > 0 && url === p.failUrl)))
+  if (failed && !p.failed) p.failUrl = url
+  p.failed = failed
   if (card?.p === p) {
     card.el.classList.remove("is-checking")
     paint()
-  } else if (!p.failed) {
-    await show(p)
+  } else if (!failed && !p.shownAt && !p.showing) {
+    p.showing = true
+    try { await show(p) } finally { p.showing = false }
   }
-  // a single-page app can show its error a moment later: look once more
-  await wait(2200)
-  if (pending.get(p.id) !== p || p.failed) return
-  const again = await probe(p.id)
-  if (pending.get(p.id) === p && again?.error && again.pw > 0) { p.failed = true; if (card?.p === p) paint() }
+}
+
+// a failed sign-in whose page then loads or changes its URL: look again
+function recheck (p) {
+  if (!p?.failed || p.queued || Date.now() - p.at > 60e3) return
+  p.queued = true
+  setTimeout(() => { p.queued = false; if (pending.get(p.id) === p) check(p) }, 400)
 }
 
 function closeCard () {
@@ -95,13 +117,14 @@ function closeCard () {
 function done (p) { if (pending.get(p.id) === p) pending.delete(p.id); closeCard() }
 
 async function planFor (p) {
-  if (skipped.has(`${p.host}\n${p.username}`)) return { action: "none" }
-  const plan = await window.flux.vault.plan(p.url, p.username, p.password)
+  const what = p.username   // the plan is only good for the username it was made for
+  if (skipped.has(`${p.host}\n${what}`)) return { action: "none", for: what }
+  const plan = await window.flux.vault.plan(p.url, what, p.password)
   // a change-password form often has no username on it: one saved login → that's it
-  if (plan.action === "save" && !p.username && p.kind === "change" && plan.others?.length === 1) {
-    return { action: "update", id: plan.others[0].id, username: plan.others[0].username }
+  if (plan.action === "save" && !what && p.kind === "change" && plan.others?.length === 1) {
+    return { action: "update", id: plan.others[0].id, username: plan.others[0].username, for: what }
   }
-  return plan
+  return { ...plan, for: what }
 }
 
 // re-ask the vault (username edited, or a retry changed the password)
@@ -136,10 +159,19 @@ function paint () {
 
 async function commit (which) {
   if (!card) return
-  const { p, plan } = card
+  const c = card
+  // the username was just edited (Enter beats the debounce): plan for what's typed now
+  if (c.refs.t || c.plan.for !== c.p.username) {
+    clearTimeout(c.refs.t)
+    c.refs.t = null
+    await replan(false)
+    if (card !== c || c.plan.for !== c.p.username) return
+  }
+  const { p, plan } = c
   const v = window.flux.vault
   if (which === "alt") {
-    const other = plan.others[0]
+    const other = plan.action === "save" && plan.others?.length === 1 ? plan.others[0] : null
+    if (!other) return                              // the replan took that choice away
     await v.update(other.id, { password: p.password })
     toast(`Password updated for ${other.username || p.host}`)
   } else if (plan.action === "update") {
@@ -167,7 +199,7 @@ async function show (p) {
   refs.sub = h("span.af-save-sub")
   refs.user = h("input.af-save-user", {
     value: p.username, placeholder: "Username or email", spellcheck: false, autocomplete: "off", "aria-label": "Username",
-    oninput: (e) => { card.p.username = e.target.value.trim(); clearTimeout(refs.t); refs.t = setTimeout(() => replan(false), 220) },
+    oninput: (e) => { card.p.username = e.target.value.trim(); clearTimeout(refs.t); refs.t = setTimeout(() => { refs.t = null; replan(false) }, 220) },
     onkeydown: (e) => { if (e.key === "Enter") commit("go") }
   })
   refs.pw = h("span.af-save-pw", { "aria-label": "Password" })
@@ -226,7 +258,7 @@ function onTabs () {
     if (!t || ((p.shownAt || p.failed) && away)) {
       pending.delete(id)
       if (card?.p === p) closeCard()
-    }
+    } else if (p.failed && t.url !== p.failUrl) recheck(p)
   }
   for (const id of idents.keys()) if (!T.rawTab(id)) idents.delete(id)
 }
@@ -236,4 +268,5 @@ export function initSaveLogin () {
   bus.on("login-ident", ({ id, url, username }) => { if (username) idents.set(id, { host: hostOf(url), username, at: Date.now() }) })
   bus.on("login-state", ({ seq, ...st }) => { const r = probes.get(seq); if (r) { probes.delete(seq); r(st) } })
   bus.on("tabs", onTabs)
+  bus.on("loading", ({ id, on }) => { if (!on) recheck(pending.get(id)) })
 }
