@@ -192,7 +192,7 @@ body[data-mode="light"] .wl-pv-search { background: rgb(255 255 255 / 0.6); }
 .wl-tip-ico { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: var(--f-text); background: rgb(var(--ink) / 0.07); }
 .wl-tip-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .wl-tip-title { font-size: 12.5px; font-weight: 600; color: var(--f-text); }
-.wl-tip-desc { font-size: 11px; color: var(--f-text-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wl-tip-desc { font-size: 11px; line-height: 1.3; color: var(--f-text-3); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }   /* wraps: a tip cut off mid-word teaches nothing */
 .wl-tip kbd { flex: none; white-space: nowrap; }
 
 /* narrow windows: stack the two-column steps */

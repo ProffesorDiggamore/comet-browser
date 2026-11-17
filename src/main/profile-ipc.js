@@ -107,6 +107,15 @@ function registerProfileIpc () {
       changed()
     }
   })
+  // drag to reorder: the pickers send the ids they show; one being removed
+  // (hidden from them) keeps its place at the end until it's gone
+  ipcMain.handle("flux:profiles:reorder", (e, ids) => {
+    if (!Array.isArray(ids) || ids.length > 500) return { ok: false, text: "Couldn't reorder profiles.", ...listing(e) }
+    ids = ids.map(String)
+    const r = profiles.reorder([...ids, ...[...C.removing].filter((id) => profiles.get(id) && !ids.includes(id))])
+    if (r.changed) changed()
+    return r.ok ? { ok: true, ...listing(e) } : { ok: false, text: "Couldn't reorder profiles.", ...listing(e) }
+  })
   ipcMain.handle("flux:profiles:switch", (e, id) => W.switchWindowProfile(W.targetWin(BrowserWindow.fromWebContents(e.sender)), String(id)))
   ipcMain.handle("flux:profiles:openWindow", (_e, id) => W.openProfileWindow(String(id)))
 }

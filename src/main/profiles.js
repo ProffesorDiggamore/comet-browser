@@ -213,6 +213,16 @@ const profiles = {
     save()
     return withPic(p)
   },
+  // ids: the whole list in its new order (a permutation of every profile's id).
+  // List order is what ⌃⌘1…9, the menus and every picker follow.
+  reorder (ids) {
+    if (!Array.isArray(ids) || ids.length !== data.list.length || ids.some((id) => typeof id !== "string")) return { ok: false }
+    if (new Set(ids).size !== ids.length || !ids.every((id) => this.get(id))) return { ok: false }
+    if (ids.every((id, i) => id === data.list[i].id)) return { ok: true, changed: false }
+    data.list = ids.map((id) => this.get(id))
+    save()
+    return { ok: true, changed: true }
+  },
   setActive (id) {
     if (!this.get(id)) return false
     if (data.active === id) return true

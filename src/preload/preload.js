@@ -183,6 +183,8 @@ contextBridge.exposeInMainWorld("flux", {
     update: (id, patch) => ipcRenderer.invoke("flux:profiles:update", id, patch),
     remove: (id) => ipcRenderer.invoke("flux:profiles:remove", id),
     switch: (id) => ipcRenderer.invoke("flux:profiles:switch", id),
+    // ids in their new order: ⌃⌘1…9 and every list follow it
+    reorder: (ids) => ipcRenderer.invoke("flux:profiles:reorder", ids),
     pickPicture: () => ipcRenderer.invoke("flux:profiles:pickPicture"),
     pictureOriginal: (id) => ipcRenderer.invoke("flux:profiles:pictureOriginal", id),
     // a profile in a window of its own (focuses it when it already has one)

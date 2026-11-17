@@ -116,10 +116,12 @@ export function initBmBar () {
   }
 
   let sig = ""
-  bus.on("config", () => {
-    const s = JSON.stringify([bmBarOn(), (state.get("bookmarks") ?? []).map((b) => [b.url, b.title])])
+  const check = () => {
+    const s = JSON.stringify([bmBarOn(), (state.get("bookmarks") ?? []).map((b) => [b.url, b.title, T.faviconFor(b.url)])])
     if (s !== sig) { sig = s; render() }
-  })
+  }
+  bus.on("config", check)
+  bus.on("tabs", check)   // a bookmarked site's favicon is learned once one of its pages loads
   bus.on("bookmarks", render)
   let rf = 0      // next frame: fitting changes the row's own width (» appears), which would loop the observer
   new ResizeObserver(() => { if (!bmBarOn() || rf) return; rf = requestAnimationFrame(() => { rf = 0; fit() }) }).observe(items)

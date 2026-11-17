@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0 — Public release
+
+The first public release, with a drag-to-install disk image. Download it from [Releases](https://github.com/ProffesorDiggamore/comet-browser/releases/latest).
+
+- **Welcome tour.** On first launch a short glass sheet walks through the look (Auto / Light / Dark and a theme), the layout (sidebar or top tabs), your name and wallpaper, importing from another browser, making Comet your default browser, and the eight most useful shortcuts. Every choice applies live. Replay it from Help → Welcome Tour…, Settings → About or ⌘K.
+- **Profiles side by side.** Any profile can open in its own window next to the others, fully isolated: cookies and sign-ins, tabs, bookmarks, history, passwords, Home, look and AI chats. Open one from the profile picker, Profiles → Open in New Window, the Dock menu, Settings → Profiles or ⌘N. Each profile has one window, so opening it again brings that window forward. The windows that were open come back on relaunch. Drag profiles to reorder them; ⌃⌘1…9 follow the order.
+- **Bookmarks button.** It replaces Library at the bottom of the sidebar (and sits in the toolbar with top tabs or a collapsed sidebar). It opens a compact glass list of all your bookmarks with search, Add / Remove This Page, list or grid, and keyboard control. ⌥⌘B opens it from anywhere. Library is still ⌘Y.
+- **Rename bookmarks** inline from the bookmarks bar, the Bookmarks list and Library.
+- **Smarter passwords.** The save card is readable in light and dark. Comet finds the right username or email field (including two-step logins and sign-up / change-password forms), offers **Update** when you change a saved password, stays quiet when nothing changed, holds back after a rejected sign-in, and updates the card in place when you retry. "Never for this site" is remembered. Saved logins are strictly per profile.
+- **More ways to make it yours.** Interface font (System, Rounded, Serif, Mono), Increase contrast, glass presets (Clear, Frosted, Solid), sidebar on the right, choose the toolbar buttons, Home widget size and placement, and Backup & Restore of all settings (passwords and API keys are never exported).
+- **Polish.** Light-mode fixes across popovers, widgets and the library; confirmations before destructive actions; plain-language copy; Reduced Motion respected everywhere; keyboard focus for sidebar rows and menus; ⌘1…⌘8 select tabs and ⌘9 the last one; ⇧⌘R reloads ignoring cache.
+- **Install like any Mac app.** `npm run dist` builds `Comet-macOS-arm64.dmg`: drag Comet to Applications.
+
 ## v0.9 — Tab groups, Peek, Now Playing, a sidebar you can shape
 
 - **Tab groups** — sidebar folders with a name and a color. Right-click a tab → Add Tab to New Group (⌥⌘G), or Move to an existing group; drag tabs onto a group (or among its tabs) to file them, anywhere else to take them out. Click a group to fold it (the tab you're on stays visible), double-click to rename, + for a new tab inside it, right-click for color / ungroup / close. A tab opened beside a grouped tab joins the group. Groups are saved with your session. Code: `core/groups.js`, `components/vgroups.js`, `styles/sidebar-plus.css`.

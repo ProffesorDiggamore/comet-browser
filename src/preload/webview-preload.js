@@ -131,8 +131,8 @@ ipcRenderer.on("flux-file-result", (_e, { id, files }) => {
 })
 
 // Autofill: when a login field gets focus, tell the host where it is; the
-// host shows saved logins from every profile (each with its profile's
-// avatar) as an overlay.  The page never sees a password until the user
+// host shows this window's profile's saved logins (never another
+// profile's) as an overlay.  The page never sees a password until the user
 // picks one there.  On submit, the typed login goes to the host, which
 // waits for the page to settle before offering to save / update it.
 // Only the top frame, only real (trusted) user input.

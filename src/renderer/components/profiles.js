@@ -14,6 +14,7 @@ import { ico } from "../core/icons.js"
 import { closePopover } from "./popover.js"
 import { group, block, btn } from "./settings/kit.js"
 import * as T from "../core/tabs.js"
+import { sortable } from "../core/sortable.js"
 
 export { profileButton, openProfileMenu, openWindowPicker } from "./profile-menu.js"
 
@@ -76,6 +77,23 @@ export async function openProfileWindow (id) {
   if (!r?.ok) toast(r?.text ?? "Couldn't open that profile")
   return r
 }
+
+// a new order for the profiles a list shows (the picker leaves out this
+// window's own; a search hides some); the rest keep their places.  List
+// order is ⌃⌘1…9, so a move changes which key opens which profile.
+export async function reorderProfiles (ids) {
+  const shown = new Set(ids)
+  let k = 0
+  const full = data.list.map((p) => (shown.has(p.id) ? ids[k++] : p.id))
+  if (full.every((id, i) => id === data.list[i].id)) return
+  const byId = new Map(data.list.map((p) => [p.id, p]))
+  data = { ...data, list: full.map((id) => byId.get(id)) }
+  bus.emit("profiles", data)
+  const r = await window.flux.profiles.reorder(full)
+  if (!r?.ok) toast(r?.text ?? "Couldn't reorder profiles")
+  await refresh(r)
+}
+export const profileKey = (p) => { const n = data.list.findIndex((x) => x.id === p.id) + 1; return n > 0 && n <= 9 ? `⌃⌘${n}` : "" }
 
 // ── create / edit sheet ──────────────────────────────────────────
 let sheetEl = null
@@ -329,11 +347,17 @@ export function catProfiles () {
   const rows = data.list.map((p, i) => {
     const on = p.id === cur.id
     const elsewhere = open.has(p.id)
-    return h("div.set-row.pf-row", { dataset: { search: `profile ${p.name} window` } }, [
+    const many = data.list.length > 1
+    return h("div.set-row.pf-row", {
+      dataset: { search: `profile ${p.name} window`, id: p.id },
+      tabindex: many ? 0 : null,
+      title: many ? "Drag to reorder (⌥↑ ⌥↓) — the order sets ⌃⌘1…9" : null,
+      "aria-keyshortcuts": many ? "Alt+ArrowUp Alt+ArrowDown" : null
+    }, [
       avatar(p, 34),
       h("div.rtext", {}, [
-        h("div.rlabel", { text: p.name }),
-        h("div.rdesc", { text: on ? (open.size ? "This window" : "Current profile") : elsewhere ? "Open in another window" : i < 9 ? `⌃⌘${i + 1} to switch` : "" })
+        h("div.rlabel", {}, [p.name, i < 9 ? h("kbd.pf-kbd", { text: `⌃⌘${i + 1}`, title: `⌃⌘${i + 1} switches to ${p.name}` }) : null]),
+        h("div.rdesc", { text: on ? (open.size ? "This window" : "Current profile") : elsewhere ? "Open in another window" : "" })
       ]),
       h("div.control", {}, [
         on ? h("span.pf-badge", {}, [ico("check", 12), "In use"]) : elsewhere ? null : btn("Switch", () => switchProfile(p.id)),
@@ -343,13 +367,25 @@ export function catProfiles () {
       ].filter(Boolean))
     ])
   })
-  return [
-    group("Profiles", [
-      ...rows,
-      block([h("button.btn.pf-add", { onclick: () => openProfileSheet() }, [ico("plus", 14), "Add Profile…"])], "add profile new account")
-    ], "Each profile keeps its own tabs, bookmarks, history, passwords, cookies and site logins, Home screen and look, and can have a window of its own beside the others (⌘N). API keys are shared."),
-  ]
+  const sec = group("Profiles", [
+    ...rows,
+    block([h("button.btn.pf-add", { onclick: () => openProfileSheet() }, [ico("plus", 14), "Add Profile…"])], "add profile new account")
+  ], "Each profile keeps its own tabs, bookmarks, history, passwords, cookies and site logins, Home screen and look, and can have a window of its own beside the others (⌘N). Drag to change the order: ⌃⌘1…9 follow it. API keys are shared.")
+  if (rows.length > 1) {
+    sortable(rows[0].parentElement, {
+      rows: () => [...rows[0].parentElement?.children ?? []].filter((r) => r.classList.contains("pf-row") && !r.classList.contains("is-hidden")),
+      idOf: (r) => r.dataset.id,
+      onMove: (ids, id, { keyboard }) => { if (keyboard) refocus = { id, t: Date.now() }; reorderProfiles(ids) }
+    })
+  }
+  // a keyboard move re-renders Settings: keep the row focused
+  if (refocus && Date.now() - refocus.t < 1500) {
+    const id = refocus.id
+    requestAnimationFrame(() => rows.find((r) => r.dataset.id === id && r.isConnected)?.focus({ preventScroll: true }))
+  }
+  return [sec]
 }
+let refocus = null
 
 export async function initProfiles () {
   window.flux.profiles.onChange((r) => refresh(r))

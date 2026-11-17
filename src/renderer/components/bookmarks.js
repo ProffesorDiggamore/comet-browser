@@ -60,6 +60,8 @@ export async function deleteBookmark (b) {
 export function openBookmarks (anchor = null, { only = null } = {}) {
   // the shortcut / a second press closes it again
   if (cur && (!anchor || anchor === cur.anchor)) { closePopover(); return }
+  // where focus goes back to on close: the button it was opened from, else where it was (⌥⌘B)
+  const back = anchor ?? document.activeElement
   anchor = anchor ?? visibleButton()
   const onlySet = only ? new Set(only) : null
   let q = ""
@@ -72,6 +74,7 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
   let focusUrl = null
   let popEl = null
   let hereKey = ""
+  let leaving = false        // closing to open a bookmark: focus belongs to the page, not the button
 
   const search = h("input.bmp-search", {
     type: "text", placeholder: onlySet ? "Filter these bookmarks" : "Search bookmarks", spellcheck: false, autocomplete: "off",
@@ -191,6 +194,7 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
       if (el) { el.classList.remove("is-opened"); void el.offsetWidth; el.classList.add("is-opened") }
       return
     }
+    leaving = true
     closePopover()
     if (how === "tab") T.newTab(b.url)
     else if (how === "peek") bus.emit("peek:open", { url: b.url })
@@ -267,6 +271,13 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
   search.addEventListener("input", () => { q = search.value.trim(); sel = 0; render() })
   search.addEventListener("keydown", (e) => {
     const step = (d) => { e.preventDefault(); if (!items.length) return; sel = Math.max(0, Math.min(items.length - 1, sel + d)); paintSel(true) }
+    // the right-click menu is open: ↑↓ move into it, ⏎ just dismisses it (never opens the list's selection)
+    if (ctx) {
+      const mis = [...ctx.querySelectorAll(".mi")]
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); (e.key === "ArrowDown" ? mis[0] : mis[mis.length - 1])?.focus() }
+      else if (e.key === "Enter") { e.preventDefault(); closeCtx() }
+      return
+    }
     if (e.key === "ArrowDown") step(grid ? COLS : 1)
     else if (e.key === "ArrowUp") step(grid ? -COLS : -1)
     else if (grid && !search.value && e.key === "ArrowRight") step(1)
@@ -322,6 +333,11 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
       window.removeEventListener("keydown", escKey, true)
       clearTimeout(clickT)
       cur = null
+      // Esc / click away: hand focus back instead of dropping it on <body>
+      const f = document.activeElement
+      if (!leaving && (!f || f === document.body || popEl?.contains(f)) && back instanceof Element && back !== document.body && back.isConnected) {
+        try { back.focus({ preventScroll: true }) } catch {}
+      }
     }
   })
   if (!popEl) { offs.forEach((off) => off()); window.removeEventListener("keydown", escKey, true); return }

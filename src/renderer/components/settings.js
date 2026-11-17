@@ -140,7 +140,9 @@ function catAppearance () {
   const t = state.get("theme")
   const classic = themeById(t.active).family === "classic"
   const themes = themeGrid(t.active)   // [modern + Custom, classic]
-  const accent = h("input", { type: "color", value: t.accent })
+  // until you pick your own, the swatch shows the theme's accent (what the UI is actually using)
+  const own = themeById(t.active).sw?.[2]
+  const accent = h("input", { type: "color", value: !t.accentCustom && /^#[0-9a-f]{6}$/i.test(own ?? "") ? own : t.accent })
   accent.addEventListener("input", () => { state.set("theme.accent", accent.value); state.set("theme.accentCustom", true) })
   const css = h("textarea", { value: t.customCss ?? "", style: { minHeight: "84px", fontFamily: "monospace", minWidth: "340px" } })
   css.addEventListener("change", () => state.set("theme.customCss", css.value))

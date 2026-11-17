@@ -120,6 +120,8 @@ export function newTab (url = null, { activate = true, background = false, pinne
   wv.className = "is-hidden"
   const isHome = !url
   const target = url ? normalizeInput(url, { search }) : "about:blank"
+  // restored tabs carry their saved icon: seed the cache so bookmarks show it before the page loads
+  if (favicon && url && !faviconByHost.has(hostOf(target))) faviconByHost.set(hostOf(target), favicon)
 
   const tab = {
     id, wv, title: title ?? (isHome ? "New Tab" : target), url: isHome ? "" : target, favicon: favicon ?? faviconFor(target),

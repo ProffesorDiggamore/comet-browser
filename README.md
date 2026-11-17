@@ -19,6 +19,17 @@
   <img src="docs/images/home-light.png" width="860" alt="Comet's Home screen in light mode">
 </p>
 
+<table>
+  <tr>
+    <td><img src="docs/images/home-dark.png" alt="Home screen in dark mode"></td>
+    <td><img src="docs/images/bookmarks.png" alt="The Bookmarks list opened from the sidebar"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/profiles.png" alt="The profile picker with Personal, Work and School"></td>
+    <td><img src="docs/images/welcome.png" alt="The Welcome tour's look step"></td>
+  </tr>
+</table>
+
 ---
 
 ## Install
@@ -94,11 +105,12 @@ Profiles are separate identities, each with its own tabs, bookmarks, history, sa
 - **Switch** from the avatar at the top of the sidebar, or ⌃⌘1 … ⌃⌘9.
 - **Open a profile in its own window** to use two at once: the avatar menu, **Profiles → Open in New Window**, Settings → Profiles, or right-click Comet in the Dock.
 - Each window keeps its profile, and the windows that were open come back the next time you launch Comet.
+- **Reorder** by dragging profiles in the avatar menu or Settings → Profiles; ⌃⌘1 … ⌃⌘9 follow that order.
 - Manage them in **Settings → Profiles**: rename, color, emoji or photo, remove.
 
 ### Passwords
 
-Comet offers to save a password when you sign in, and to **update** it when you change one. Saved passwords fill in from the key icon in the field. They are encrypted with your Mac's keychain and never leave your Mac. Manage them in **Settings → Passwords**.
+Comet offers to save a password when you sign in, and to **update** it when you change one. It doesn't offer to save a password the site rejected. Saved passwords fill in from the key icon in the field, and each profile keeps its own. They are encrypted with your Mac's keychain and never leave your Mac. Manage them in **Settings → Passwords**.
 
 ### Easy Files
 
