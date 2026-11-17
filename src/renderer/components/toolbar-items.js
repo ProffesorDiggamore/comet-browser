@@ -9,7 +9,7 @@ import { bus } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { state } from "../core/state.js"
 import { menu } from "./popover.js"
-import { openDownloads } from "./downloads.js"
+import { openDownloads, downloadsBadge } from "./downloads.js"
 
 // order here = order in the toolbar and in Settings; web = page-only (hidden on Home)
 export const TOOL_ITEMS = [
@@ -36,6 +36,7 @@ function makeBtn (it) {
     title: it.title, "aria-label": it.title, dataset: { tool: it.id },
     onclick: () => (it.id === "downloads" ? openDownloads(b) : bus.emit("menu", { action: it.action }))
   }, [ico(it.icon, 16)])
+  if (it.id === "downloads") { b.dataset.downloadsBtn = ""; b.append(downloadsBadge()) }
   return b
 }
 

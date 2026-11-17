@@ -89,7 +89,7 @@ The full list is in **Settings → Shortcuts**.
 - **Tab groups:** right-click a tab → **Add Tab to New Group** (⌥⌘G). Name it, pick a color, click it to fold it away. Drag tabs in and out.
 - **Rename a tab:** double-click its title.
 - **Peek:** ⇧-click any link to open it in a sheet over the page. Open it as a tab, split it beside the page, or press Esc to dismiss.
-- **Now Playing:** when a tab plays sound, a mini player appears at the bottom of the sidebar.
+- **Now Playing:** when a tab plays sound, a mini player appears at the bottom of the sidebar. It can show Spotify too.
 - Prefer tabs across the top? **Settings → Layout → Style → Top tabs.** The sidebar can also sit on the right.
 
 ### Bookmarks
@@ -97,6 +97,7 @@ The full list is in **Settings → Shortcuts**.
 - **⌘D** or the ☆ in the toolbar bookmarks the page.
 - The **Bookmarks button** (bottom of the sidebar, or the toolbar with top tabs) opens a compact list of all your bookmarks with search. Press ⌥⌘B to open it from anywhere.
 - **Rename** a bookmark: right-click it → **Rename…**, or double-click it in the list.
+- Clicking a bookmark opens it in a new tab. ⌘-click opens it in the background and ⇧-click in Peek.
 - **⇧⌘B** shows or hides the bookmarks bar under the toolbar.
 
 ### Profiles: keep accounts apart
@@ -113,6 +114,14 @@ Profiles are separate identities, each with its own tabs, bookmarks, history, sa
 
 Comet offers to save a password when you sign in, and to **update** it when you change one. It doesn't offer to save a password the site rejected. Saved passwords fill in from the key icon in the field, and each profile keeps its own. They are encrypted with your Mac's keychain and never leave your Mac. Manage them in **Settings → Passwords**.
 
+### Search that guesses
+
+As you type in the Home search box or the address bar, Comet shows its best guess in gray: a site you visit, or your search engine's top prediction. Press → or Tab to take it, or keep typing. Predictions are never requested from private tabs or for things that look like addresses, emails or passwords; turn them off in **Settings → Search & Tabs**.
+
+### Spotify
+
+Add the **Spotify** widget to Home (Edit Widgets → Add Widget) to see what's playing and control it: play, skip, seek, shuffle, volume and search. It controls the Spotify app on your Mac, so there's no account to connect; macOS asks once to let Comet control Spotify. ⌘K → “Spotify” or `sp <song>` works too.
+
 ### Easy Files
 
 When a site asks you to upload a file, Comet first offers what you just copied (a screenshot, an image, Finder files, or text) and your newest downloads. One click and the site receives it. **Browse files…** opens the regular dialog.
@@ -125,8 +134,8 @@ Everything is in **Settings** (⌘,), and the search box at the top finds any op
 
 - **Appearance:** Auto / Light / Dark, eight themes that work in both modes, or a Custom theme with your own tint, glow and accent. Interface font (System, Rounded, Serif, Mono). Increase contrast. Liquid glass presets (Clear, Frosted, Solid) with fine-tuning sliders. Animated background styles.
 - **Layout:** sidebar or top tabs, sidebar on the left or right, its width, comfortable or compact rows, the page card's corner radius and margin, and which buttons appear in the toolbar (right-click the toolbar → Customize Toolbar…).
-- **Home Screen:** your name, a wallpaper (presets, any photo, or your desktop picture) with a dim slider, and widgets: clock, calendar, weather, top sites, clipboard, notes, battery, open tabs. Choose Edit Widgets to drag, resize and add widgets. You can also set the widget size and where they sit.
-- **Search & Tabs:** search engine and keywords, whether unused New Tabs close themselves, ⇧-click to Peek, Easy Files, and make Comet your default browser.
+- **Home Screen:** your name, a wallpaper (presets, any photo, or your desktop picture) with a dim slider, and Apple-style widgets: clock, world clock, calendar, weather, Spotify, to-do, notes, focus timer, countdown, batteries, top sites, clipboard, open tabs and more. Choose Edit Widgets to drag, resize and add widgets from a gallery with live previews. Pick a widget style (Full Color, Tinted, Clear, Frosted, Liquid, Solid), the widget size and where they sit.
+- **Search & Tabs:** search engine and keywords, search suggestions, whether unused New Tabs close themselves, ⇧-click to Peek, Easy Files, and make Comet your default browser.
 - **Privacy & Shield:** tracker blocking, HTTPS-only, Global Privacy Control, clearing browsing data.
 - **Backup & Restore:** export all your settings to a file and import them on another Mac. Passwords and API keys are never included.
 
@@ -134,7 +143,7 @@ Everything is in **Settings** (⌘,), and the search box at the top finds any op
 
 ## Privacy
 
-Comet is local-first. Your history, bookmarks, passwords and settings stay in `~/Library/Application Support/Comet` on your Mac. Built-in tracker blocking and HTTPS-only are on by default. The optional Comet AI assistant (⌘J) runs on your Mac with [Ollama](https://ollama.com); it only talks to a cloud model if you add your own API key.
+Comet is local-first. Your history, bookmarks, passwords and settings stay in `~/Library/Application Support/Comet` on your Mac. Built-in tracker blocking and HTTPS-only are on by default. Search suggestions send what you type in the search box to your search engine, like every browser does; switch them off in Settings → Search & Tabs. The optional Comet AI assistant (⌘J) runs on your Mac with [Ollama](https://ollama.com); it only talks to a cloud model if you add your own API key.
 
 ---
 

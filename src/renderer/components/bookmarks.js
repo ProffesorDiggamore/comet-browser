@@ -3,7 +3,8 @@
 //  bookmark, anchored to the bookmarks button (sidebar footer, or the
 //  toolbar in the tabs-on-top layout and when the sidebar is folded
 //  away) or opened with ⌥⌘B.  Type to filter; ↑↓ (←→ in the grid) and
-//  ⏎ open; ⌘-click opens in the background, ⇧-click in Peek.  Rename
+//  ⏎ open in a new tab (an empty New Tab is reused); ⌘-click opens in
+//  the background, ⇧-click in Peek.  Rename
 //  with a double-click or right-click › Rename….  The bar's » opens
 //  the same popover with just the bookmarks that didn't fit.
 // ───────────────────────────────────────────────────────────────────
@@ -12,7 +13,7 @@ import { state } from "../core/state.js"
 import { bus, toast, actionToast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { popover, closePopover } from "./popover.js"
-import { addBookmark, removeBookmark, renameBookmark, isBookmarked, inlineRename, hostLabel, bookmarkLabel, bookmarkName, bookmarkPlaceholder } from "./library.js"
+import { addBookmark, removeBookmark, renameBookmark, isBookmarked, inlineRename, hostLabel, bookmarkLabel, bookmarkName, bookmarkPlaceholder, openBookmarkUrl } from "./library.js"
 import * as T from "../core/tabs.js"
 
 const GRID_KEY = "comet.bookmarks.grid"
@@ -187,18 +188,17 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
   }
 
   // ── actions ───────────────────────────────────────────────────────
-  function openMark (b, how = "here") {
+  function openMark (b, how = "tab") {
     if (how === "bg") {
-      T.newTab(b.url, { background: true })
+      openBookmarkUrl(b.url, { background: true })
       const el = list.querySelector(`[data-i="${items.indexOf(b)}"]`)
       if (el) { el.classList.remove("is-opened"); void el.offsetWidth; el.classList.add("is-opened") }
       return
     }
     leaving = true
     closePopover()
-    if (how === "tab") T.newTab(b.url)
-    else if (how === "peek") bus.emit("peek:open", { url: b.url })
-    else T.navigate(b.url)
+    if (how === "peek") bus.emit("peek:open", { url: b.url })
+    else openBookmarkUrl(b.url, { here: how === "here" })
   }
 
   function startRename (i) {
@@ -227,8 +227,9 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
     if (!b) return
     closeCtx()
     const entries = [
-      ["Open", "arrowRight", () => openMark(b)],
       ["Open in New Tab", "plus", () => openMark(b, "tab")],
+      ["Open in This Tab", "arrowRight", () => openMark(b, "here")],
+      ["Open in Background", "layers", () => openMark(b, "bg"), "⌘-click"],
       ["Open in Peek", "eye", () => openMark(b, "peek"), "⇧-click"],
       "-",
       ["Rename…", "edit", () => startRename(i)],
@@ -282,7 +283,7 @@ export function openBookmarks (anchor = null, { only = null } = {}) {
     else if (e.key === "ArrowUp") step(grid ? -COLS : -1)
     else if (grid && !search.value && e.key === "ArrowRight") step(1)
     else if (grid && !search.value && e.key === "ArrowLeft") step(-1)
-    else if (e.key === "Enter" && items[sel]) { e.preventDefault(); openMark(items[sel], e.metaKey ? "bg" : e.shiftKey ? "peek" : "here") }
+    else if (e.key === "Enter" && items[sel]) { e.preventDefault(); openMark(items[sel], e.metaKey ? "bg" : e.shiftKey ? "peek" : "tab") }
   })
 
   const at = (e) => { const el = e.target.closest("[data-i]"); return el ? Number(el.dataset.i) : -1 }

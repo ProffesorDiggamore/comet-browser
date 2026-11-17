@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════════════════
+   WIDGET GALLERY — "+ Add Widget": kinds on the left, live miniature
+   previews of each size on the right, over your wallpaper.
+   ═══════════════════════════════════════════════════════════════════ */
+.pop--gallery { padding: 0 !important; overflow: hidden; max-width: calc(100vw - 32px); }
+.hw-gal { display: grid; grid-template-columns: 190px minmax(0, 1fr); height: min(440px, calc(100vh - 140px)); }
+.hw-gal-list { display: flex; flex-direction: column; gap: 1px; padding: 10px 8px; overflow-y: auto; border-right: 0.5px solid rgb(var(--ink) / 0.1); }
+.hw-gal-item {
+  display: flex; align-items: center; gap: 9px; flex: 0 0 auto; height: 32px; padding: 0 8px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--f-text); font-size: 13px; font-weight: 500; text-align: left; outline: 0;
+}
+.hw-gal-item:hover { background: rgb(var(--ink) / 0.06); }
+.hw-gal-item.is-on { background: var(--f-accent); color: #fff; }
+.hw-gal-item:active { scale: 0.97; transition: scale 100ms ease-out; }
+.hw-gal-ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; flex: 0 0 auto; background: rgb(var(--ink) / 0.08); }
+.hw-gal-item.is-on .hw-gal-ico { background: rgb(255 255 255 / 0.22); }
+.hw-gal-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-gal-stage { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; overflow-y: auto; background-color: var(--f-bg-1); }
+.hw-gal-stage::before { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / 0.12); pointer-events: none; }
+.hw-gal-title { position: relative; color: #fff; text-shadow: 0 1px 6px rgb(0 0 0 / 0.35); }
+.hw-gal-name { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.hw-gal-desc { font-size: 12px; font-weight: 500; opacity: 0.85; margin-top: 2px; }
+.hw-grid.hw-gal-row { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: center; gap: 22px 24px; max-width: none; width: auto; margin: auto 0; }
+.hw-gal-pick { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0; border: 0; background: none; color: #fff; outline: 0; }
+.hw-gal-pick .hw { flex: 0 0 auto; transition: scale 260ms cubic-bezier(0.2, 0.9, 0.3, 1), box-shadow var(--f-med); }
+.hw-gal-pick:hover .hw { scale: 1.03; }
+.hw-gal-pick:active .hw { scale: 0.96; transition-duration: 100ms; }
+.hw-gal-pick:focus-visible .hw { box-shadow: 0 0 0 3px var(--f-accent), var(--hw-shadow); }
+.hw-gal-size { font-size: 11px; font-weight: 600; text-shadow: 0 1px 4px rgb(0 0 0 / 0.45); }
+.hw.is-preview .hw-body { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .hw-gal-pick .hw { transition: none; } }

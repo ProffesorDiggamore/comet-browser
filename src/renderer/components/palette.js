@@ -13,8 +13,26 @@ import { toggleBookmark } from "./library.js"
 import { openBookmarks } from "./bookmarks.js"
 import { allProfiles, currentProfile, openProfileWindow } from "./profiles.js"
 import * as T from "../core/tabs.js"
+import { spotify } from "./widgets/spotify-client.js"
 
 let overlay = null
+let prefill = null   // a command that keeps the palette open sets the box (Search Spotify… → "sp ")
+
+// the Spotify app's transport, when it's on this Mac
+let probed = null     // "notInstalled" | "notRunning" | "running", before the user has opted in to Spotify
+function spotifyCommands () {
+  const s = spotify.state
+  if ((s?.status ?? probed) === "notInstalled") return []
+  const now = s?.track && spotify.live(s) ? `${s.track.title} — ${s.track.artist}` : ""
+  const c = (label, icon, run, sub = "") => ({ kind: "cmd", icon, label, run, sub })
+  return [
+    c(s?.status === "playing" ? "Spotify: Pause" : "Spotify: Play", s?.status === "playing" ? "pause" : "play", () => spotify.command("toggle"), now),
+    c("Spotify: Next Track", "music", () => spotify.command("next")),
+    c("Spotify: Previous Track", "music", () => spotify.command("previous")),
+    { ...c("Search Spotify…", "search", () => prefill?.("sp ")), keep: true },
+    c("Open Spotify", "music", () => spotify.command("open"))
+  ]
+}
 
 function commands () {
   const web = T.getActive() && !T.getActive().isHome
@@ -51,6 +69,7 @@ function commands () {
     cmd("Appearance settings", "palette", () => bus.emit("settings:goto", "appearance")),
     cmd("Open page in system browser", "external", () => window.flux.openExternal(T.getActive().url), "", web),
     cmd("Welcome tour", "flux", () => bus.emit("menu", { action: "welcome" })),
+    ...spotifyCommands(),
     // Comet AI stays reachable, below the browser commands
     cmd("Ask Comet AI", "spark", () => bus.emit("ai:toggle"), "⌘J"),
     cmd("Summarize this page", "spark", () => bus.emit("ai:ask", { text: "Summarize this page: key points, then anything to act on.", withPage: true }), "", web)
@@ -79,6 +98,8 @@ export function openPalette () {
     const my = ++seqq
     const base = [...tabItems(), ...commands()]
     if (!q) { visible = base; sel = 0; paint(); return }
+    // "sp lo-fi" / "spotify lo-fi" → search in the Spotify app (first, the rest still below)
+    const spq = /^(?:sp|spotify)\s+(.+)$/i.exec(input.value.trim())?.[1]
     const score = (i) => {
       const l = i.label.toLowerCase(); const s = (i.sub ?? "").toLowerCase()
       if (l.startsWith(q)) return 3
@@ -86,6 +107,7 @@ export function openPalette () {
       return l.includes(q) || s.includes(q) ? 1 : 0
     }
     visible = base.map((i) => [i, score(i)]).filter(([, s]) => s).sort((a, b) => b[1] - a[1]).map(([i]) => i)
+    if (spq && (spotify.state?.status ?? probed) !== "notInstalled") visible.unshift({ kind: "cmd", icon: "music", label: `Search Spotify for “${spq}”`, sub: "Opens in Spotify", run: () => spotify.command("search", spq) })
     for (const b of (state.get("bookmarks") ?? []).filter((b) => `${b.title} ${b.url}`.toLowerCase().includes(q)).slice(0, 4)) {
       visible.push({ kind: "bookmark", icon: "bookmark", label: b.title || b.url, sub: T.hostOf(b.url), run: () => T.newTab(b.url) })
     }
@@ -106,7 +128,7 @@ export function openPalette () {
       if (i.kind !== lastKind) { out.push(h("div.pal-group", { text: label[i.kind] })); lastKind = i.kind }
       out.push(h(`button.pal-row${idx === sel ? ".is-sel" : ""}${i.kind === "ai" ? ".is-ai" : ""}`, {
         onmouseenter: () => { sel = idx; mark() },
-        onclick: () => { closePalette(); i.run() }
+        onclick: () => { if (i.keep) { i.run(); return } closePalette(); i.run() }
       }, [
         h("span.pal-ico", {}, [i.fav ? h("img", { src: i.fav, onerror: (e) => e.target.replaceWith(ico("globe", 15)) }) : ico(i.icon, 15)]),
         h("span.pal-label", { text: i.label }),
@@ -126,6 +148,7 @@ export function openPalette () {
     else if (e.key === "Enter") {
       e.preventDefault()
       const it = (e.metaKey || e.ctrlKey) ? visible.find((i) => i.kind === "ai") : visible[sel]
+      if (it?.keep) { it.run(); return }
       closePalette(); it?.run()
     } else if (e.key === "Escape") { e.preventDefault(); closePalette() }
   })
@@ -134,6 +157,12 @@ export function openPalette () {
     h("div.pal.glass", {}, [h("div.pal-top", {}, [ico("search", 17), input, h("kbd.pal-kbd", { text: "esc" })]), rows])
   ])
   document.body.append(overlay)
+  prefill = (v) => { input.value = v; input.focus(); filter() }
+  // a fresh read only once Spotify is opted in (its AppleScript asks macOS for permission); before that, pgrep only
+  const was = spotify.state?.status ?? probed
+  const after = () => { if (overlay && (spotify.state?.status ?? probed) !== was) filter() }
+  if (spotify.enabled()) spotify.refresh()?.then(after)
+  else spotify.probe().then((st) => { probed = st; after() })
   filter()
   input.focus()
 }

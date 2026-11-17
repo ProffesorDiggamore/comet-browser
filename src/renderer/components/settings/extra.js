@@ -11,6 +11,7 @@ import { springEasing, replayPreview } from "../../core/motion.js"
 import { group, row, block, seg, sw, rng, sel, textField, btn } from "./kit.js"
 import { localStatus, pullModel, getButton, capsBadges, fmtSize, shortName } from "../localai.js"
 import { sideRow, toolbarGroup } from "./look.js"
+import { providerName } from "../omnibox-predict.js"
 
 const rerender = () => bus.emit("settings:rerender")
 
@@ -125,7 +126,7 @@ export function catAI () {
       row("Ask before clicking or typing on pages", sw(ai.confirmPageActions !== false, (v) => state.set("ai.confirmPageActions", v)), "Tab actions never ask. Password and payment fields are always off-limits."),
       row("Share the active tab with each message", sw(ai.autoContext !== false, (v) => state.set("ai.autoContext", v)), "Title and URL only, so “this page” just works."),
       row("Show thinking", sw(ai.showThinking !== false, (v) => state.set("ai.showThinking", v))),
-      row("Return key in the address bar", sel([{ v: "smart", label: "Smart" }, { v: "search", label: "Always search" }, { v: "ai", label: "Always ask AI" }], ai.enterAction ?? "smart", (v) => state.set("ai.enterAction", v)), "Smart sends questions to Comet AI. ⌘↩ always does.")
+      row("Return key in the address bar", sel([{ v: "smart", label: "Smart" }, { v: "search", label: "Always search" }, { v: "ai", label: "Always ask AI" }], ai.enterAction ?? "smart", (v) => state.set("ai.enterAction", v)), "Smart sends questions to Comet AI. ⇧⌘↩ always does; ⌘↩ opens in a new tab.")
     ]),
     group("Custom instructions", [block([instr], "custom instructions")], "Added to every conversation."),
     group("Data", [
@@ -248,6 +249,7 @@ export function catLayout () {
       row("Tab rows", seg([{ v: "comfortable", label: "Comfortable" }, { v: "compact", label: "Compact" }], l.tabStyle ?? "comfortable", (v) => state.set("layout.tabStyle", v))),
       row("Preview on the active tab", sw(l.tabThumbs !== false, (v) => state.set("layout.tabThumbs", v)), "A small live picture of the page on the tab you're on."),
       row("Now Playing", sw(l.nowPlaying !== false, (v) => state.set("layout.nowPlaying", v)), "A player at the bottom of the sidebar for the tab playing sound: play / pause, mute, jump to it."),
+      row("Spotify in Now Playing", sw(l.nowPlayingSpotify ?? (state.get("home.widgets") ?? []).some((w) => w?.kind === "spotify"), (v) => state.set("layout.nowPlayingSpotify", v)), "With no tab playing, show the Spotify app's song. macOS asks once to let Comet control Spotify."),
       row("Hide sidebar", sw(!!l.vtabsCollapsed, (v) => state.set("layout.vtabsCollapsed", v)), "⌘B. Touch the left edge to peek at your tabs.")
     ], "Right-click a tab → Add Tab to New Group (⌥⌘G) to start a group. Drag tabs onto a group to file them; double-click a name to rename."),
     dia && group("Page", [
@@ -317,5 +319,9 @@ export function catKeywords () {
     wrap.append(btn("Add keyword", () => { list.push({ key: "new", name: "New", url: "https://example.com/search?q=%s" }); paint() }, "btn btn--ghost"))
   }
   paint()
-  return [group("Search keywords", [wrap], "Type a keyword then your query in the address bar — e.g. “yt lofi beats”, “gh electron”. %s is where the query goes.")]
+  const who = providerName(state.get("general.searchEngineId"))
+  return [group("Search suggestions", [
+    row("Search suggestions", sw(state.get("general.searchSuggestions") !== false, (v) => state.set("general.searchSuggestions", v)),
+      `As you type in the address bar or on Home, what you've typed so far is sent to ${who} to predict your search. Never from private tabs, and never addresses, email addresses or password-like text.`)
+  ]), group("Search keywords", [wrap], "Type a keyword then your query in the address bar — e.g. “yt lofi beats”, “gh electron”. %s is where the query goes.")]
 }

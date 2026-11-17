@@ -19,6 +19,7 @@ import { profileButton } from "./profiles.js"
 import { headerFor, paintHeader, dropHeader, inlineEdit, renameHeader } from "./vgroups.js"
 import { nowPlaying } from "./nowplaying.js"
 import { openBookmarks } from "./bookmarks.js"
+import { downloadsBadge } from "./downloads.js"
 
 let root, tiles, list, ind, btnNew
 const rows = new Map()      // tabId -> row element
@@ -297,6 +298,14 @@ function resizeHandle () {
   return grip
 }
 
+// the footer's Downloads button carries the same progress ring as the toolbar's
+function dlFoot () {
+  const b = foot("download", "Downloads (⌥⌘L)", () => openDownloadsPopover(), ".vt-dl")
+  b.dataset.downloadsBtn = ""
+  b.append(downloadsBadge())
+  return b
+}
+
 export function initVTabs () {
   root = document.getElementById("vtabs")
   tiles = h("div.vt-tiles", {
@@ -318,7 +327,7 @@ export function initVTabs () {
     h("div.vt-bottom", {}, [
       foot("gear", "Settings (⌘,)", () => toggleView("settings", () => bus.emit("view", "settings"))),
       btnMarks,
-      foot("download", "Downloads (⌥⌘L)", () => openDownloadsPopover()),
+      dlFoot(),
       foot("eyeoff", "New private tab (⇧⌘N)", () => T.newTab(null, { private: true })),
       h("span.vt-flex"),
       modeBtn,

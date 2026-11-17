@@ -1,8 +1,8 @@
 // ───────────────────────────────────────────────────────────────────
 //  bmbar.js — the bookmarks bar: one slim row under the top bar with
-//  every bookmark (⌘D adds one).  Click opens it here, ⌘-click opens a
-//  background tab; what doesn't fit goes under » (the Bookmarks
-//  popover, limited to those).  Right-click › Rename… names one in
+//  every bookmark (⌘D adds one).  Click opens it in a new tab (an empty
+//  New Tab is reused), ⌘-click opens a background tab; what doesn't
+//  fit goes under » (the Bookmarks popover, limited to those).  Right-click › Rename… names one in
 //  place.  Show / hide with ⇧⌘B, View → Bookmarks Bar, More, or
 //  Settings → Layout.
 // ───────────────────────────────────────────────────────────────────
@@ -11,7 +11,7 @@ import { state } from "../core/state.js"
 import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { menu } from "./popover.js"
-import { removeBookmark, renameBookmark, inlineRename, bookmarkLabel, bookmarkName, bookmarkPlaceholder } from "./library.js"
+import { removeBookmark, renameBookmark, inlineRename, bookmarkLabel, bookmarkName, bookmarkPlaceholder, openBookmarkUrl } from "./library.js"
 import { openBookmarks } from "./bookmarks.js"
 import * as T from "../core/tabs.js"
 
@@ -33,8 +33,7 @@ function favFor (url) {
 }
 
 function open (b, e) {
-  if (e?.metaKey || e?.button === 1) T.newTab(b.url, { background: true })
-  else T.navigate(b.url)
+  openBookmarkUrl(b.url, { background: !!(e?.metaKey || e?.button === 1) })
 }
 
 // edit the name right on the bar: the button becomes a field until Enter / Esc / click away
@@ -50,8 +49,9 @@ function renameItem (el, b) {
 
 function itemMenu (anchor, b) {
   menu(anchor, [
-    { label: "Open", icon: "arrowRight", run: () => T.navigate(b.url) },
-    { label: "Open in New Tab", icon: "plus", run: () => T.newTab(b.url) },
+    { label: "Open in New Tab", icon: "plus", run: () => openBookmarkUrl(b.url) },
+    { label: "Open in This Tab", icon: "arrowRight", run: () => openBookmarkUrl(b.url, { here: true }) },
+    { label: "Open in Background", icon: "layers", kbd: "⌘-click", run: () => openBookmarkUrl(b.url, { background: true }) },
     { label: "Open in Private Tab", icon: "eyeoff", run: () => T.newTab(b.url, { private: true }) },
     { label: "Copy Link", icon: "link", run: () => { navigator.clipboard.writeText(b.url); toast("Link copied") } },
     "-",

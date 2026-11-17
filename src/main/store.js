@@ -16,6 +16,7 @@ const DEFAULTS = {
   general: {
     searchEngineId: "duckduckgo",   // see renderer/data/engines.js
     customSearchUrl: "https://duckduckgo.com/?q=%s",
+    searchSuggestions: true,        // live predictions from the search engine as you type (main/suggest.js)
     homeOnNewTab: true,
     restoreTabs: true,
     newTabPosition: "end",          // end | afterCurrent
@@ -58,7 +59,7 @@ const DEFAULTS = {
     headline: "How can I help you?",
     wallpaper: { kind: "preset", value: "tide" },   // preset | image (userData/wallpaper.*) | color
     dim: 0.15,                  // darkens the wallpaper so widgets stay readable
-    widgetStyle: "glass",       // glass | liquid | solid | tinted | clear  (Home Widgets' styles)
+    widgetStyle: "color",       // color (Apple Full Color) | tinted | clear | glass | liquid | solid
     widgetSize: "m",            // s | m | l  (widget grid unit 132 / 156 / 184px)
     align: "center",            // top | center | bottom  (where the Home cluster sits)
     showSearch: true,
@@ -192,7 +193,7 @@ const DEFAULTS = {
     { key: "img", name: "Image search", url: "https://www.google.com/search?tbm=isch&q=%s" }
   ],
   session: { tabs: [], active: 0 },
-  meta: { schema: 7 }
+  meta: { schema: 8 }
 }
 
 // the look from the reference: violet nebula + clear liquid glass
@@ -296,6 +297,15 @@ function migrate (CONFIG_PATH, RAW, cache) {
     const OLD = { ht_search: "CmdOrCtrl+1", ht_gh: "CmdOrCtrl+2", ht_yt: "CmdOrCtrl+3", ht_ai: "CmdOrCtrl+4" }
     for (const t of Array.isArray(cache.hotTabs) ? cache.hotTabs : []) if (t && OLD[t.id] && t.hotkey === OLD[t.id]) t.hotkey = ""
     cache.meta = { schema: 7 }
+    writeJson(CONFIG_PATH, cache)
+  }
+  // one-time v1.x migration: Home widgets became Apple-style, with "Full
+  // Color" as the default look.  Only people still on the old default
+  // (Frosted) move to it; a material someone picked themselves is kept.
+  if (RAW && (RAW.meta?.schema ?? 0) < 8) {
+    const was = RAW.home?.widgetStyle
+    if (cache.home && (was === undefined || was === "glass")) cache.home.widgetStyle = "color"
+    cache.meta = { schema: 8 }
     writeJson(CONFIG_PATH, cache)
   }
   return cache

@@ -94,7 +94,17 @@ const favImg = (url) => {
   return f ? h("img.lib-fav", { src: f, onerror: (e) => e.target.replaceWith(ico("globe", 15)) }) : ico("globe", 15)
 }
 
+// a bookmark opens in a new foreground tab (⌘ / middle click: in the
+// background).  An empty New Tab is taken over instead of left behind.
+export function openBookmarkUrl (url, { background = false, here = false } = {}) {
+  if (background) return T.newTab(url, { background: true })
+  const a = T.getActive()
+  if (here || (a?.isHome && !a.pane)) return T.navigate(url, a?.id ?? null)
+  return T.newTab(url)
+}
+
 function open (url, e) { if (e?.metaKey || e?.button === 1) T.newTab(url, { background: true }); else T.newTab(url) }
+const openMark = (url, e) => openBookmarkUrl(url, { background: !!(e?.metaKey || e?.button === 1) })
 
 export function initLibrary () {
   const pane = document.getElementById("library")
@@ -109,7 +119,7 @@ export function initLibrary () {
     if (tab === "bookmarks") {
       const bms = (state.get("bookmarks") ?? []).filter((b) => !q || `${b.title} ${b.url}`.toLowerCase().includes(q))
       if (!bms.length) { listEl.append(h("div.lib-empty", { text: q ? "No bookmarks match." : "No bookmarks yet — press ⌘D on any page." })); return }
-      listEl.append(h("div.lib-grid", {}, bms.map((b) => h("div.lib-card.glass.lit", { onclick: (e) => open(b.url, e), onauxclick: (e) => open(b.url, e), oncontextmenu: (e) => cardMenu(e, b) }, [
+      listEl.append(h("div.lib-grid", {}, bms.map((b) => h("div.lib-card.glass.lit", { onclick: (e) => openMark(b.url, e), onauxclick: (e) => { if (e.button === 1) { e.preventDefault(); openMark(b.url, e) } }, oncontextmenu: (e) => cardMenu(e, b) }, [
         h("div.lib-card-top", {}, [favImg(b.url), h("button.tb-btn", { title: "Remove", onclick: (e) => { e.stopPropagation(); removeBookmark(b.url).then(fill) } }, [ico("close", 13)])]),
         h("div.lib-card-title", { text: bookmarkLabel(b) }),
         h("div.lib-card-sub", { text: T.hostOf(b.url) })
@@ -122,7 +132,7 @@ export function initLibrary () {
     for (const e of rows) {
       const day = dayLabel(e.ts)
       if (day !== lastDay) { listEl.append(h("div.lib-day", { text: day })); lastDay = day }
-      listEl.append(h("div.lib-row", { onclick: (ev) => open(e.url, ev), onauxclick: (ev) => open(e.url, ev) }, [
+      listEl.append(h("div.lib-row", { onclick: (ev) => open(e.url, ev), onauxclick: (ev) => { if (ev.button === 1) { ev.preventDefault(); open(e.url, ev) } } }, [
         h("span.lib-time", { text: new Date(e.ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }),
         favImg(e.url),
         h("span.lib-title", { text: e.title || e.url }),
@@ -137,7 +147,10 @@ export function initLibrary () {
     e.preventDefault()
     const card = e.currentTarget
     menu({ x: e.clientX, y: e.clientY }, [
-      { label: "Open in New Tab", icon: "plus", run: () => T.newTab(b.url) },
+      { label: "Open in New Tab", icon: "plus", run: () => openBookmarkUrl(b.url) },
+      { label: "Open in This Tab", icon: "arrowRight", run: () => openBookmarkUrl(b.url, { here: true }) },
+      { label: "Open in Background", icon: "layers", kbd: "⌘-click", run: () => openBookmarkUrl(b.url, { background: true }) },
+      "-",
       { label: "Rename…", icon: "edit", run: () => {
         const title = card.querySelector(".lib-card-title")
         if (title) inlineRename(title, { value: bookmarkName(b), placeholder: bookmarkPlaceholder(b), cls: "lib-edit", onDone: (v) => { if (v !== null) renameBookmark(b.url, v) } })

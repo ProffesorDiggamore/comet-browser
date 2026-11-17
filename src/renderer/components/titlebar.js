@@ -38,10 +38,13 @@ function kick (el, cls) {
   el.addEventListener("animationend", () => el.classList.remove(cls), { once: true })
 }
 
-// sidebar layout: from the sidebar's Downloads button; classic: the title bar's
+// from whichever Downloads button is showing: the sidebar footer's, the
+// toolbar's (sidebar folded away, or added under Customize Toolbar) or the
+// title bar's in the tabs-on-top layout
 export function openDownloadsPopover () {
-  const side = document.querySelector('.vt-bottom [aria-label^="Downloads"]')
-  openDownloads(side?.offsetParent ? side : btnDl)
+  const shown = (el) => el.getBoundingClientRect().width > 0 && (el.checkVisibility?.({ checkOpacity: true, checkVisibilityCSS: true }) ?? !!el.offsetParent)
+  const btn = [...document.querySelectorAll("[data-downloads-btn]")].find(shown)
+  openDownloads(btn ?? { x: window.innerWidth - 16, y: 52 })
 }
 
 // group entries for the tab menu: new group, move to another, or out
@@ -257,6 +260,7 @@ export function initTitlebar () {
   btnStar = iconBtn("bookmark", "Bookmark this page (⌘D)", () => toggleBookmark(), ".tb-circle")
   btnDl = iconBtn("download", "Downloads (⌥⌘L)", () => openDownloads(btnDl), ".tb-circle")
   btnDl.append(downloadsBadge())
+  btnDl.dataset.downloadsBtn = ""
   const btnAI = iconBtn("spark", "Comet AI (⌘J)", () => bus.emit("ai:toggle"), ".tb-circle.tb-ai")
   const btnOverview = iconBtn("overview", "Tab overview (⇧⌘\\)", () => bus.emit("overview:open"), ".tb-circle")
 
@@ -317,11 +321,15 @@ export function initTitlebar () {
   // every bookmark in a popover; the sidebar layout has this in the sidebar footer (CSS hides this one there)
   const btnMarks = iconBtn("bookmarks", "Bookmarks (⌥⌘B)", () => openBookmarks(btnMarks), ".tb-marks")
   btnMarks.dataset.bookmarksBtn = ""
+  // with the sidebar folded away its footer's Downloads button goes with it: this one stands in (CSS)
+  const btnDlTb = iconBtn("download", "Downloads (⌥⌘L)", () => openDownloads(btnDlTb), ".tb-dl")
+  btnDlTb.dataset.downloadsBtn = ""
+  btnDlTb.append(downloadsBadge())
 
   mount(toolbar, h("div.tl-inner", {}, [
     h("div.tl-nav", {}, [btnSide, btnBack, h("span.tl-sep"), btnFwd, btnReload]),
     addrWrap,
-    h("div.tl-actions", {}, [btnMarks, btnReader, btnStar2, btnMore])
+    h("div.tl-actions", {}, [btnMarks, btnDlTb, btnReader, btnStar2, btnMore])
   ]))
   initToolbarItems(toolbar.querySelector(".tl-actions"), { reader: btnReader, bookmark: btnStar2 }, btnMore)
 

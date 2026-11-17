@@ -48,16 +48,9 @@ body[data-vt-side="right"][data-layout="dia"] .tl-inner { padding-left: 84px; }
 body.is-fullscreen[data-vt-side="right"][data-layout="dia"] .tl-inner { padding-left: 10px; }
 
 /* ── Home: widget size + where the cluster sits ─────────────────── */
-body[data-hw-size="s"] .home-scroll { --hw-u: 132px; --hw-gap: 13px; }
-body[data-hw-size="l"] .home-scroll { --hw-u: 184px; --hw-gap: 18px; }
-body[data-hw-size="s"] .hw-time { font-size: 37px; }
-body[data-hw-size="s"] .size-small .hw-time { font-size: 33px; }
-body[data-hw-size="s"] .hw-cal-num { font-size: 52px; }
-body[data-hw-size="s"] :is(.hw-wx-temp, .hw-cd-num) { font-size: 38px; }
-body[data-hw-size="l"] .hw-time { font-size: 52px; }
-body[data-hw-size="l"] .size-small .hw-time { font-size: 47px; }
-body[data-hw-size="l"] .hw-cal-num { font-size: 76px; }
-body[data-hw-size="l"] :is(.hw-wx-temp, .hw-cd-num) { font-size: 54px; }
+/* widgets are drawn at 170pt and zoomed by --hw-k (widgets.css) */
+body[data-hw-size="s"] .home-scroll { --hw-k: 0.86; }
+body[data-hw-size="l"] .home-scroll { --hw-k: 1.14; }
 body[data-home-align="top"] .home-scroll { justify-content: flex-start; padding-top: 56px; }
 body[data-home-align="bottom"] .home-scroll { justify-content: safe flex-end; padding-bottom: 76px; }
 

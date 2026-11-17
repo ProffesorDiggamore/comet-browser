@@ -12,7 +12,9 @@ import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import { attachOmnibox } from "./omnibox.js"
 import { popover, closePopover } from "./popover.js"
-import { KINDS, SIZES, renderWidget, armFocusAlarm } from "./widgets.js"
+import { armFocusAlarm } from "./widgets.js"
+import { widgetTile, afterGridMount, markEntering } from "./widgets-grid.js"
+import { openGallery } from "./widgets-gallery.js"
 import { seg, rng } from "./settings/kit.js"
 import { currentProfile, avatar } from "./profiles.js"
 import { openLens } from "./lens.js"
@@ -22,9 +24,10 @@ export const WALL_PRESETS = [
   { id: "meadow", name: "Meadow" }, { id: "sunrise", name: "Sunrise" }, { id: "graphite", name: "Graphite" },
   { id: "theme", name: "Theme" }
 ]
+// Apple's widget rendering modes first (Full Color / Tinted / Clear), then the older materials
 export const WIDGET_STYLES = [
-  { v: "glass", label: "Frosted" }, { v: "liquid", label: "Liquid" }, { v: "solid", label: "Solid" },
-  { v: "tinted", label: "Tinted" }, { v: "clear", label: "Clear" }
+  { v: "color", label: "Full Color" }, { v: "tinted", label: "Tinted" }, { v: "clear", label: "Clear" },
+  { v: "glass", label: "Frosted" }, { v: "liquid", label: "Liquid" }, { v: "solid", label: "Solid" }
 ]
 
 let wallData = null          // the userData wallpaper as a data URL (loaded once)
@@ -74,53 +77,13 @@ export function wallpaperPicker () {
     h("div.micro.wp-label", { text: "Dim" }),
     rng(state.get("home.dim") ?? 0.15, 0, 0.7, 0.01, (v) => `${Math.round(v * 100)}%`, (v) => { state.set("home.dim", v); document.querySelector(".home-dim")?.style.setProperty("opacity", v) }),
     h("div.micro.wp-label", { text: "Widget style" }),
-    seg(WIDGET_STYLES, state.get("home.widgetStyle") ?? "glass", (v) => state.set("home.widgetStyle", v))
+    seg(WIDGET_STYLES, state.get("home.widgetStyle") ?? "color", (v) => state.set("home.widgetStyle", v))
   ])
 }
 
-// ── one widget tile ───────────────────────────────────────────────
-function tile (w, idx) {
-  const sz = SIZES[w.size] ?? SIZES.small
-  const body = h("div.hw-body")
-  const el = h(`div.hw.is-${w.kind}.size-${w.size}`, {
-    style: { gridColumn: `span ${sz.cols}`, gridRow: `span ${sz.rows}` },
-    draggable: editing,
-    ondragstart: (e) => { e.dataTransfer.setData("text/flux-widget", String(idx)); el.classList.add("is-dragging") },
-    ondragend: () => el.classList.remove("is-dragging"),
-    ondragover: (e) => { if (editing) { e.preventDefault(); el.classList.add("is-drop") } },
-    ondragleave: () => el.classList.remove("is-drop"),
-    ondrop: (e) => {
-      e.preventDefault(); el.classList.remove("is-drop")
-      const from = Number(e.dataTransfer.getData("text/flux-widget"))
-      if (Number.isNaN(from) || from === idx) return
-      const list = [...widgets()]
-      const [m] = list.splice(from, 1)
-      list.splice(idx, 0, m)
-      saveWidgets(list)
-    }
-  }, [body])
-  const ctx = {
-    rerender: () => rerenderHome(),
-    update: (patch, { quiet } = {}) => {
-      const list = widgets().map((x) => x.id === w.id ? { ...x, ...patch } : x)
-      if (quiet) { Object.assign(w, patch); state.set("home.widgets", list) } else saveWidgets(list)
-    }
-  }
-  const stop = renderWidget(body, w, ctx)
-  if (stop) cleanups.push(stop)
-
-  if (editing) {
-    const kind = KINDS[w.kind]
-    const sizes = kind?.sizes ?? ["small"]
-    el.append(h("button.hw-remove", { title: "Remove widget", onclick: () => saveWidgets(widgets().filter((x) => x.id !== w.id)) }, [h("span", { text: "−" })]))
-    if (sizes.length > 1) {
-      el.append(h("button.hw-size", {
-        title: "Change size",
-        onclick: () => ctx.update({ size: sizes[(sizes.indexOf(w.size) + 1) % sizes.length] })
-      }, [h("span", { text: SIZES[w.size]?.label ?? "Size" })]))
-    }
-  }
-  return el
+// ── one widget tile (built in widgets-grid.js) ────────────────────
+function tile (w) {
+  return widgetTile(w, { editing, list: widgets, save: saveWidgets, rerender: () => rerenderHome(), onCleanup: (fn) => cleanups.push(fn) })
 }
 
 // "Good morning, Landon" — your name (Settings → Home Screen), by time of
@@ -145,10 +108,7 @@ function greeting () {
 }
 
 function gallery (anchor) {
-  const list = h("div.hw-gallery", {}, Object.entries(KINDS).map(([k, kind]) => h("button.hw-gal-item", {
-    onclick: () => { closePopover(); saveWidgets([...widgets(), { id: uid(), kind: k, size: kind.sizes.includes("medium") ? "medium" : kind.sizes[0], config: {} }]) }
-  }, [h("span.hw-gal-ico", {}, [ico(kind.icon, 18)]), h("span.hw-gal-text", {}, [h("span.hw-gal-name", { text: kind.name }), kind.desc ? h("span.hw-gal-desc", { text: kind.desc }) : null])])))
-  popover(anchor, h("div", {}, [h("div.micro.wp-label", { text: "Add a widget" }), list]), { width: 420, align: "end" })
+  openGallery(anchor, { onAdd: (k, size) => { const id = uid(); markEntering(id); saveWidgets([...widgets(), { id, kind: k, size, config: {} }]) } })
 }
 
 export function initHome () {
@@ -166,8 +126,8 @@ export function initHome () {
     const lensBtn = h("button.home-lens", { title: "Search with an image (Google Lens) — or paste / drop one here", "aria-label": "Search with an image", onclick: () => openLens(lensBtn) }, [ico("lens", 18)])
     pill.append(ico("search", 17), input, lensBtn)
 
-    const grid = h(`div.hw-grid${editing ? ".is-editing" : ""}`, { dataset: { style: state.get("home.widgetStyle") ?? "glass" } },
-      widgets().map((w, i) => tile(w, i)))
+    const grid = h(`div.hw-grid${editing ? ".is-editing" : ""}`, { dataset: { style: state.get("home.widgetStyle") ?? "color" } },
+      widgets().map((w) => tile(w)))
     if (editing) {
       const add = h("button.hw.hw-add.size-small", { title: "Add a widget", onclick: () => gallery(add) }, [ico("plus", 24), h("span", { text: "Add Widget" })])
       grid.append(add)
@@ -188,6 +148,7 @@ export function initHome () {
       ]),
       h("div.home-tools", {}, [btnWall, btnEdit])
     ]))
+    afterGridMount(grid)
     if (state.get("home.showSearch") !== false) attachOmnibox(input, { anchor: pill, place: "home" })
   }
   rerenderHome = () => { if ((window.__fluxView ?? "home") === "home") render() }

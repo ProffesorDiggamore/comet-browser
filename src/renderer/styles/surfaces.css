@@ -96,23 +96,49 @@ input.pal-input, input.ov-search { padding: 0; border: 0; border-radius: 0; min-
 .lib-card-title { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; position: relative; z-index: 3; }
 .lib-card-sub { font-size: 11.5px; color: var(--f-text-dim); position: relative; z-index: 3; }
 
-/* ── downloads popover ─────────────────────────────────────────── */
-.dl-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 8px; }
+/* ── downloads popover ─────────────────────────────────────────────
+   Same glass shell, radius and shadow as the Bookmarks popover, but a
+   denser tint: it opens over the sidebar footer and the page, and the
+   icons there must never read through it.                           */
+.pop.dl-pop { padding: 6px; overflow: hidden !important; max-height: none; background-color: color-mix(in srgb, var(--f-bg-1) 95%, transparent); }
+body[data-mode="light"] .pop.dl-pop { background-color: rgba(252, 252, 254, 0.95); }
+.dl { position: relative; z-index: 2; display: flex; flex-direction: column; max-height: min(60vh, 520px); min-height: 0; }
+.dl-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 6px 8px 10px; flex: 0 0 auto; }
+.dl-head strong { font-size: 13px; font-weight: 600; }
 .dl-head .btn { padding: 4px 10px; font-size: 12px; }
-.dl-list { display: flex; flex-direction: column; gap: 2px; max-height: 50vh; overflow-y: auto; }
+.dl-head .btn:disabled { opacity: 0.4; pointer-events: none; }
+.dl-list { display: flex; flex-direction: column; gap: 2px; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .dl-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; }
-.dl-row:hover { background: var(--f-fill); }
-.dl-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: var(--f-fill-hi); color: var(--f-accent); flex: 0 0 auto; }
+.dl-row:hover { background: rgb(var(--ink) / 0.06); }
+.dl-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: rgb(var(--ink) / 0.07); color: var(--f-accent); flex: 0 0 auto; }
+.dl-row.is-failed .dl-ico { color: var(--sys-red, #ff453a); }
+.dl-row.is-failed .dl-sub { color: var(--sys-red, #ff453a); }
 .dl-main { flex: 1; min-width: 0; }
 .dl-name { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dl-sub { font-size: 11px; color: var(--f-text-dim); }
-.dl-bar { height: 4px; border-radius: 4px; background: var(--f-fill-hi); overflow: hidden; margin: 4px 0 3px; }
+.dl-sub { font-size: 11px; color: var(--f-text-dim); font-variant-numeric: tabular-nums; }
+.dl-bar { height: 4px; border-radius: 4px; background: rgb(var(--ink) / 0.1); overflow: hidden; margin: 4px 0 3px; }
 .dl-bar i { display: block; height: 100%; border-radius: 4px; background: var(--f-accent); transition: width 0.3s; }
 .dl-bar i.is-indet { animation: dl-indet 1.2s ease-in-out infinite; }
 @keyframes dl-indet { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 .dl-acts { display: flex; gap: 2px; }
 .dl-acts .tb-btn { width: 26px; height: 26px; }
-.dl-empty { padding: 24px; text-align: center; color: var(--f-text-dim); font-size: 13px; }
+.dl-empty { padding: 22px 24px 24px; text-align: center; color: var(--f-text-dim); font-size: 13px; }
+/* reduced motion: it fades in instead of scaling, and the busy bar stands still */
+[data-motion="reduced"] .pop.dl-pop { animation-name: m-fade !important; }
+[data-motion="reduced"] .dl-bar i.is-indet { animation: none; transform: none; }
+/* the toolbar's stand-in Downloads button: only while the sidebar (and its
+   footer button) is folded away, and not when Customize Toolbar added one */
+#toolbar .tb-dl { display: none; }
+body[data-layout="dia"].vt-collapsed #toolbar .tl-actions:not(:has(> [data-tool="downloads"])) .tb-dl { display: inline-flex; }
+/* the sidebar footer's Downloads button: dot + progress ring, like the toolbar's */
+.vt-foot.vt-dl { position: relative; }
+.vt-foot.vt-dl .dl-badge { display: none; }   /* the ring says it */
+.vt-foot.vt-dl.is-busy { color: var(--f-accent); }
+.vt-foot.vt-dl.is-busy::after {
+  content: ""; position: absolute; inset: 3px; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(var(--f-accent) var(--p, 30%), rgb(var(--ink) / 0.1) 0);
+  -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%); mask: radial-gradient(circle, transparent 62%, #000 64%);
+}
 
 /* ── site info ─────────────────────────────────────────────────── */
 .si { display: flex; flex-direction: column; gap: 2px; padding: 4px; }

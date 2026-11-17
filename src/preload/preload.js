@@ -67,6 +67,10 @@ contextBridge.exposeInMainWorld("flux", {
   },
 
   weather: (city, unit) => ipcRenderer.invoke("flux:weather", { city, unit }),
+  spotify: { state: () => ipcRenderer.invoke("flux:spotify:state"), probe: () => ipcRenderer.invoke("flux:spotify:probe"), subscribe: (mode) => ipcRenderer.invoke("flux:spotify:subscribe", mode), unsubscribe: () => ipcRenderer.invoke("flux:spotify:unsubscribe"),
+    command: (name, arg) => ipcRenderer.invoke("flux:spotify:command", name, arg), art: (url) => ipcRenderer.invoke("flux:spotify:art", url), onState: (cb) => on("flux:spotify:state", cb) },
+  // live search predictions (main/suggest.js); nothing is sent for private tabs
+  suggest: (q, opts = {}) => ipcRenderer.invoke("flux:suggest", { q, private: !!opts.private }),
 
   // search by image with Google Lens (lens.js)
   lens: {

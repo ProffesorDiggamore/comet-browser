@@ -57,6 +57,7 @@ plutil -replace LSMinimumSystemVersion -string "13.0" "$PL"
 plutil -replace CFBundleURLTypes -json '[{"CFBundleURLName":"Web site URL","CFBundleTypeRole":"Viewer","CFBundleURLSchemes":["http","https"]}]' "$PL"
 plutil -replace NSCameraUsageDescription -string "Websites you allow can use your camera." "$PL"
 plutil -replace NSMicrophoneUsageDescription -string "Websites you allow, and voice input, can use your microphone." "$PL"
+plutil -replace NSAppleEventsUsageDescription -string "Comet controls Spotify for the Now Playing widget and media controls." "$PL"
 
 xattr -cr "$APP"
 codesign --force --deep --sign - "$APP" 2>/dev/null

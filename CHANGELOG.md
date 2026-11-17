@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1 — Spotify, search that guesses, Apple-style widgets
+
+- **Spotify.** A new Home widget in three sizes, styled like Apple's Music widget: artwork, the card tinted from the album colour, drag to seek, shuffle / back / play / next / repeat, volume, and Search Spotify. The sidebar's Now Playing shows Spotify when no tab is playing sound (Settings → Layout → Sidebar), and ⌘K has Play/Pause, Next, Previous, Open Spotify and `sp <query>` to search. It controls the Spotify Mac app directly, so there's nothing to sign in to. macOS asks once to let Comet control Spotify. Comet only talks to Spotify once you add the widget or turn it on in the sidebar.
+- **Search that guesses.** The Home search box and the address bar complete as you type, showing the best guess in gray after the cursor: a site you visit, or the top search prediction. → or Tab accepts it, and Esc clears it. The list shows a Top Hit, then search predictions, open tabs, bookmarks and history. Predictions come from your search engine. Nothing is sent from private tabs, for anything that looks like an address, email or password, or when you switch it off in Settings → Search & Tabs. ⌘↩ opens the result in a new tab.
+- **Widgets redesigned in Apple's style.** Every widget was redrawn: full-colour cards by default, Calendar with today in red, a Weather sky that follows the conditions with an hourly strip, an analog Clock, a Batteries ring, Reminders-style To-Do, and Notes, Focus, World Clock, Top Sites and more. Tiles shrink slightly when pressed, dragging reorders them live, and **Add Widget** is now a gallery with live previews. Styles: Full Color, Tinted, Clear, Frosted, Liquid, Solid. If you were on the old default (Frosted), you move to Full Color once.
+- **Downloads fixed.** The panel opens upward from its button and no longer covers the sidebar or shows the page through it. Each window lists its own profile's downloads, with live progress, time left, Pause, Cancel and Retry.
+- **Bookmarks open in a new tab**, or in the current tab when it's an empty New Tab. ⌘-click opens one in the background and ⇧-click opens it in Peek.
+
 ## v1.0.1 — Open source
 
 - Comet is now open source under the MIT License (see LICENSE).

@@ -23,6 +23,7 @@ async function weather (city, unit) {
   if (!place) throw new Error(`Couldn't find “${city}”`)
   const f = await getJson(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}` +
     "&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,weather_code&forecast_days=5&timezone=auto" +
+    "&hourly=temperature_2m,weather_code,is_day&forecast_hours=26" +
     (unit === "f" ? "&temperature_unit=fahrenheit" : ""))
   const data = {
     place: place.name,
@@ -31,6 +32,9 @@ async function weather (city, unit) {
     day: !!f.current.is_day,
     hi: Math.round(f.daily.temperature_2m_max[0]),
     lo: Math.round(f.daily.temperature_2m_min[0]),
+    // the next hours, starting with the current one (local times, "2026-11-17T15:00")
+    hours: (f.hourly?.time ?? []).map((t, i) => ({ t, temp: Math.round(f.hourly.temperature_2m[i]), code: f.hourly.weather_code[i], day: !!f.hourly.is_day[i] }))
+      .filter((x) => x.t >= String(f.current.time ?? "").slice(0, 13)).slice(0, 12),
     days: f.daily.time.map((d, i) => ({ d, hi: Math.round(f.daily.temperature_2m_max[i]), lo: Math.round(f.daily.temperature_2m_min[i]), code: f.daily.weather_code[i] }))
   }
   cache.set(key, { t: Date.now(), data })

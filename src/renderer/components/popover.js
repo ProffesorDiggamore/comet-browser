@@ -25,8 +25,11 @@ export function closePopover () {
 
 export function isPopoverOpen () { return !!open }
 
-// anchor: an element, or { x, y } for a pointer position
-export function popover (anchor, content, { align = "start", width = null, className = "", onClose = null, offset = 8 } = {}) {
+// anchor: an element, or { x, y } for a pointer position.  alignTo: an
+// element whose left / right edge the popover lines up with instead of the
+// anchor's (the sidebar).  follow: re-place it whenever its size changes, so
+// one that grows while open never spills over its button or off-screen.
+export function popover (anchor, content, { align = "start", width = null, className = "", onClose = null, offset = 8, alignTo = null, follow = false } = {}) {
   // clicking the button that opened it closes it (a toggle), instead of reopening
   if (open && anchor instanceof Element && open.anchor === anchor) { closePopover(); return null }
   closePopover()
@@ -38,7 +41,8 @@ export function popover (anchor, content, { align = "start", width = null, class
     const r = anchor instanceof Element ? anchor.getBoundingClientRect() : { left: anchor.x, right: anchor.x, top: anchor.y, bottom: anchor.y, width: 0 }
     const w = el.offsetWidth
     const hgt = el.offsetHeight
-    let x = align === "end" ? r.right - w : align === "center" ? r.left + r.width / 2 - w / 2 : r.left
+    const e = alignTo instanceof Element && alignTo.isConnected ? alignTo.getBoundingClientRect() : r
+    let x = align === "end" ? e.right - w : align === "center" ? r.left + r.width / 2 - w / 2 : e.left
     let y = r.bottom + offset
     x = Math.max(8, Math.min(window.innerWidth - w - 8, x))
     if (y + hgt > window.innerHeight - 8) y = Math.max(8, r.top - hgt - offset)
@@ -47,13 +51,15 @@ export function popover (anchor, content, { align = "start", width = null, class
     el.style.transformOrigin = `${Math.round((r.left + r.width / 2) - x)}px ${y < r.top ? "100%" : "0"}`
   }
   place()
+  const ro = follow ? new ResizeObserver(() => { if (open?.el === el) place() }) : null
+  ro?.observe(el)
 
   const down = (e) => { if (!el.contains(e.target) && !(anchor instanceof Element && anchor.contains(e.target))) closePopover() }
   const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); closePopover() } }
   setTimeout(() => document.addEventListener("pointerdown", down, true), 0)
   document.addEventListener("keydown", key, true)
   window.addEventListener("resize", closePopover, { once: true })
-  open = { el, anchor, onClose, cleanup: () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key, true) } }
+  open = { el, anchor, onClose, cleanup: () => { ro?.disconnect(); document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key, true) } }
   return el
 }
 
