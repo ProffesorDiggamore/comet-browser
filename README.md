@@ -13,6 +13,7 @@
   <a href="https://github.com/ProffesorDiggamore/comet-browser/releases/latest/download/Comet-macOS-arm64.dmg"><b>⬇︎ Download Comet for Mac</b></a>
   &nbsp;·&nbsp; Apple silicon · macOS 13 or later
   &nbsp;·&nbsp; <a href="https://github.com/ProffesorDiggamore/comet-browser/releases">All releases</a>
+  &nbsp;·&nbsp; <a href="LICENSE">MIT License</a>
 </p>
 
 <p align="center">
@@ -185,3 +186,9 @@ The browser was called **Flux** before v0.8. A few internal names keep that on p
 ## What's new
 
 See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## License
+
+Comet is open source under the [MIT License](LICENSE). You're free to use, change and share it.

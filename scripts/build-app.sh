@@ -24,6 +24,7 @@ RES="$APP/Contents/Resources"
 rm -f "$RES/default_app.asar" "$RES/electron.icns"
 ditto src "$RES/app/src"
 cp package.json "$RES/app/package.json"
+cp LICENSE "$RES/app/LICENSE"
 # production dependencies only (Electron itself is the app shell)
 npm ls --omit=dev --parseable --all 2>/dev/null | tail -n +2 | while read -r dep; do
   ditto "$dep" "$RES/app/${dep#"$ROOT"/}"

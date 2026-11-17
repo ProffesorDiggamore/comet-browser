@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.1 — Open source
+
+- Comet is now open source under the MIT License (see LICENSE).
+
 ## v1.0 — Public release
 
 The first public release, with a drag-to-install disk image. Download it from [Releases](https://github.com/ProffesorDiggamore/comet-browser/releases/latest).
