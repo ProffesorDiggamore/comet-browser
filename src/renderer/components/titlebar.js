@@ -64,6 +64,7 @@ export function tabMenu (t, anchor) {
 }
 
 function favNode (t) {
+  if (t.pane === "settings") return ico("gear", 13)
   if (t.isHome) return ico("flux", 13)
   if (t.asleep && !t.favicon) return ico("sleep", 13)
   if (t.favicon) return h("img", { src: t.favicon, draggable: false, onerror: (e) => e.target.replaceWith(ico("globe", 13)) })
@@ -110,10 +111,10 @@ function updateTabEl (el, t, activeId) {
   el.classList.toggle("is-split", !!t.inSplit)
   el.classList.toggle("is-pinned", !!t.pinned)
   el.classList.toggle("is-private", !!t.private)
-  const title = t.isHome ? "New Tab" : (t.title || t.url || "New Tab")
+  const title = t.pane === "settings" ? "Settings" : t.isHome ? "New Tab" : (t.title || t.url || "New Tab")
   el.title = t.asleep ? `${title} — sleeping (click to wake)` : title
   const fav = el.querySelector(".tab-fav")
-  const favKey = `${t.isHome}|${t.asleep}|${t.favicon}`
+  const favKey = `${t.isHome}|${t.pane}|${t.asleep}|${t.favicon}`
   if (fav.dataset.k !== favKey) { fav.dataset.k = favKey; fav.replaceChildren(favNode(t)) }
   const tt = el.querySelector(".tab-title")
   if (tt.textContent !== title) tt.textContent = title
@@ -331,6 +332,7 @@ export function moreMenu (anchor, opts = {}) {
     "-",
     { label: "History", icon: "clock", kbd: "⌘Y", run: () => bus.emit("library:open", "history") },
     { label: "Bookmarks", icon: "bookmark", kbd: "⌥⌘B", run: () => bus.emit("library:open", "bookmarks") },
+    { label: "Bookmarks Bar", checked: state.get("layout.bookmarksBar") !== false, kbd: "⇧⌘B", run: () => bus.emit("menu", { action: "bookmarks-bar" }) },
     { label: "Downloads", icon: "download", run: () => openDownloads(anchor) },
     "-",
     { label: "Ask Comet AI", icon: "spark", kbd: "⌘J", run: () => bus.emit("ai:toggle") },

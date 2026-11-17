@@ -122,6 +122,7 @@ const DEFAULTS = {
     frameRadius: 14,
     showHomeHotTabs: true,
     showFullUrl: false,         // omnibox shows host only until focused
+    bookmarksBar: true,         // the row of bookmarks under the top bar (⇧⌘B)
     aiPanelWidth: 400
   },
   motion: {

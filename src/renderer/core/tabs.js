@@ -55,7 +55,7 @@ export function hostOf (url) { try { return new URL(url).host } catch { return "
 
 // ── reads ─────────────────────────────────────────────────────────
 const pub = (t) => ({
-  id: t.id, title: t.title, url: t.url, favicon: t.favicon, loading: t.loading, asleep: t.asleep, isHome: t.isHome,
+  id: t.id, title: t.title, url: t.url, favicon: t.favicon, loading: t.loading, asleep: t.asleep, isHome: t.isHome, pane: t.pane ?? null,
   pinned: t.pinned, muted: t.muted, audible: t.audible, blocked: t.blocked, thumb: t.thumb, inSplit: isInSplit(t.id),
   private: t.private
 })
@@ -105,7 +105,7 @@ async function applySite (tab) {
 export function refreshSite (id) { const t = rawTab(id); if (t) applySite(t) }
 
 // ── lifecycle ─────────────────────────────────────────────────────
-export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null, private: priv = false } = {}) {
+export function newTab (url = null, { activate = true, background = false, pinned = false, asleep = false, index = null, search = false, title = null, favicon = null, private: priv = false, pane = null } = {}) {
   const id = `tab_${++seq}`
   const wv = document.createElement("webview")
   // a private tab lives in an in-memory partition: its cookies and logins never touch disk
@@ -120,8 +120,10 @@ export function newTab (url = null, { activate = true, background = false, pinne
   const tab = {
     id, wv, title: title ?? (isHome ? "New Tab" : target), url: isHome ? "" : target, favicon: favicon ?? faviconFor(target),
     loading: false, asleep: false, isHome, pinned, muted: false, audible: false, blocked: 0, thumb: null, lastActive: Date.now(),
-    private: !!priv
+    private: !!priv,
+    pane: url ? null : pane          // a Comet page shown in this tab instead of Home ("settings")
   }
+  if (tab.pane === "settings") tab.title = "Settings"
   if (asleep && !isHome) { tab.asleep = true; tab.sleptUrl = target; wv.src = "about:blank" } else wv.src = target
 
   let idx = index
@@ -215,9 +217,17 @@ export function setActive (id) {
   if (tab.asleep) wakeTab(id)
   touch(tab)
   layout(prev?.id !== id)
-  bus.emit("view", tab.isHome ? "home" : "tabs")
+  bus.emit("view", viewFor(tab))
   bus.emit("hover-url", "")
   emit()
+}
+
+// which view a tab shows: its Comet page, Home, or the web page
+export const viewFor = (t) => (t ? t.pane ?? (t.isHome ? "home" : "tabs") : "home")
+// Settings lives in its own tab, like Chrome: reuse the open one, else open one
+export function openSettingsTab () {
+  const t = tabs.find((x) => x.pane === "settings")
+  if (t) setActive(t.id); else newTab(null, { pane: "settings" })
 }
 
 export function closeTab (id) {
@@ -264,6 +274,7 @@ export function navigate (input, tabId = null, opts = {}) {
   if (!tab) { newTab(url); return }
   if (tab.asleep) wakeTab(tab.id)
   tab.isHome = false
+  tab.pane = null
   tab.wv.src = url
   tab.url = url
   touch(tab)

@@ -33,6 +33,7 @@ let dragId = null
 let lastOrder = "", lastActive = null
 
 function fav (t, size = 16) {
+  if (t.pane === "settings") return ico("gear", size - 2)
   if (t.isHome) return ico("flux", size - 2)
   if (t.favicon) return h("img", { src: t.favicon, draggable: false, onerror: (e) => e.target.replaceWith(ico("globe", size - 2)) })
   return ico(t.asleep ? "sleep" : "globe", size - 2)
@@ -86,10 +87,10 @@ function update (el, t, activeId) {
   el.classList.toggle("is-loading", !!t.loading)
   el.classList.toggle("is-split", !!t.inSplit)
   el.classList.toggle("is-private", !!t.private)
-  const title = t.isHome ? (t.private ? "Private Tab" : "New Tab") : (t.title || t.url)
+  const title = t.pane === "settings" ? "Settings" : t.isHome ? (t.private ? "Private Tab" : "New Tab") : (t.title || t.url)
   el.title = title
   const f = el.querySelector(".vt-fav")
-  const fk = `${t.isHome}|${t.favicon}|${t.asleep}`
+  const fk = `${t.isHome}|${t.pane}|${t.favicon}|${t.asleep}`
   if (f.dataset.k !== fk) { f.dataset.k = fk; f.replaceChildren(fav(t)) }
   const tt = el.querySelector(".vt-title")
   if (tt.textContent !== title) tt.textContent = title
@@ -169,7 +170,9 @@ function paintMode () {
 
 // a second click on Settings / Library closes it again
 function toggleView (v, open) {
-  if (window.__fluxView === v) bus.emit("view", T.getActive()?.isHome ? "home" : "tabs")
+  const a = T.getActive()
+  if (v === "settings" && a?.pane === "settings") T.closeTab(a.id)      // Settings is a tab: closing it goes back
+  else if (window.__fluxView === v) bus.emit("view", T.viewFor(a))
   else open()
 }
 

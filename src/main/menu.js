@@ -85,6 +85,7 @@ function buildMenu (getWin) {
         item("Split View", "CmdOrCtrl+\\", "split"),
         item("Tab Overview", "Shift+CmdOrCtrl+\\", "overview"),
         item("Toggle Sidebar", "CmdOrCtrl+B", "sidebar"),
+        item("Show / Hide Bookmarks Bar", "Shift+CmdOrCtrl+B", "bookmarks-bar"),
         item("Focus Mode", "Shift+CmdOrCtrl+F", "focus"),
         { type: "separator" },
         { role: "togglefullscreen" },

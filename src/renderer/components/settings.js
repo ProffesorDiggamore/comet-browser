@@ -293,7 +293,7 @@ function catExtensions () {
 
 const SHORTCUTS = [
   ["Ask Comet AI", "⌘J"], ["Ask about this page", "⇧⌘J"], ["New AI chat", "⌥⌘J"], ["Command palette", "⌘K"],
-  ["New tab", "⌘T"], ["Close tab", "⌘W"], ["Reopen closed tab", "⇧⌘T"], ["Next / previous tab", "⌃Tab / ⌃⇧Tab"], ["Move through tabs", "⌘↑ ⌘↓ (sidebar) · ⌘← ⌘→ (tabs on top)"],
+  ["New tab", "⌘T"], ["Close tab", "⌘W"], ["Reopen closed tab", "⇧⌘T"], ["Next / previous tab", "⌃Tab / ⌃⇧Tab"], ["Move through tabs", "⌘↑ ⌘↓ (sidebar) · ⌘← ⌘→ (tabs on top)"], ["Bookmarks bar", "⇧⌘B"],
   ["Focus address bar", "⌘L"], ["Reload page", "⌘R"], ["Reload Comet UI", "⇧⌘R"], ["Back / Forward", "⌘[  /  ⌘]"],
   ["Find in page", "⌘F"], ["Bookmark page", "⌘D"], ["History", "⌘Y"], ["Bookmarks", "⌥⌘B"], ["Downloads", "⌥⌘L"],
   ["Tab overview", "⇧⌘\\"], ["Split view", "⌘\\"], ["Reader mode", "⌥⌘R"], ["Picture in picture", "⌥⌘P"],

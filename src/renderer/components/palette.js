@@ -65,7 +65,7 @@ export function openPalette () {
   const rows = h("div.pal-rows")
   const input = h("input.pal-input", { type: "text", placeholder: "Search tabs, commands and history", spellcheck: false })
 
-  const tabItems = () => T.getTabs().map((t) => ({ kind: "tab", icon: t.asleep ? "sleep" : "layers", fav: t.favicon, label: t.isHome ? "New Tab" : t.title || t.url, sub: t.isHome ? "" : T.hostOf(t.url), run: () => T.setActive(t.id) }))
+  const tabItems = () => T.getTabs().map((t) => ({ kind: "tab", icon: t.asleep ? "sleep" : "layers", fav: t.favicon, label: t.pane === "settings" ? "Settings" : t.isHome ? "New Tab" : t.title || t.url, sub: t.isHome ? "" : T.hostOf(t.url), run: () => T.setActive(t.id) }))
 
   async function filter () {
     const q = input.value.trim().toLowerCase()

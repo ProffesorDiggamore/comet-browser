@@ -232,6 +232,7 @@ export function catLayout () {
       row("Sidebar", seg([{ v: "shown", label: "Always" }, { v: "autohide", label: "Auto-hide" }, { v: "hidden", label: "Hidden" }], l.sidebar ?? "autohide", (v) => state.set("layout.sidebar", v)), "Auto-hide slides it in when you touch the left edge. ⌘B toggles."),
       row("Floating content frame", sw(l.frame !== false, (v) => state.set("layout.frame", v)), "Pages sit in an inset rounded glass frame."),
       row("Frame corner radius", rng(l.frameRadius ?? 14, 0, 28, 1, (v) => `${v}px`, (v) => state.set("layout.frameRadius", v))),
+      row("Bookmarks bar", sw(l.bookmarksBar !== false, (v) => state.set("layout.bookmarksBar", v)), "A row of your bookmarks under the top bar. ⌘D bookmarks a page; ⇧⌘B shows or hides the bar."),
       row("Show full URL in address bar", sw(!!l.showFullUrl, (v) => state.set("layout.showFullUrl", v)), "Off shows just the site and path until you click."),
       row("AI panel width", rng(l.aiPanelWidth ?? 400, 320, 760, 10, (v) => `${v}px`, (v) => { state.set("layout.aiPanelWidth", v); const p = document.getElementById("aipanel"); if (p) p.style.width = `${v}px` }))
     ]),

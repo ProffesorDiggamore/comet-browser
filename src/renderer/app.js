@@ -32,6 +32,7 @@ import { initEasyFiles } from "./components/easyfiles.js"
 import { initProfiles, switchProfile, openProfileSheet } from "./components/profiles.js"
 import { initTooltips } from "./components/tooltip.js"
 import { initAutofill } from "./components/passwords.js"
+import { initBmBar, toggleBmBar } from "./components/bmbar.js"
 
 const PANES = ["home", "library", "settings"]
 
@@ -89,6 +90,7 @@ function runAction (action, extra = {}) {
     case "split-with-url": { const id = T.newTab(extra.url, { background: true }); if (web) T.setSplit(a.id, id); return }
     case "overview": return bus.emit("overview:open")
     case "sidebar": return bus.emit("sidebar:toggle")
+    case "bookmarks-bar": return toggleBmBar()
     case "focus": return bus.emit("focus:toggle")
     case "devtools": return web && T.rawTab(a.id).wv.openDevTools()
     case "back": return T.back()
@@ -134,6 +136,7 @@ async function main () {
   initTitlebar()
   initSidebar()
   initVTabs()
+  initBmBar()
   initHome()
   initSettings()
   initLibrary()
@@ -147,7 +150,10 @@ async function main () {
   // "home" is the New Tab page — asking for it with no home tab active opens one
   bus.on("view", (v) => {
     if (v === "ai") { bus.emit("ai:toggle"); return }
-    if (v === "home" && !T.getActive()?.isHome) { T.newTab(); return }
+    const a = T.getActive()
+    if (v === "home" && (!a?.isHome || a.pane)) { T.newTab(); return }
+    // Settings opens in its own tab (or switches to the one already open)
+    if (v === "settings" && a?.pane !== "settings") { T.openSettingsTab(); return }
     showView(v)
   })
   bus.on("toast", (m) => toast(m))
