@@ -179,6 +179,9 @@ function registerIpc ({ ctxFor, winFor, ROOT, restart }) {
   // fill only from the window's own profile, whatever id the renderer passes
   ipcMain.handle("flux:vault:fill", (e, profileId, id) => (String(profileId) === pid(e) ? vault.fill(pid(e), String(id)) : null))
   ipcMain.handle("flux:vault:known", (e, url, username, password) => vault.known(String(url ?? ""), String(username ?? ""), String(password ?? ""), pid(e)))
+  ipcMain.handle("flux:vault:plan", (e, url, username, password) => vault.plan(pid(e), String(url ?? ""), String(username ?? ""), String(password ?? "")))
+  ipcMain.handle("flux:vault:update", (e, id, patch) => vault.update(pid(e), String(id ?? ""), { username: typeof patch?.username === "string" ? patch.username : undefined, password: typeof patch?.password === "string" ? patch.password : undefined }))
+  ipcMain.handle("flux:vault:never", (e, url) => vault.never(pid(e), String(url ?? "")))
 }
 
 function send (w, channel, payload) {

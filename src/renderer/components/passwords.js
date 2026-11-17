@@ -4,19 +4,17 @@
 //  it with this window's profile's saved logins for the site (profiles
 //  are fully isolated: main only ever answers from the asking profile).
 //  The password only reaches the page after the user picks a row.
-//  After a sign-in, offers to save the login to the current profile.
+//  Saving after a sign-in lives in save-login.js.
 // ───────────────────────────────────────────────────────────────────
 import { h } from "../core/dom.js"
 import { bus, toast } from "../core/bus.js"
 import { ico } from "../core/icons.js"
 import * as T from "../core/tabs.js"
 import { avatar, currentProfile } from "./profiles.js"
+import { initSaveLogin } from "./save-login.js"
 
 let menu = null      // { el, wv, items, sel, rows }
 let blurT = null
-const skipped = new Set()   // "host\nuser" the user said Not now to, this session
-
-const hostOf = (u) => { try { return new URL(u).host.replace(/^www\./, "") } catch { return "" } }
 
 function closeMenu () {
   clearTimeout(blurT)
@@ -97,63 +95,6 @@ function onKey (key) {
   menu.rows[menu.sel]?.scrollIntoView({ block: "nearest" })
 }
 
-// ── save after sign-in ────────────────────────────────────────────
-let saveEl = null
-function closeSave () {
-  if (!saveEl) return
-  const el = saveEl
-  saveEl = null
-  el.classList.add("is-leaving")
-  setTimeout(() => el.remove(), 180)
-}
-
-async function onSubmit ({ id, url, username, password }) {
-  const tab = T.rawTab(id)
-  if (!tab || tab.private || !password || !/^https?:/.test(url)) return
-  const host = hostOf(url)
-  if (skipped.has(`${host}\n${username}`)) return
-  if (await window.flux.vault.known(url, username, password)) return
-  const update = (await window.flux.vault.match(url)).some((m) => m.username === username)
-  closeSave()
-  const p = currentProfile()
-  let timer = null
-  const card = h("div.af-save.glass", { role: "dialog", onmouseenter: () => clearTimeout(timer), onmouseleave: () => { timer = setTimeout(closeSave, 6000) } }, [
-    h("div.af-save-top", {}, [
-      h("span.af-save-ico", {}, [ico("key", 15)]),
-      h("div.af-text", {}, [
-        h("span.af-user", { text: update ? "Update saved password?" : "Save this password?" }),
-        h("span.af-sub", { text: host })
-      ])
-    ]),
-    h("div.af-save-login", {}, [
-      avatar(p, 22),
-      h("span.af-text", {}, [
-        h("span.af-user", { text: username || "No username" }),
-        h("span.af-sub", { text: `${"•".repeat(Math.min(12, password.length))} · ${p.name}` })
-      ])
-    ]),
-    h("div.af-save-actions", {}, [
-      h("button.btn.btn--ghost", { onclick: () => { skipped.add(`${host}\n${username}`); closeSave() } }, "Not now"),
-      h("button.btn.btn--accent", { onclick: async () => {
-        await window.flux.vault.add({ url, username, password, source: "autosave" })
-        closeSave()
-        toast(update ? "Password updated" : `Saved to ${p.name}`)
-      } }, update ? "Update" : "Save")
-    ])
-  ])
-  saveEl = card
-  document.body.append(card)
-  // hang it under the toolbar's key button, so it never covers the AI panel
-  const key = document.querySelector('#toolbar [aria-label="Fill saved login"]')
-  const kr = key?.offsetParent ? key.getBoundingClientRect() : null
-  if (kr) {
-    card.style.top = `${kr.bottom + 8}px`
-    card.style.right = "auto"
-    card.style.left = `${Math.max(8, Math.min(kr.right - card.offsetWidth + 10, window.innerWidth - card.offsetWidth - 8))}px`
-  }
-  timer = setTimeout(closeSave, 20000)
-}
-
 // ── toolbar key button: same list, anchored to the button ─────────
 export async function fillActiveTab (anchor) {
   const t = T.getActive()
@@ -170,7 +111,7 @@ export function initAutofill () {
   bus.on("login-field", onField)
   bus.on("login-blur", () => { clearTimeout(blurT); blurT = setTimeout(closeMenu, 120) })
   bus.on("login-key", onKey)
-  bus.on("login-submit", onSubmit)
+  initSaveLogin()
   // another tab, or this tab went to a new page
   bus.on("tabs", ({ activeId }) => { if (menu && (T.rawTab(activeId)?.wv !== menu.wv || T.rawTab(activeId)?.url !== menu.url)) closeMenu() })
   window.addEventListener("resize", closeMenu)

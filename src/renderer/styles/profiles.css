@@ -160,19 +160,71 @@ body.is-switching-profile #app { opacity: 0; transform: scale(0.992); transition
 }
 .af-foot:hover { color: var(--f-text); }
 
-.af-save {
-  position: fixed; z-index: 900; top: calc(var(--f-titlebar-h) + 52px); right: 16px; width: 300px;
-  padding: 14px; border-radius: 16px; display: flex; flex-direction: column; gap: 12px;
+.af-save.glass {
+  position: fixed; z-index: 900; top: calc(var(--f-titlebar-h) + 52px); right: 16px; width: 318px;
+  padding: 12px 14px 14px; border-radius: 18px; display: flex; flex-direction: column; gap: 10px;
+  /* nearly opaque: it floats over web pages, often a white login page */
+  background-color: var(--f-pop-bg); --f-blur: 44px;
+  color: rgb(var(--ink) / 0.9);
   transform-origin: top right;
   animation: af-in 260ms var(--f-ease) both;
 }
-.af-save-top { display: flex; align-items: center; gap: 10px; }
-.af-save-ico {
-  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: 0 0 auto;
-  background: var(--f-accent-soft); color: var(--f-accent-text);
+.af-save.glass.is-flash { animation: af-flash 900ms var(--f-ease-out) both; }
+.af-save.glass.is-leaving { animation: af-out 160ms var(--f-ease-out) both; pointer-events: none; }
+@keyframes af-flash { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--f-accent) 70%, transparent), var(--f-glass-drop, 0 18px 50px -20px rgba(0, 0, 0, 0.6)); } 100% { box-shadow: 0 0 0 10px transparent, var(--f-glass-drop, 0 18px 50px -20px rgba(0, 0, 0, 0.6)); } }
+.af-save-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.af-save-fav {
+  width: 22px; height: 22px; border-radius: 6px; flex: 0 0 auto; display: grid; place-items: center; overflow: hidden;
+  background: rgb(var(--ink) / 0.07); color: rgb(var(--ink) / 0.6);
 }
-.af-save-login { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgb(var(--ink) / 0.06); }
-.af-save-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.af-save-fav img { width: 16px; height: 16px; object-fit: contain; }
+.af-save-host { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: rgb(var(--ink) / 0.62); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.af-save-x {
+  width: 22px; height: 22px; border: 0; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto;
+  background: rgb(var(--ink) / 0.06); color: rgb(var(--ink) / 0.55);
+}
+.af-save-x:hover { background: rgb(var(--ink) / 0.12); color: rgb(var(--ink) / 0.85); }
+.af-save-top { display: flex; flex-direction: column; gap: 2px; }
+.af-save-title { font-size: 14px; font-weight: 650; letter-spacing: -0.01em; color: rgb(var(--ink) / 0.92); }
+.af-save-sub { font-size: 11.5px; color: rgb(var(--ink) / 0.56); }
+.af-save-sub.is-warn { color: var(--sys-orange); font-weight: 600; }
+.af-save.is-checking .af-save-sub { opacity: 0.55; }
+.af-save-cred {
+  display: flex; flex-direction: column; border-radius: 12px; overflow: hidden;
+  background: rgb(var(--ink) / 0.055); border: 0.5px solid rgb(var(--ink) / 0.09);
+}
+.af-save-row { display: flex; align-items: center; gap: 9px; min-height: 38px; padding: 0 8px 0 9px; }
+.af-save-row + .af-save-row { border-top: 0.5px solid rgb(var(--ink) / 0.08); }
+.af-save-av, .af-save-lock { width: 22px; display: grid; place-items: center; flex: 0 0 auto; color: rgb(var(--ink) / 0.5); }
+.af-save input.af-save-user {
+  flex: 1; min-width: 0; height: 28px; padding: 0 6px; margin-left: -6px; border: 0; border-radius: 7px; box-shadow: none;
+  background: transparent; color: rgb(var(--ink) / 0.9); font-size: 13px; font-weight: 600;
+}
+.af-save input.af-save-user:hover { background: rgb(var(--ink) / 0.05); }
+.af-save input.af-save-user:focus { background: rgb(var(--ink) / 0.07); box-shadow: 0 0 0 2px color-mix(in srgb, var(--f-accent) 45%, transparent); }
+.af-save input.af-save-user::placeholder { color: rgb(var(--ink) / 0.35); font-weight: 500; }
+.af-save-pw {
+  flex: 1; min-width: 0; font: 500 13px/1 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing: 0.04em;
+  color: rgb(var(--ink) / 0.78); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: text;
+}
+.af-save-eye {
+  width: 28px; height: 28px; border: 0; border-radius: 8px; display: grid; place-items: center; flex: 0 0 auto;
+  background: transparent; color: rgb(var(--ink) / 0.5);
+}
+.af-save-eye:hover { background: rgb(var(--ink) / 0.08); color: rgb(var(--ink) / 0.85); }
+.af-save-alt {
+  align-self: flex-start; margin-top: -2px; padding: 2px 0; border: 0; background: transparent;
+  color: var(--f-accent-text); font-size: 11.5px; font-weight: 600;
+}
+.af-save-alt:hover { text-decoration: underline; }
+.af-save-alt[hidden] { display: none; }
+.af-save-actions { display: flex; align-items: center; gap: 6px; }
+.af-save-gap { flex: 1; }
+.af-save-never { padding: 4px 0; border: 0; background: transparent; color: rgb(var(--ink) / 0.5); font-size: 11.5px; white-space: nowrap; }
+.af-save-never:hover { color: rgb(var(--ink) / 0.8); }
+.af-save .btn--plain.af-save-later { color: rgb(var(--ink) / 0.75); }
+.af-save .btn--plain.af-save-later:hover { background: rgb(var(--ink) / 0.08); }
+.af-save-go { min-width: 70px; }
 
 /* ── Move & Scale (covers the sheet while open) ─────────────────── */
 .pf-sheet { position: relative; }

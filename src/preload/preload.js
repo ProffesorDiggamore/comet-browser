@@ -107,7 +107,10 @@ contextBridge.exposeInMainWorld("flux", {
     match: (url) => ipcRenderer.invoke("flux:vault:match", url),
     matchAll: (url) => ipcRenderer.invoke("flux:vault:match-all", url),
     fill: (profileId, id) => ipcRenderer.invoke("flux:vault:fill", profileId, id),
-    known: (url, username, password) => ipcRenderer.invoke("flux:vault:known", url, username, password)
+    known: (url, username, password) => ipcRenderer.invoke("flux:vault:known", url, username, password),
+    plan: (url, username, password) => ipcRenderer.invoke("flux:vault:plan", url, username, password),
+    update: (id, patch) => ipcRenderer.invoke("flux:vault:update", id, patch),
+    never: (url) => ipcRenderer.invoke("flux:vault:never", url)
   },
 
   ai: {
