@@ -171,7 +171,8 @@ async function main () {
 
   // keys from inside a page: Escape + user Hot Tab hotkeys
   // ⌘ + arrow along the tab strip (sidebar ↑ ↓, top ← →) moves between tabs
-  const editableEl = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
+  // a field with text keeps ⌘-arrow for its caret; an empty one (like a New Tab's search) switches tabs
+  const editableEl = (el) => !!el && (el.isContentEditable ? !!el.textContent : /^(INPUT|TEXTAREA)$/.test(el.tagName) ? el.value !== "" : el.tagName === "SELECT")
   const tabArrow = (k, editable) => {
     if (!k.meta || k.ctrl || k.alt || k.shift || editable) return false
     const step = T.arrowStep(k.key)
@@ -186,9 +187,12 @@ async function main () {
     if (tabArrow(k, k.editable)) return
     matchHotkey({ key: k.key, metaKey: k.meta ?? true, ctrlKey: !!k.ctrl, shiftKey: !!k.shift, altKey: !!k.alt })
   })
+  // capture phase: fields like the omnibox handle arrows themselves
+  window.addEventListener("keydown", (e) => {
+    if (tabArrow({ key: e.key, meta: e.metaKey, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey }, editableEl(e.target))) { e.preventDefault(); e.stopPropagation() }
+  }, true)
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape") { escape(); return }
-    if (tabArrow({ key: e.key, meta: e.metaKey, ctrl: e.ctrlKey, alt: e.altKey, shift: e.shiftKey }, editableEl(e.target))) { e.preventDefault(); return }
     if (e.metaKey && matchHotkey(e)) e.preventDefault()
   })
 

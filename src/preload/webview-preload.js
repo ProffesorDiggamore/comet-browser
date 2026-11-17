@@ -34,7 +34,8 @@ try {
 let tabAxis = "v"
 ipcRenderer.on("flux:tab-axis", (_e, a) => { tabAxis = a === "h" ? "h" : "v" })
 const TAB_KEYS = { v: ["ArrowUp", "ArrowDown"], h: ["ArrowLeft", "ArrowRight"] }
-const editable = (el) => !!el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
+// a field with text keeps ⌘-arrow for its caret; an empty one has nothing to move
+const editable = (el) => !!el && (el.isContentEditable ? !!el.textContent : /^(INPUT|TEXTAREA)$/.test(el.tagName) ? el.value !== "" : el.tagName === "SELECT")
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { ipcRenderer.sendToHost("flux-key", { key: "Escape" }); return }
