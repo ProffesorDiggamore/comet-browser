@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.2 — A Home that's useful, editable passwords
+
+- **Jump Back In.** Under the Home search field: the pages you were just on, one per site, that you don't have open. Click to pick up where you left off, × to hide one, History → for the rest. Search-result pages are skipped. Settings → Home Screen turns it off.
+- **New widgets: Reading List, Headlines, Downloads, Favorites.** Reading List shows what you saved for later. Headlines shows top stories from The Verge, Hacker News, BBC, NPR, NYT, Ars Technica, TechCrunch, Apple Newsroom, ESPN or any RSS / Atom feed you paste (⋯ on the widget). Downloads lists your newest files: click to open, the folder button shows it in Finder. Favorites puts your bookmarks on Home as app icons. Existing Homes get Reading List and Headlines added once at the end; Edit Widgets removes them.
+- **Reading List (⇧⌘D).** Save any page for later from Bookmarks → Add to Reading List, ⇧⌘D, the tab's right-click menu or ⌘K. Tracking parameters are stripped. Opening an item marks it read; ✓ and × on each row. Unread items are searchable in ⌘K.
+- **Edit saved logins.** Settings → Passwords was rebuilt like Apple's Passwords app: search, All / Reused / Weak filters, and every login opens in place to change its website, username or password. 🎲 suggests a strong password (Safari-style, like `abcdef-ghijk2-lmNopq`), with a strength meter while you type. Each row copies the username or password or opens the site.
+- **Strong passwords on sign-up forms.** Click into a new-password field and Comet offers **Use Strong Password**: it fills the password and its confirm box, copies it, and offers to save it after you sign up.
+- **Picture in Picture when you switch tabs.** A video that's playing (with sound) floats in a Picture in Picture window when you switch to another tab and docks again when you come back. Settings → Search & Tabs.
+- **Unit conversion** in the address bar and Home search: `5 km to mi`, `72f in c`, `3 lb to kg`, `1.5 l in cups`, `90 min to h`, `2 gb in mb`. Enter or click copies the result.
+- **Copy Link as Markdown (⌥⇧⌘C)** and **Copy Clean Link** (removes utm_*, fbclid, gclid, YouTube's si and more), in the File menu and ⌘K.
+- **Close Duplicate Tabs** in the Tab menu, the tab's right-click menu and ⌘K. It keeps the tab you're on (or the pinned one) and closed tabs can be reopened with ⇧⌘T.
+- **⌘K** also has Generate a Strong Password (copies one) and Passwords.
+- **Fixes:** the saved-login list under a login field was see-through glass, so on white login pages it read white on white; it's now solid like the save card. Site icons on Home (Top Sites, Favorites, Jump Back In) now get their own tint instead of all being the same blue-gray: style objects silently dropped CSS custom properties (`core/dom.js`).
+
 ## v1.1 — Spotify, search that guesses, Apple-style widgets
 
 - **Spotify.** A new Home widget in three sizes, styled like Apple's Music widget: artwork, the card tinted from the album colour, drag to seek, shuffle / back / play / next / repeat, volume, and Search Spotify. The sidebar's Now Playing shows Spotify when no tab is playing sound (Settings → Layout → Sidebar), and ⌘K has Play/Pause, Next, Previous, Open Spotify and `sp <query>` to search. It controls the Spotify Mac app directly, so there's nothing to sign in to. macOS asks once to let Comet control Spotify. Comet only talks to Spotify once you add the widget or turn it on in the sidebar.

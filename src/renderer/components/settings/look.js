@@ -91,6 +91,7 @@ export function catHome () {
     group("Home screen", [
       row("Greeting", sw(hm.showGreeting !== false, (v) => state.set("home.showGreeting", v)), "“Good morning, …” with your name and this profile's picture."),
       row("Search field", sw(hm.showSearch !== false, (v) => state.set("home.showSearch", v))),
+      row("Jump Back In", sw(hm.showJumpBack !== false, (v) => state.set("home.showJumpBack", v)), "Pages you were on recently and don't have open, under the search field."),
       row("24-hour clock", sw(hm.clock24 === true, (v) => state.set("home.clock24", v))),
       row("Temperature", seg([{ v: "f", label: "°F" }, { v: "c", label: "°C" }], hm.tempUnit ?? "f", (v) => state.set("home.tempUnit", v))),
       row("Your name", textField(state.get("user.name"), (v) => state.set("user.name", v), { placeholder: "First name" }), "Shown in the Home greeting.")

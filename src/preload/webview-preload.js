@@ -220,14 +220,19 @@ if (window === window.top) {
     const hint = hintOf(el)
     return USERISH.test(hint) && (pwIn(scopeOf(el)).length > 0 || /username|email|login/i.test(hint))
   }
+  // a password box for a NEW password (sign-up, change password): Comet can suggest one
+  const OLDPW = /current|old|existing|aktuell|actuel|actual/i
+  const isNewPw = (el) => el instanceof HTMLInputElement && el.type === "password" && !el.disabled && !el.readOnly &&
+    !/current-password/.test(el.autocomplete) && !OLDPW.test(hintOf(el)) &&
+    (/new-password/.test(el.autocomplete) || /\bnew\b|create|choose|confirm|repeat|retype|again|neu|nouveau|nuevo/i.test(hintOf(el)) || pwIn(scopeOf(el)).length >= 2)
   const report = () => {
     if (!field) return
     const r = field.getBoundingClientRect()
-    ipcRenderer.sendToHost("flux-login-field", { x: r.left, y: r.bottom, w: r.width, top: r.top, url: location.href })
+    ipcRenderer.sendToHost("flux-login-field", { x: r.left, y: r.bottom, w: r.width, top: r.top, url: location.href, fresh: isNewPw(field) && !field.value })
   }
 
   document.addEventListener("focusin", (e) => {
-    if (!e.isTrusted || !isLoginInput(e.target)) return
+    if (!e.isTrusted || !(isLoginInput(e.target) || isNewPw(e.target))) return
     field = e.target
     report()
   }, true)
@@ -270,8 +275,17 @@ if (window === window.top) {
     el.dispatchEvent(new Event("input", { bubbles: true }))
     el.dispatchEvent(new Event("change", { bubbles: true }))
   }
-  ipcRenderer.on("flux-login-fill", (_e, { username, password }) => {
+  ipcRenderer.on("flux-login-fill", (_e, { username, password, fresh }) => {
     const at = field && document.contains(field) ? field : document.activeElement
+    // a suggested password goes into the new-password box and its confirm box
+    if (fresh) {
+      const scope = at instanceof HTMLElement && at !== document.body ? scopeOf(at) : document
+      const boxes = pwIn(scope).filter((x) => !/current-password/.test(x.autocomplete) && !OLDPW.test(hintOf(x)))
+      for (const x of boxes.length ? boxes : [at]) if (x instanceof HTMLInputElement) setVal(x, password)
+      if (at instanceof HTMLElement) at.focus()
+      menuOpen = false
+      return
+    }
     const pws = pwIn(at instanceof HTMLElement && at !== document.body ? scopeOf(at) : document)
     const pw = at instanceof HTMLInputElement && at.type === "password" ? at
       : pws.find((x) => !/new-password/.test(x.autocomplete)) || pws[0] || pwIn()[0] || null

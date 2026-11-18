@@ -11,7 +11,9 @@ import * as T from "./core/tabs.js"
 import { startPerfLoop } from "./core/perf.js"
 import { initMotion } from "./core/motion.js"
 import { initBackdrop } from "./core/backdrop.js"
-import { pipScript } from "./core/pagescripts.js"
+import { pipScript, autoPipScript } from "./core/pagescripts.js"
+import { addActiveToReadingList } from "./core/readinglist.js"
+import { copyLink } from "./core/links.js"
 import { initTitlebar, openDownloadsPopover } from "./components/titlebar.js"
 import { initSidebar } from "./components/sidebar.js"
 import { initVTabs } from "./components/vtabs.js"
@@ -71,6 +73,21 @@ async function pip () {
   else if (String(r).startsWith("error")) toast(r)
 }
 
+// switch away from a tab playing a video → it floats in Picture in Picture;
+// come back → it docks again (Settings → Search & Tabs)
+function initAutoPip () {
+  let last = T.getActiveId()
+  bus.on("tabs", ({ activeId }) => {
+    if (activeId === last) return
+    const prev = T.rawTab(last)
+    last = activeId
+    if (state.get("general.autoPip") === false) return
+    if (prev && !prev.isHome && !prev.asleep && prev.audible && !prev.muted && ![T.getSplit()?.a, T.getSplit()?.b].includes(prev.id)) T.exec(prev.id, autoPipScript(true)).catch(() => {})
+    const cur = T.rawTab(activeId)
+    if (cur && !cur.isHome && !cur.asleep) T.exec(cur.id, autoPipScript(false)).catch(() => {})
+  })
+}
+
 function runAction (action, extra = {}) {
   const a = T.getActive()
   const web = a && !a.isHome
@@ -78,6 +95,10 @@ function runAction (action, extra = {}) {
     case "new-tab": return T.newTab()
     case "new-private-tab": return T.newTab(null, { private: true })
     case "copy-url": if (web) { navigator.clipboard.writeText(a.url); toast("Link copied") } return
+    case "copy-markdown": return web ? copyLink(a, "markdown") : toast("Open a web page first")
+    case "copy-clean": return web ? copyLink(a, "clean") : toast("Open a web page first")
+    case "reading-add": return addActiveToReadingList()
+    case "close-duplicates": { const n = T.closeDuplicates(); return toast(n ? `Closed ${n} duplicate tab${n === 1 ? "" : "s"}` : "No duplicate tabs") }
     case "reopen": return T.reopenClosed()
     case "close-tab": return a && T.closeTab(a.id)
     case "focus-address": return bus.emit("focus-address")
@@ -171,6 +192,7 @@ async function main () {
   initEasyFiles()
   initAutofill()
   initPeek()
+  initAutoPip()
 
   // "home" is the New Tab page — asking for it with no home tab active opens one
   bus.on("view", (v) => {

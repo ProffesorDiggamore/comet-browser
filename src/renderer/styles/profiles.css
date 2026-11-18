@@ -156,6 +156,8 @@ body.is-switching-profile #app { opacity: 0; transform: scale(0.992); transition
   transform-origin: top left;
   animation: af-in 220ms var(--f-ease-out) both;
 }
+/* nearly opaque, like the save card: it opens over web pages, usually a white login form */
+.af-menu.glass { background-color: var(--f-pop-bg); --f-blur: 44px; }
 .af-menu.is-leaving, .af-save.is-leaving { animation: af-out 140ms var(--f-ease-out) both; pointer-events: none; }
 @keyframes af-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
 @keyframes af-out { to { opacity: 0; transform: translateY(-3px) scale(0.98); } }

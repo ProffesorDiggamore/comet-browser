@@ -76,6 +76,8 @@ function buildMenu (api) {
         { type: "separator" },
         item("Open Location…", "CmdOrCtrl+L", "focus-address"),
         item("Copy Link to This Page", "Shift+CmdOrCtrl+C", "copy-url"),
+        item("Copy Link as Markdown", "Alt+Shift+CmdOrCtrl+C", "copy-markdown"),
+        item("Copy Clean Link", "", "copy-clean"),
         item("Command Palette…", "CmdOrCtrl+K", "palette"),
         { type: "separator" },
         item("Save Page Screenshot", "Shift+CmdOrCtrl+S", "screenshot"),
@@ -132,6 +134,7 @@ function buildMenu (api) {
       label: "Bookmarks",
       submenu: [
         item("Bookmark This Page", "CmdOrCtrl+D", "bookmark"),
+        item("Add to Reading List", "Shift+CmdOrCtrl+D", "reading-add"),
         item("Show Bookmarks", "Alt+CmdOrCtrl+B", "bookmarks")
       ]
     },
@@ -151,6 +154,7 @@ function buildMenu (api) {
         item("Mute / Unmute Tab", "Ctrl+M", "mute"),
         item("Picture in Picture", "Alt+CmdOrCtrl+P", "pip"),
         item("Sleep Background Tabs", "", "sleep-all"),
+        item("Close Duplicate Tabs", "", "close-duplicates"),
         { type: "separator" },
         item("Show Downloads", "Alt+CmdOrCtrl+L", "downloads")
       ]

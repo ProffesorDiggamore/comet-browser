@@ -64,16 +64,18 @@ const DEFAULTS = {
     align: "center",            // top | center | bottom  (where the Home cluster sits)
     showSearch: true,
     showGreeting: true,         // "Good morning, <profile>" above the search field
+    showJumpBack: true,         // "Jump Back In": recent pages you don't have open, under the search field
+    hiddenRecent: [],           // urls removed from Jump Back In
     widgets: [                  // grid order; size = small 1×1 | medium 2×1 | large 2×2 | wide 4×1
-      { id: "hw_clock", kind: "clock", size: "small" },
-      { id: "hw_date", kind: "calendar", size: "small" },
       { id: "hw_weather", kind: "weather", size: "medium" },
-      { id: "hw_sites", kind: "sites", size: "medium" },
-      { id: "hw_clip", kind: "clipboard", size: "medium" },
-      { id: "hw_notes", kind: "notes", size: "small" },
-      { id: "hw_battery", kind: "battery", size: "small" }
+      { id: "hw_reading", kind: "reading", size: "medium" },
+      { id: "hw_date", kind: "calendar", size: "small" },
+      { id: "hw_downloads", kind: "downloads", size: "small" },
+      { id: "hw_news", kind: "headlines", size: "medium", config: { feed: "verge" } },
+      { id: "hw_sites", kind: "sites", size: "medium" }
     ]
   },
+  readingList: [],              // Save for Later (⇧⌘D): { url, title, host, addedAt, read }
   hotTabs: [                    // no default hotkeys: ⌘1–⌘9 select tabs (menu.js) unless a Hot Tab claims one
     { id: "ht_search", label: "DuckDuckGo", url: "https://duckduckgo.com", icon: null, hotkey: "", action: "open" },
     { id: "ht_gh", label: "GitHub", url: "https://github.com", icon: null, hotkey: "", action: "open" },
@@ -193,7 +195,7 @@ const DEFAULTS = {
     { key: "img", name: "Image search", url: "https://www.google.com/search?tbm=isch&q=%s" }
   ],
   session: { tabs: [], active: 0 },
-  meta: { schema: 8 }
+  meta: { schema: 9 }
 }
 
 // the look from the reference: violet nebula + clear liquid glass
@@ -306,6 +308,17 @@ function migrate (CONFIG_PATH, RAW, cache) {
     const was = RAW.home?.widgetStyle
     if (cache.home && (was === undefined || was === "glass")) cache.home.widgetStyle = "color"
     cache.meta = { schema: 8 }
+    writeJson(CONFIG_PATH, cache)
+  }
+  // one-time v1.2 migration: Home gets the useful widgets.  Reading List and
+  // Headlines join the end of an existing grid (Edit Widgets removes them).
+  if (RAW && (RAW.meta?.schema ?? 0) < 9) {
+    const list = Array.isArray(cache.home?.widgets) ? cache.home.widgets : null
+    if (list) {
+      if (!list.some((w) => w?.kind === "reading")) list.push({ id: "hw_reading", kind: "reading", size: "medium" })
+      if (!list.some((w) => w?.kind === "headlines")) list.push({ id: "hw_news", kind: "headlines", size: "medium", config: { feed: "verge" } })
+    }
+    cache.meta = { schema: 9 }
     writeJson(CONFIG_PATH, cache)
   }
   return cache

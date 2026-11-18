@@ -28,6 +28,13 @@ function closeMenu () {
 
 async function pick (item, wv) {
   closeMenu()
+  if (item.suggest) {
+    try { wv.send("flux-login-fill", { password: item.suggest, fresh: true }) } catch { return }
+    navigator.clipboard.writeText(item.suggest).catch(() => {})
+    toast("Strong password filled and copied — Comet will offer to save it")
+    try { wv.focus() } catch {}
+    return
+  }
   const login = await window.flux.vault.fill(item.profile.id, item.id)
   if (!login) return toast("That login is gone")
   try { wv.send("flux-login-fill", login) } catch { return }
@@ -42,12 +49,16 @@ function paintSel () {
 function openMenu (items, wv, at) {
   closeMenu()
   const me = currentProfile().id
-  const multi = new Set(items.map((i) => i.profile.id)).size > 1
-  const rows = items.map((it, i) => h("button.af-row", {
+  const multi = new Set(items.filter((i) => i.profile).map((i) => i.profile.id)).size > 1
+  const rows = items.map((it, i) => h(`button.af-row${it.suggest ? ".is-suggest" : ""}`, {
     onmousedown: (e) => e.preventDefault(),            // keep focus in the page's field
     onmouseenter: () => { if (menu) { menu.sel = i; paintSel() } },
     onclick: () => pick(it, wv)
-  }, [
+  }, it.suggest ? [
+    h("span.af-av.af-dice", {}, [ico("dice", 15)]),
+    h("span.af-text", {}, [h("span.af-user", { text: "Use Strong Password" }), h("span.af-sub.af-pw", { text: it.suggest })]),
+    h("span.af-go", {}, [ico("arrowRight", 13)])
+  ] : [
     h("span.af-av", {}, [avatar(it.profile, 26)]),
     h("span.af-text", {}, [
       h("span.af-user", { text: it.username || "No username" }),
@@ -56,7 +67,7 @@ function openMenu (items, wv, at) {
     h("span.af-go", {}, [ico("arrowRight", 13)])
   ]))
   const el = h("div.af-menu.glass", { role: "listbox", onmousedown: (e) => e.preventDefault() }, [
-    h("div.af-head", {}, [ico("key", 12), h("span", { text: items.length > 1 ? `${items.length} saved logins` : "Saved login" })]),
+    h("div.af-head", {}, [ico("key", 12), h("span", { text: items[0]?.suggest ? "New password" : items.length > 1 ? `${items.length} saved logins` : "Saved login" })]),
     h("div.af-list", {}, rows),
     h("button.af-foot", { onmousedown: (e) => e.preventDefault(), onclick: () => { closeMenu(); bus.emit("settings:goto", "passwords") } }, [ico("gear", 12), h("span", { text: "Manage passwords" })])
   ])
@@ -74,11 +85,12 @@ function openMenu (items, wv, at) {
   try { wv.send("flux-login-menu", true) } catch {}
 }
 
-async function onField ({ id, wv, x, y, w, top, url }) {
+async function onField ({ id, wv, x, y, w, top, url, fresh }) {
   const tab = T.rawTab(id)
   if (!tab || tab.id !== T.getActiveId() && !tab.inSplit) return
   clearTimeout(blurT)
-  const items = await window.flux.vault.matchAll(url)
+  const items = fresh ? [] : await window.flux.vault.matchAll(url)
+  if (fresh && !tab.private) items.unshift({ suggest: await window.flux.vault.generate({}) })
   if (!items.length) { closeMenu(); return }
   const r = wv.getBoundingClientRect()
   const z = T.zoomOf(id) || 1

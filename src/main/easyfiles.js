@@ -63,14 +63,14 @@ function fileItem (id, p, source) {
 
 // with several profiles, a window offers only what ITS profile downloaded
 // this session; a single-profile user keeps the ~/Downloads scan
-function recentDownloads (ctx) {
+function recentDownloads (ctx, max = RECENT_DOWNLOADS) {
   if (profiles.list().length > 1) {
     return [...ctx.downloads.values()]
       .filter(({ info }) => info.state === "completed")
       .map(({ info }) => { try { return fs.statSync(info.path).isFile() ? { p: info.path, t: info.finished ?? 0 } : null } catch { return null } })
       .filter(Boolean)
       .sort((a, b) => b.t - a.t)
-      .slice(0, RECENT_DOWNLOADS)
+      .slice(0, max)
       .map((x) => x.p)
   }
   const dir = app.getPath("downloads")
@@ -81,7 +81,7 @@ function recentDownloads (ctx) {
     .map((n) => { const p = path.join(dir, n); try { const st = fs.statSync(p); return st.isFile() ? { p, t: st.mtimeMs } : null } catch { return null } })
     .filter(Boolean)
     .sort((a, b) => b.t - a.t)
-    .slice(0, RECENT_DOWNLOADS)
+    .slice(0, max)
     .map((x) => x.p)
 }
 
@@ -180,4 +180,4 @@ function registerEasyFilesIpc ({ ctxFor, winFor }) {
   })
 }
 
-module.exports = { registerEasyFilesIpc }
+module.exports = { registerEasyFilesIpc, recentDownloads, mimeOf }

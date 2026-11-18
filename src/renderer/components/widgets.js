@@ -6,7 +6,7 @@
 //  body element and returns a cleanup (timers stop off-screen).
 //  Per-widget settings live on the widget: w.config.
 //  The kinds themselves: widgets-time.js, widgets-wx.js,
-//  widgets-web.js, widgets-personal.js.
+//  widgets-web.js, widgets-personal.js, widgets-useful.js.
 // ───────────────────────────────────────────────────────────────────
 import { h } from "../core/dom.js"
 import { state } from "../core/state.js"
@@ -16,6 +16,7 @@ import { weather } from "./widgets-wx.js"
 import { sites, tabs, closed, hottabs, clipboard, imagesearch } from "./widgets-web.js"
 import { notes, todo, battery } from "./widgets-personal.js"
 import { spotifyWidget } from "./widgets/spotify.js"
+import { reading, downloads, headlines, favorites } from "./widgets-useful.js"
 
 export const SIZES = {
   small: { label: "Small", cols: 1, rows: 1 },
@@ -40,6 +41,10 @@ export function armFocusAlarm () {
 }
 
 export const KINDS = {
+  reading: { name: "Reading List", icon: "glasses", desc: "Pages you saved for later (⇧⌘D)", sizes: ["small", "medium", "large"], render: reading },
+  headlines: { name: "Headlines", icon: "news", desc: "Top stories from a news site or any RSS feed", sizes: ["medium", "large", "wide"], render: headlines },
+  downloads: { name: "Downloads", icon: "download", desc: "Your newest files — open or show in Finder", sizes: ["small", "medium", "large"], render: downloads },
+  favorites: { name: "Favorites", icon: "bookmark", desc: "Your bookmarks, one click away", sizes: ["small", "medium", "large"], render: favorites },
   clock: { name: "Clock", icon: "clock", desc: "An analog dial, or the time in big type", sizes: ["small", "medium"], render: clock },
   calendar: { name: "Calendar", icon: "calendar", desc: "Today and this month", sizes: ["small", "medium", "large"], render: calendar },
   weather: { name: "Weather", icon: "sun", desc: "Now, the next hours and days", sizes: ["small", "medium", "wide"], render: weather },
@@ -63,7 +68,8 @@ export const SAMPLE = {
   weather: () => ({ city: (state.get("home.widgets") ?? []).find((w) => w.kind === "weather" && w.config?.city)?.config.city ?? "Cupertino" }),
   notes: () => ({ text: "Groceries\nOat milk, lemons, basil, the good bread", at: Date.now() }),
   todo: () => ({ items: [{ t: "Book flights", done: false }, { t: "Call the dentist", done: false }, { t: "Water plants", done: true }] }),
-  countdown: () => ({ label: "Vacation", date: new Date(Date.now() + 12 * 86_400_000).toLocaleDateString("en-CA") })
+  countdown: () => ({ label: "Vacation", date: new Date(Date.now() + 12 * 86_400_000).toLocaleDateString("en-CA") }),
+  headlines: () => ({ feed: (state.get("home.widgets") ?? []).find((w) => w.kind === "headlines")?.config?.feed ?? "verge" })
 }
 
 export function renderWidget (body, w, ctx) {

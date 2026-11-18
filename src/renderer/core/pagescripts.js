@@ -189,7 +189,25 @@ function pip () {
   return v.requestPictureInPicture().then(() => "ok", (e) => "error: " + e.message)
 }
 
+// auto Picture in Picture: a playing video floats when you switch away from
+// its tab, and comes back when you return (only one Comet put there)
+function autoPip (o) {
+  const cur = document.pictureInPictureElement
+  if (!o.enter) {
+    if (cur && cur.dataset.cometAutoPip) { delete cur.dataset.cometAutoPip; document.exitPictureInPicture(); return "exited" }
+    return "none"
+  }
+  if (cur) return "already"
+  const v = [...document.querySelectorAll("video")]
+    .filter((x) => !x.paused && !x.ended && x.readyState > 2 && x.clientWidth >= 200 && !x.disablePictureInPicture)
+    .sort((a, b) => (b.clientWidth * b.clientHeight) - (a.clientWidth * a.clientHeight))[0]
+  if (!v) return "no-video"
+  v.dataset.cometAutoPip = "1"
+  return v.requestPictureInPicture().then(() => "ok", (e) => { delete v.dataset.cometAutoPip; return "error: " + e.message })
+}
+
 export const readScript = (o) => call(read, { max: 16000, ...o })
+export const autoPipScript = (enter) => call(autoPip, { enter })
 export const actScript = (o) => call(act, o)
 export const readerScript = () => call(reader)
 export const pipScript = () => call(pip)

@@ -22,6 +22,7 @@ import { catHome, catBackup, textGroup, glassGroup } from "./settings/look.js"
 import { catProfiles } from "./profiles.js"
 import { catTour } from "./settings/tour.js"
 import { catShortcuts, catAbout } from "./settings/system.js"
+import { catPasswords } from "./settings/passwords.js"
 
 // ── categories ────────────────────────────────────────────────────
 // "Make default" → macOS asks to confirm, so the answer is re-read when the window regains focus
@@ -59,6 +60,7 @@ function catSearch () {
       row("New tab opens", seg([{ v: "end", label: "At the end" }, { v: "afterCurrent", label: "Next to current" }], state.get("general.newTabPosition"), (v) => state.set("general.newTabPosition", v))),
       row("Show Home on new tab", sw(state.get("general.homeOnNewTab"), (v) => state.set("general.homeOnNewTab", v))),
       row("Close unused New Tabs", sw(state.get("general.discardBlankTabs") !== false, (v) => state.set("general.discardBlankTabs", v)), "A New Tab you leave without opening anything closes itself, so blank tabs don't pile up."),
+      row("Picture in Picture when you switch tabs", sw(state.get("general.autoPip") !== false, (v) => state.set("general.autoPip", v)), "A video that's playing keeps going in a floating window when you switch to another tab, and docks again when you come back."),
       row("Restore tabs on launch", sw(state.get("general.restoreTabs"), (v) => state.set("general.restoreTabs", v))),
       row("Easy Files uploads", sw(state.get("general.easyFiles") !== false, (v) => state.set("general.easyFiles", v)), "When a site asks for a file, offer what you copied and your recent downloads first. Applies to pages loaded after the change."),
       row("Default page zoom", rng(state.get("general.defaultZoom") ?? 1, 0.5, 2, 0.05, (v) => `${Math.round(v * 100)}%`, (v) => state.set("general.defaultZoom", v)), "Applied to newly opened tabs.")
@@ -311,67 +313,6 @@ function catPrivacy () {
         bus.emit("settings:rerender")
         toast("Settings reset")
       }, "btn btn--danger"), "Does not touch saved API keys.")
-    ])
-  ]
-}
-
-// ── passwords vault ──────────────────────────────────────────────
-function catPasswords () {
-  const list = h("div", { dataset: { search: "passwords vault login credentials" }, style: { gridColumn: "1 / -1" } }, [h("div.rdesc", { text: "Loading vault…" })])
-  const addForm = h("div", { style: { gridColumn: "1 / -1", display: "none", gap: "8px", flexWrap: "wrap", marginTop: "8px" } })
-
-  let saved = 0
-  window.flux.vault.list().then((entries) => {
-    saved = entries.length
-    clear(list)
-    if (!entries.length) list.append(h("div.rdesc", { text: "No saved passwords yet. Import them from another browser below, or add one manually." }))
-    entries.sort((a, b) => (a.host || "").localeCompare(b.host || "")).forEach((e) => {
-      const pwField = h("code", { style: { fontSize: "12px", color: "var(--f-text-dim)" }, text: "••••••••••" })
-      let shown = false
-      const revealBtn = h("button.tb-btn", { title: "Reveal", onclick: async () => {
-        shown = !shown
-        pwField.textContent = shown ? (await window.flux.vault.reveal(e.id)) || "(empty)" : "••••••••••"
-        revealBtn.replaceChildren(ico(shown ? "eyeoff" : "eye", 15))
-        if (shown) setTimeout(() => { if (shown) revealBtn.click() }, 12_000)
-      } }, [ico("eye", 15)])
-      list.append(h("div.set-row", { dataset: { search: `${e.host} ${e.username} ${e.source}` } }, [
-        h("div.rlabel", {}, [h("strong", { text: e.host || e.url }), h("span", { style: { color: "var(--f-text-dim)", marginLeft: "8px" }, text: e.username || "(no username)" }), h("div", { style: { marginTop: "3px" } }, [pwField])]),
-        h("div.control", {}, [
-          revealBtn,
-          h("button.tb-btn", { title: "Copy username", onclick: () => { navigator.clipboard.writeText(e.username || ""); toast("Username copied") } }, [ico("copy", 15)]),
-          h("button.tb-btn", { title: "Copy password", onclick: async () => { navigator.clipboard.writeText(await window.flux.vault.reveal(e.id)); toast("Password copied") } }, [ico("key", 15)]),
-          h("button.tb-btn", { title: "Delete", onclick: async () => { if (!confirm(`Delete the login for ${e.host || e.url}?`)) return; await window.flux.vault.remove(e.id); bus.emit("settings:rerender") } }, [ico("trash", 15)])
-        ])
-      ]))
-    })
-    list.append(h("div.rdesc", { text: `${entries.length} saved · encrypted at rest with the OS keychain · never leaves this Mac.` }))
-  })
-
-  const uf = h("input", { type: "url", placeholder: "https://site.com", style: { minWidth: "200px" } })
-  const un = h("input", { type: "text", placeholder: "username", style: { minWidth: "160px" } })
-  const up = h("input", { type: "password", placeholder: "password", style: { minWidth: "160px" } })
-  addForm.append(uf, un, up, btn("Save", async () => {
-    if (!uf.value) return toast("Need a URL")
-    await window.flux.vault.add({ url: uf.value, username: un.value, password: up.value, source: "manual" })
-    uf.value = un.value = up.value = ""
-    bus.emit("settings:rerender")
-  }, "btn btn--accent"))
-
-  return [
-    group("Saved passwords", [
-      h("div.set-row", {}, [h("div.control", { style: { gridColumn: "1 / -1", justifySelf: "start", gap: "8px" } }, [
-        btn("Import from another browser…", () => bus.emit("settings:goto", "import")),
-        btn("Add manually", () => { addForm.style.display = addForm.style.display === "none" ? "flex" : "none" }, "btn btn--ghost")
-      ])]),
-      addForm,
-      list
-    ]),
-    group("Danger zone", [
-      row("Delete every saved password", btn("Delete All Passwords…", async () => {
-        if (!saved) return toast("No saved passwords")
-        if (!confirm(`Delete all ${saved} saved password${saved === 1 ? "" : "s"}? This can't be undone.`)) return
-        await window.flux.vault.clear(); bus.emit("settings:rerender"); toast("Passwords deleted")
-      }, "btn btn--danger"))
     ])
   ]
 }

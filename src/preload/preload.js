@@ -67,6 +67,12 @@ contextBridge.exposeInMainWorld("flux", {
   },
 
   weather: (city, unit) => ipcRenderer.invoke("flux:weather", { city, unit }),
+  // Home widgets: Headlines (RSS / Atom) and the newest files in Downloads
+  home: {
+    headlines: (url) => ipcRenderer.invoke("flux:home:headlines", url),
+    downloads: (max) => ipcRenderer.invoke("flux:home:downloads", max),
+    file: (id, verb) => ipcRenderer.invoke("flux:home:file", id, verb)
+  },
   spotify: { state: () => ipcRenderer.invoke("flux:spotify:state"), probe: () => ipcRenderer.invoke("flux:spotify:probe"), subscribe: (mode) => ipcRenderer.invoke("flux:spotify:subscribe", mode), unsubscribe: () => ipcRenderer.invoke("flux:spotify:unsubscribe"),
     command: (name, arg) => ipcRenderer.invoke("flux:spotify:command", name, arg), art: (url) => ipcRenderer.invoke("flux:spotify:art", url), onState: (cb) => on("flux:spotify:state", cb) },
   // live search predictions (main/suggest.js); nothing is sent for private tabs
@@ -114,6 +120,7 @@ contextBridge.exposeInMainWorld("flux", {
     known: (url, username, password) => ipcRenderer.invoke("flux:vault:known", url, username, password),
     plan: (url, username, password) => ipcRenderer.invoke("flux:vault:plan", url, username, password),
     update: (id, patch) => ipcRenderer.invoke("flux:vault:update", id, patch),
+    generate: (opts) => ipcRenderer.invoke("flux:vault:generate", opts),
     never: (url) => ipcRenderer.invoke("flux:vault:never", url)
   },
 

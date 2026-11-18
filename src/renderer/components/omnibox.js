@@ -18,6 +18,7 @@ import { attachLensInput } from "./lens.js"
 import { leave } from "../core/motion.js"
 import { makeGhost } from "./omnibox-ghost.js"
 import { canPredict, cached, fetchPredictions } from "./omnibox-predict.js"
+import { convert } from "../core/units.js"
 
 // ── tiny safe calculator (+ - * / % ^ parentheses) ──────────────────
 function calc (src) {
@@ -162,6 +163,8 @@ export function attachOmnibox (input, { anchor = input, place = "toolbar", onDon
     const top = []
     const math = calc(q)
     if (math != null) top.push({ key: "math", icon: "hash", label: `= ${math.toLocaleString()}`, sub: "Copy result", run: () => { navigator.clipboard.writeText(String(math)); bus.emit("toast", "Copied") } })
+    const conv = math == null ? convert(q) : null
+    if (conv) top.push({ key: "math", icon: "hash", label: conv.text, sub: "Copy result", run: () => { navigator.clipboard.writeText(String(conv.value)); bus.emit("toast", "Copied") } })
     const kw = T.keywordFor(q)
     if (kw) top.push({ key: "kw", icon: "search", label: `Search ${kw.name} for “${kw.query}”`, run: (nt) => go(kw.url, nt), primary: true })
     if (kind === "url") top.push({ key: "url", icon: "arrowRight", label: q, sub: "Go to site", fill: raw, run: (nt) => go(q, nt), primary: true })

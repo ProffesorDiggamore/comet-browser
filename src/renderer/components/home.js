@@ -18,6 +18,10 @@ import { openGallery } from "./widgets-gallery.js"
 import { seg, rng } from "./settings/kit.js"
 import { currentProfile, avatar } from "./profiles.js"
 import { openLens } from "./lens.js"
+import * as T from "../core/tabs.js"
+import { plate } from "./widgets-web.js"
+import { ago } from "./widgets-useful.js"
+import { openBookmarkUrl } from "./library.js"
 
 export const WALL_PRESETS = [
   { id: "tide", name: "Tide" }, { id: "bloom", name: "Bloom" }, { id: "dusk", name: "Dusk" },
@@ -107,6 +111,51 @@ function greeting () {
   return h("div.home-hello", {}, [avatar(currentProfile(), 44), h("div.home-hello-text", {}, [line, sub])])
 }
 
+// ── Jump Back In: the pages you were just on, one per site, that aren't open ──
+const SEARCHY = /(^|\.)(google|bing|duckduckgo|search\.brave|ecosia|yahoo|startpage|perplexity|youtube|kagi)\./
+const isSearchPage = (url, host) => SEARCHY.test(host) && /[?&](q|query|p|search_query)=/.test(url)
+function jumpBack () {
+  const cards = h("div.home-jb-cards")
+  const wrap = h("section.home-jb", { "aria-label": "Jump back in", hidden: true }, [
+    h("div.home-jb-head", {}, [
+      h("span.home-jb-title", { text: "Jump Back In" }),
+      h("button.home-jb-link", { onclick: () => bus.emit("library:open", "history") }, [h("span", { text: "History" }), ico("forward", 11)])
+    ]),
+    cards
+  ])
+  const hide = async (url) => {
+    await state.set("home.hiddenRecent", [url, ...(state.get("home.hiddenRecent") ?? [])].slice(0, 300))
+    paint()
+  }
+  const paint = async () => {
+    const hidden = new Set(state.get("home.hiddenRecent") ?? [])
+    const open = new Set(T.getTabs().map((t) => t.url))
+    const rows = await window.flux.history.search({ query: "", limit: 250 })
+    const seen = new Set()
+    const pick = []
+    for (const e of rows) {
+      const host = T.hostOf(e.url)
+      if (!host || !/^https?:/.test(e.url) || hidden.has(e.url) || open.has(e.url) || seen.has(host) || isSearchPage(e.url, host)) continue
+      seen.add(host)
+      pick.push(e)
+      if (pick.length >= 8) break
+    }
+    wrap.hidden = !pick.length
+    cards.replaceChildren(...pick.map((e) => {
+      const host = T.hostOf(e.url).replace(/^www\./, "")
+      return h("div.home-jb-card", { role: "link", tabIndex: 0, title: e.url,
+        onclick: (ev) => openBookmarkUrl(e.url, { background: !!ev.metaKey }),
+        onkeydown: (ev) => { if (ev.key === "Enter") openBookmarkUrl(e.url, { background: !!ev.metaKey }) } }, [
+        plate(e.url, host, 18),
+        h("span.home-jb-text", {}, [h("span.home-jb-t", { text: e.title || host }), h("span.home-jb-s", { text: `${host} · ${ago(e.ts)}` })]),
+        h("button.home-jb-x", { title: "Remove from Jump Back In", "aria-label": "Remove", onclick: (ev) => { ev.stopPropagation(); hide(e.url) } }, [ico("close", 10)])
+      ])
+    }))
+  }
+  paint()
+  return wrap
+}
+
 function gallery (anchor) {
   openGallery(anchor, { onAdd: (k, size) => { const id = uid(); markEntering(id); saveWidgets([...widgets(), { id, kind: k, size, config: {} }]) } })
 }
@@ -144,6 +193,7 @@ export function initHome () {
       h("div.home-scroll", { onclick: (e) => { if (editing && e.target.classList.contains("home-scroll")) { editing = false; render() } } }, [
         state.get("home.showGreeting") !== false && greeting(),
         state.get("home.showSearch") !== false && pill,
+        !editing && state.get("home.showJumpBack") !== false && jumpBack(),
         grid
       ]),
       h("div.home-tools", {}, [btnWall, btnEdit])
@@ -156,7 +206,7 @@ export function initHome () {
   // re-render on layout changes only — typing in a Notes widget must not rebuild the grid
   const sig = () => JSON.stringify([
     (state.get("home.widgets") ?? []).map((w) => [w.id, w.kind, w.size, w.config?.city]),
-    state.get("home.wallpaper"), state.get("home.widgetStyle"), state.get("home.showSearch"), state.get("home.showGreeting"),
+    state.get("home.wallpaper"), state.get("home.widgetStyle"), state.get("home.showSearch"), state.get("home.showGreeting"), state.get("home.showJumpBack"),
     state.get("home.clock24"), state.get("home.tempUnit"), state.get("hotTabs")
   ])
   let lastSig = sig()

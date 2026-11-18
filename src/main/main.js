@@ -32,6 +32,7 @@ const { registerLensIpc } = require("./lens")
 const { registerWeatherIpc } = require("./weather")
 const { registerSpotifyIpc } = require("./spotify")
 const { registerSuggestIpc } = require("./suggest")
+const { registerHomeDataIpc } = require("./home-data")
 
 const ROOT = path.resolve(__dirname, "..", "..")
 const WEBVIEW_PRELOAD = path.join(__dirname, "..", "preload", "webview-preload.js")
@@ -118,6 +119,7 @@ app.whenReady().then(async () => {
   registerWeatherIpc()
   registerSpotifyIpc()
   registerSuggestIpc(deps)
+  registerHomeDataIpc(deps)
 
   // private tabs: each profile has one in-memory partition (no "persist:"), with
   // the same shield / downloads / permission hooks and no extensions.  Nothing

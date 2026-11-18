@@ -8,6 +8,7 @@
 // ───────────────────────────────────────────────────────────────────
 import { h, mount } from "../core/dom.js"
 import { bus, toast } from "../core/bus.js"
+import { addToReadingList } from "../core/readinglist.js"
 import { ico } from "../core/icons.js"
 import { state } from "../core/state.js"
 import { flip, leave, effectiveMode, ms } from "../core/motion.js"
@@ -78,8 +79,10 @@ export function tabMenu (t, anchor) {
     { label: "Reload", icon: "reload", run: () => T.reload(t.id), disabled: t.isHome },
     { label: "Sleep Tab", icon: "sleep", run: () => T.sleepTab(t.id), disabled: t.id === T.getActiveId() || t.isHome },
     { label: "Copy Link", icon: "link", run: () => { navigator.clipboard.writeText(t.url); toast("Link copied") }, disabled: t.isHome },
+    { label: "Add to Reading List", icon: "glasses", run: () => addToReadingList(t.url, t.pageTitle || t.title), disabled: t.isHome },
     { label: "Ask Comet AI About This Tab", icon: "spark", disabled: t.isHome, run: () => { T.setActive(t.id); bus.emit("ai:ask", { text: "Summarize this page.", withPage: true }) } },
     "-",
+    { label: "Close Duplicate Tabs", icon: "copy", run: () => { const n = T.closeDuplicates(); toast(n ? `Closed ${n} duplicate tab${n === 1 ? "" : "s"}` : "No duplicate tabs") } },
     { label: "Close Other Tabs", icon: "layers", run: () => T.closeOthers(t.id) },
     { label: dia ? "Close Tabs Below" : "Close Tabs to the Right", icon: dia ? "chevronDown" : "forward", run: () => T.closeRight(t.id) },
     { label: "Close Tab", icon: "close", kbd: "⌘W", danger: true, run: () => T.closeTab(t.id) }

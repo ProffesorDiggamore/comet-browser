@@ -14,6 +14,9 @@ import { openBookmarks } from "./bookmarks.js"
 import { allProfiles, currentProfile, openProfileWindow } from "./profiles.js"
 import * as T from "../core/tabs.js"
 import { spotify } from "./widgets/spotify-client.js"
+import { addActiveToReadingList, unread, markRead } from "../core/readinglist.js"
+import { copyLink } from "../core/links.js"
+import { openBookmarkUrl } from "./library.js"
 
 let overlay = null
 let prefill = null   // a command that keeps the palette open sets the box (Search Spotify… → "sp ")
@@ -45,6 +48,12 @@ function commands () {
     ...allProfiles().filter((p) => p.id !== currentProfile().id).map((p) => cmd(`Open ${p.name} in new window`, "window", () => openProfileWindow(p.id))),
     cmd("Copy link to this page", "link", () => { navigator.clipboard.writeText(T.getActive().url); bus.emit("toast", "Link copied") }, "⇧⌘C", web),
     cmd("Reopen closed tab", "reload", () => T.reopenClosed(), "⇧⌘T"),
+    cmd("Add to Reading List", "glasses", () => addActiveToReadingList(), "⇧⌘D", web),
+    cmd("Copy link as Markdown", "markdown", () => copyLink(T.getActive(), "markdown"), "⌥⇧⌘C", web),
+    cmd("Copy clean link (no tracking)", "link", () => copyLink(T.getActive(), "clean"), "", web),
+    cmd("Close duplicate tabs", "copy", () => { const n = T.closeDuplicates(); toast(n ? `Closed ${n} duplicate tab${n === 1 ? "" : "s"}` : "No duplicate tabs") }),
+    cmd("Generate a strong password", "dice", async () => { navigator.clipboard.writeText(await window.flux.vault.generate({})); toast("Strong password copied") }),
+    cmd("Passwords", "key", () => bus.emit("settings:goto", "passwords")),
     cmd("Tab overview", "overview", () => bus.emit("overview:open"), "⇧⌘\\"),
     cmd("Split view", "split", () => T.toggleSplit(), "⌘\\", web),
     cmd("Reader mode", "book", () => bus.emit("reader:toggle"), "⌥⌘R", web),
@@ -108,6 +117,9 @@ export function openPalette () {
     }
     visible = base.map((i) => [i, score(i)]).filter(([, s]) => s).sort((a, b) => b[1] - a[1]).map(([i]) => i)
     if (spq && (spotify.state?.status ?? probed) !== "notInstalled") visible.unshift({ kind: "cmd", icon: "music", label: `Search Spotify for “${spq}”`, sub: "Opens in Spotify", run: () => spotify.command("search", spq) })
+    for (const r of unread().filter((r) => `${r.title} ${r.url}`.toLowerCase().includes(q)).slice(0, 4)) {
+      visible.push({ kind: "reading", icon: "glasses", label: r.title || r.url, sub: r.host, run: () => { markRead(r.url); openBookmarkUrl(r.url) } })
+    }
     for (const b of (state.get("bookmarks") ?? []).filter((b) => `${b.title} ${b.url}`.toLowerCase().includes(q)).slice(0, 4)) {
       visible.push({ kind: "bookmark", icon: "bookmark", label: b.title || b.url, sub: T.hostOf(b.url), run: () => T.newTab(b.url) })
     }
@@ -122,7 +134,7 @@ export function openPalette () {
 
   function paint () {
     let lastKind = null
-    const label = { tab: "Tabs", cmd: "Commands", bookmark: "Bookmarks", history: "History", ai: "Comet AI" }
+    const label = { tab: "Tabs", cmd: "Commands", reading: "Reading List", bookmark: "Bookmarks", history: "History", ai: "Comet AI" }
     const out = []
     visible.forEach((i, idx) => {
       if (i.kind !== lastKind) { out.push(h("div.pal-group", { text: label[i.kind] })); lastKind = i.kind }

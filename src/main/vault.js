@@ -4,6 +4,7 @@
 //  renderer only ever gets metadata unless it explicitly reveals one.
 // ───────────────────────────────────────────────────────────────────
 const { safeStorage } = require("electron")
+const crypto = require("node:crypto")
 const fs = require("node:fs")
 const path = require("node:path")
 const { profiles } = require("./profiles")
@@ -39,12 +40,46 @@ function hostOf (url) {
 }
 
 const norm = (u) => String(u ?? "").trim().toLowerCase()
+const withScheme = (u) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(u) ? u : `https://${u}`)
+
+// short, all one kind of character, or a well-known password
+const COMMON = new Set(["password", "123456", "12345678", "123456789", "qwerty", "abc123", "111111", "letmein", "iloveyou", "admin", "welcome", "monkey", "dragon", "football", "baseball", "sunshine", "princess", "passw0rd", "password1"])
+function weak (p) {
+  if (p.length < 8 || COMMON.has(p.toLowerCase())) return true
+  const kinds = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d]/].filter((r) => r.test(p)).length
+  return p.length < 12 ? kinds < 3 : kinds < 2
+}
 
 function id () { return `pw_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}` }
 
 const vault = {
+  // metadata only; weak / reused are worked out here so passwords never reach the list
   list (pid) {
-    return load(pid).entries.map((e) => ({ id: e.id, url: e.url, host: e.host, username: e.username, source: e.source, addedAt: e.addedAt }))
+    const entries = load(pid).entries
+    const uses = new Map()
+    for (const e of entries) if (e.password) uses.set(e.password, (uses.get(e.password) ?? 0) + 1)
+    return entries.map((e) => ({
+      id: e.id, url: e.url, host: e.host, username: e.username, source: e.source, addedAt: e.addedAt, updatedAt: e.updatedAt ?? null,
+      empty: !e.password, weak: !!e.password && weak(e.password), reused: (uses.get(e.password) ?? 0) > 1
+    }))
+  },
+  // Safari-style strong password: three groups of six, one capital, one digit
+  generate ({ length = 0, symbols = false } = {}) {
+    const lower = "abcdefghijkmnopqrstuvwxyz", upper = "ABCDEFGHJKLMNPQRSTUVWXYZ", digits = "23456789", sym = "!@#$%^&*-_+=?"
+    const pick = (set) => set[crypto.randomInt(set.length)]
+    if (!length) {
+      const chars = Array.from({ length: 18 }, () => pick(lower))
+      const spots = [...Array(18).keys()]
+      const take = () => spots.splice(crypto.randomInt(spots.length), 1)[0]
+      chars[take()] = pick(upper)
+      chars[take()] = pick(digits)
+      return [0, 6, 12].map((i) => chars.slice(i, i + 6).join("")).join("-")
+    }
+    const n = Math.max(8, Math.min(64, length | 0))
+    const pool = lower + upper + digits + (symbols ? sym : "")
+    let out
+    do { out = Array.from({ length: n }, () => pick(pool)).join("") } while (!(/[a-z]/.test(out) && /[A-Z]/.test(out) && /\d/.test(out)))
+    return out
   },
   reveal (pid, entryId) {
     const e = load(pid).entries.find((x) => x.id === entryId)
@@ -52,6 +87,7 @@ const vault = {
   },
   add (pid, { url, username, password, source }) {
     const data = load(pid)
+    url = withScheme(String(url ?? "").trim())
     const host = hostOf(url)
     const dup = data.entries.find((x) => x.host === host && x.username === username)
     if (dup) { dup.password = password || dup.password; save(pid, data); return { ok: true, added: 0, updated: 1 } }
@@ -127,13 +163,22 @@ const vault = {
     if (hit) return { action: "update", id: hit.id, username: hit.username }
     return { action: "save", others: site.map((e) => ({ id: e.id, username: e.username })) }
   },
-  // replace a saved login's password in place: keeps id, addedAt and any notes
-  update (pid, entryId, { username, password } = {}) {
+  // edit a saved login in place (site, username, password): keeps id and addedAt
+  update (pid, entryId, { url, username, password } = {}) {
     const data = load(pid)
     const e = data.entries.find((x) => x.id === entryId)
-    if (!e) return { ok: false }
+    if (!e) return { ok: false, text: "That login is gone" }
+    const nextUrl = typeof url === "string" && url.trim() ? withScheme(url.trim()) : e.url
+    const nextHost = hostOf(nextUrl)
+    const nextUser = typeof username === "string" ? username.trim() : e.username
+    if (!nextHost) return { ok: false, text: "That website address doesn't look right" }
+    if (data.entries.some((x) => x !== e && x.host === nextHost && norm(x.username) === norm(nextUser))) {
+      return { ok: false, text: `You already have a login for ${nextUser || "that username"} on ${nextHost}` }
+    }
+    e.url = nextUrl
+    e.host = nextHost
+    e.username = nextUser
     if (password) e.password = password
-    if (typeof username === "string") e.username = username
     e.updatedAt = Date.now()
     save(pid, data)
     return { ok: true }

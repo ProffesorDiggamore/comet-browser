@@ -266,6 +266,20 @@ export function closeTab (id, { quiet = false } = {}) {
   emit()
 }
 
+// the same address open twice: keep the active / pinned / oldest copy, close the rest
+export function closeDuplicates () {
+  const keep = new Map()
+  const rank = (t) => (t.id === activeId ? 0 : t.pinned ? 1 : 2)
+  for (const t of tabs) {
+    if (t.isHome || t.pane || !/^https?:/.test(t.url ?? "")) continue
+    const k = `${t.private ? "p:" : ""}${t.url.replace(/#.*$/, "")}`
+    const cur = keep.get(k)
+    if (!cur || rank(t) < rank(cur)) keep.set(k, t)
+  }
+  const extra = tabs.filter((t) => !t.isHome && !t.pane && /^https?:/.test(t.url ?? "") && keep.get(`${t.private ? "p:" : ""}${t.url.replace(/#.*$/, "")}`) !== t && !t.pinned)
+  for (const t of extra) closeTab(t.id, { quiet: true })
+  return extra.length
+}
 export function closeOthers (id) { for (const t of [...tabs]) if (t.id !== id && !t.pinned) closeTab(t.id) }
 export function closeRight (id) {
   const i = tabs.findIndex((t) => t.id === id)
